@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { UserRole } from '../types';
 import { 
   HeartPulse, Sparkles, ChevronRight, CheckCircle, 
@@ -7,9 +7,55 @@ import {
   Truck, ShieldCheck, Globe, Star, ArrowUpRight, 
   Stethoscope, UserCheck, Zap, BarChart3
 } from 'lucide-react';
-/* Fix: Import Link from react-router-dom for footer navigation */
 import { Link, useNavigate } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
+
+const ExpertPulse = () => {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setPos({ x, y });
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      className="relative w-full aspect-square flex items-center justify-center perspective-[1200px]"
+    >
+      <div 
+        className="relative w-64 h-64 md:w-80 md:h-80 transition-transform duration-500 ease-out preserve-3d"
+        style={{ transform: `rotateX(${pos.y * 50}deg) rotateY(${pos.x * 50}deg)` }}
+      >
+        <div className="absolute inset-0 rounded-[4rem] bg-primary/20 blur-[100px] animate-pulse"></div>
+        
+        {/* Hexagonal Rings */}
+        {[...Array(3)].map((_, i) => (
+          <div 
+            key={i}
+            className="absolute inset-0 border-4 border-slate-900/10 rounded-[3.5rem]"
+            style={{
+              transform: `rotateZ(${i * 45}deg) scale(${1 - i * 0.1})`,
+            }}
+          ></div>
+        ))}
+
+        <div className="absolute inset-[15%] bg-slate-900 rounded-[3.5rem] flex items-center justify-center shadow-2xl border border-white/10 overflow-hidden">
+           <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-transparent"></div>
+           <Stethoscope className="w-24 h-24 text-white relative z-10" />
+        </div>
+        
+        {/* Orbiting Points */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-6 bg-accent rounded-full shadow-[0_0_20px_#00BFA5] animate-bounce"></div>
+      </div>
+    </div>
+  );
+};
 
 const DoctorsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,13 +87,8 @@ const DoctorsPage: React.FC = () => {
               </button>
             </div>
           </div>
-          <div className="flex-1 relative">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-[120px] animate-pulse"></div>
-            <img 
-              src="https://images.unsplash.com/photo-1559839734-2b71f1536783?auto=format&fit=crop&q=80" 
-              className="w-full rounded-[4rem] shadow-2xl relative z-10 border-[12px] border-white grayscale-[20%] hover:grayscale-0 transition-all duration-700"
-              alt="Confident doctor"
-            />
+          <div className="flex-1">
+            <ExpertPulse />
           </div>
         </div>
       </section>

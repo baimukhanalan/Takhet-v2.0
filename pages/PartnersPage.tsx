@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { UserRole } from '../types';
 import { 
   Building2, Users, Briefcase, TrendingUp, 
@@ -9,6 +9,63 @@ import {
 } from 'lucide-react';
 import PublicHeader from '../components/PublicHeader';
 import { Link, useNavigate } from 'react-router-dom';
+
+const B2BMatrix = () => {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setPos({ x, y });
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      className="relative w-full aspect-square flex items-center justify-center perspective-[1200px]"
+    >
+      <div 
+        className="relative w-64 h-64 md:w-80 md:h-80 transition-transform duration-500 ease-out preserve-3d"
+        style={{ transform: `rotateX(${pos.y * 40}deg) rotateY(${pos.x * 40}deg)` }}
+      >
+        <div className="absolute inset-0 rounded-[5rem] bg-accent/20 blur-[120px] animate-pulse"></div>
+        
+        {/* Connection Matrix Grid */}
+        {[...Array(4)].map((_, i) => (
+          <div 
+            key={i}
+            className="absolute inset-0 border-[1px] border-accent/20"
+            style={{
+              transform: `translateZ(${i * 40}px) scale(${0.8 + i * 0.1})`,
+            }}
+          ></div>
+        ))}
+
+        <div className="absolute inset-[10%] bg-white rounded-[3rem] border-4 border-accent/10 flex items-center justify-center shadow-2xl overflow-hidden group">
+           <div className="absolute inset-0 bg-accent/5 animate-pulse"></div>
+           <Building2 className="w-24 h-24 text-accent relative z-10" />
+        </div>
+        
+        {/* Floating Data Points */}
+        {[...Array(6)].map((_, i) => (
+          <div 
+            key={i}
+            className="absolute w-3 h-3 bg-primary rounded-full shadow-[0_0_15px_#0D47A1]"
+            style={{
+              top: `${20 + i * 12}%`,
+              left: `${10 + (i % 2) * 80}%`,
+              transform: `translateZ(${i * 20}px)`,
+            }}
+          ></div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const PartnersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -40,13 +97,8 @@ const PartnersPage: React.FC = () => {
               </button>
             </div>
           </div>
-          <div className="flex-1 relative">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-[120px] animate-pulse"></div>
-            <img 
-              src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80" 
-              className="w-full rounded-[4rem] shadow-2xl relative z-10 border-[12px] border-white grayscale-[10%] hover:grayscale-0 transition-all duration-700"
-              alt="Doctor in modern clinic"
-            />
+          <div className="flex-1">
+            <B2BMatrix />
           </div>
         </div>
       </section>

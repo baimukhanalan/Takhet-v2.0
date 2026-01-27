@@ -25,20 +25,23 @@ import PartnersPage from './pages/PartnersPage';
 import AuthPage from './pages/AuthPage';
 import PatientAppointments from './pages/PatientAppointments';
 
-// Helper component to handle conditional layout
+// Enhanced AppLayout for Mobile Bottom Navigation
 const AppLayout: React.FC<{ user: User | null; onLogout: () => void; children: React.ReactNode }> = ({ user, onLogout, children }) => {
   const location = useLocation();
-  // Pages that show the sidebar ONLY when logged in
   const isPublicRoute = ['/auth', '/doctors', '/partners', '/'].includes(location.pathname);
   
-  // If user is logged in, and it's NOT a strictly public landing page, show Sidebar
+  // Custom logic for full-screen pages like consultation
+  const isConsultation = location.pathname.startsWith('/consultation/');
+
   if (user && !isPublicRoute) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar role={user.role} onLogout={onLogout} />
+      <div className="flex min-h-screen bg-background overflow-hidden">
+        {/* Sidebar handles desktop side and mobile bottom nav */}
+        {!isConsultation && <Sidebar role={user.role} onLogout={onLogout} />}
+        
         <div className="flex-1 flex flex-col min-w-0 h-screen">
-          <Header user={user} />
-          <main className="flex-1 overflow-y-auto p-4 md:p-8">
+          {!isConsultation && <Header user={user} />}
+          <main className={`flex-1 overflow-y-auto ${isConsultation ? 'p-0' : 'p-4 md:p-10'} transition-all duration-500`}>
             {children}
           </main>
         </div>
@@ -46,7 +49,6 @@ const AppLayout: React.FC<{ user: User | null; onLogout: () => void; children: R
     );
   }
 
-  // Otherwise (logged out OR strictly public page), show minimal full-screen layout
   return <div className="min-h-screen bg-background">{children}</div>;
 };
 
@@ -56,7 +58,7 @@ const App: React.FC = () => {
   const loginAs = (role: UserRole) => {
     const names = {
       [UserRole.PATIENT]: 'Alan Baimukhan',
-      [UserRole.DOCTOR]: 'Dr. Petrov',
+      [UserRole.DOCTOR]: 'Др. Михаил Михайлов',
       [UserRole.PARTNER]: 'Clinic Admin',
       [UserRole.ADMIN]: 'Master Admin'
     };
@@ -75,17 +77,13 @@ const App: React.FC = () => {
     <HashRouter>
       <AppLayout user={user} onLogout={logout}>
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={!user ? <LandingPage onLogin={() => {}} /> : <Navigate to="/dashboard" replace />} />
+          <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/dashboard" replace />} />
           <Route path="/auth" element={<AuthPage onLogin={loginAs} />} />
           <Route path="/doctors" element={<DoctorsPage />} />
           <Route path="/partners" element={<PartnersPage />} />
-          
-          {/* Universal Portal Routes */}
           <Route path="/mental" element={<MentalPage user={user || undefined} />} />
           <Route path="/community" element={<CommunityPage user={user || undefined} />} />
           
-          {/* Protected Routes */}
           <Route path="/dashboard" element={
             user?.role === UserRole.PATIENT 
               ? <PatientDashboard user={user} /> 

@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, UserRole } from '../types';
 import { 
   HeartPulse, BrainCircuit, Search, Star, Filter, 
-  ArrowUpRight, Clock, Wallet, UserCheck, MessageSquare, ChevronDown
+  ArrowUpRight, Clock, Wallet, UserCheck, MessageSquare, ChevronDown, 
+  Sparkles, Leaf
 } from 'lucide-react';
 import PublicHeader from '../components/PublicHeader';
 
@@ -17,6 +18,63 @@ interface Specialist {
   isTop: boolean;
   avatar: string;
 }
+
+const ZenSphere = () => {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setPos({ x, y });
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      className="relative w-full aspect-square flex items-center justify-center perspective-[1200px]"
+    >
+      <div 
+        className="relative w-64 h-64 md:w-80 md:h-80 transition-transform duration-1000 ease-out preserve-3d"
+        style={{ transform: `rotateX(${pos.y * 30}deg) rotateY(${pos.x * 30}deg)` }}
+      >
+        <div className="absolute inset-0 rounded-full bg-teal-500/10 blur-[120px] animate-pulse"></div>
+        
+        {/* Soft Blobs */}
+        {[...Array(2)].map((_, i) => (
+          <div 
+            key={i}
+            className="absolute inset-0 bg-primary/5 rounded-full blur-3xl animate-ping"
+            style={{
+              animationDuration: `${3 + i}s`,
+              transform: `scale(${1.2 + i * 0.2})`,
+            }}
+          ></div>
+        ))}
+
+        <div className="absolute inset-[15%] bg-white/20 backdrop-blur-3xl rounded-full border border-white/40 flex items-center justify-center shadow-2xl">
+           <BrainCircuit className="w-24 h-24 text-primary animate-pulse" />
+        </div>
+        
+        {/* Floating Leaves */}
+        {[...Array(4)].map((_, i) => (
+          <Leaf 
+            key={i}
+            className="absolute text-accent w-6 h-6 animate-bounce"
+            style={{
+              top: `${20 + i * 15}%`,
+              left: `${15 + (i % 2) * 70}%`,
+              animationDelay: `${i * 0.5}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const SPECIALISTS: Specialist[] = [
   { id: '1', name: 'Др. Алиханова А.', type: 'Психотерапевт', experience: 12, price: 15000, rating: 5.0, isTop: true, avatar: 'https://i.pravatar.cc/150?u=1' },
@@ -47,14 +105,37 @@ const MentalPage: React.FC<{ user?: User }> = ({ user }) => {
     <div className="min-h-screen bg-background pb-20">
       {!isPortal && <PublicHeader activePath="/mental" />}
       
-      <main className={`max-w-7xl mx-auto px-4 ${!isPortal ? 'pt-32' : 'pt-4'} space-y-12`}>
-        <div className="space-y-4">
-          <h1 className="text-4xl font-black text-foreground">Ментальное здоровье</h1>
-          <p className="text-muted-foreground font-medium max-w-2xl">Найдите квалифицированного специалиста для поддержки вашего психологического благополучия.</p>
-        </div>
+      <main className={`max-w-7xl mx-auto px-4 ${!isPortal ? 'pt-44' : 'pt-4'} space-y-24`}>
+        
+        {/* Hero Section for Public Page */}
+        {!isPortal && (
+          <section className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="flex-1 space-y-8 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-primary rounded-full text-xs font-black uppercase tracking-[0.2em]">
+                <Leaf className="w-4 h-4 text-accent" /> Гармония ума
+              </div>
+              <h1 className="text-5xl md:text-7xl font-black text-foreground leading-[0.9] tracking-tighter">
+                Позаботьтесь о своём <br/><span className="text-primary italic">ментальном здоровье.</span>
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
+                Персональная поддержка, квалифицированные психологи и психотерапевты в одно касание. Начните путь к спокойствию сегодня.
+              </p>
+            </div>
+            <div className="flex-1">
+              <ZenSphere />
+            </div>
+          </section>
+        )}
+
+        {isPortal && (
+          <div className="space-y-4">
+            <h1 className="text-4xl font-black text-foreground">Ментальное здоровье</h1>
+            <p className="text-muted-foreground font-medium max-w-2xl">Найдите квалифицированного специалиста для поддержки вашего психологического благополучия.</p>
+          </div>
+        )}
 
         {/* Filters */}
-        <div className="bg-white p-6 rounded-[2.5rem] border border-border shadow-sm flex flex-col md:flex-row gap-6">
+        <div className="bg-white p-8 rounded-[3rem] border border-border shadow-sm flex flex-col md:flex-row gap-6 relative z-10">
           <div className="flex-1 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <input 
