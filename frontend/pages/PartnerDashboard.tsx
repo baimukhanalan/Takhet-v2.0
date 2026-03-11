@@ -5,6 +5,7 @@ import { Building2, Users, Briefcase, TrendingUp, ShieldCheck, Globe } from 'luc
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { translations, Language } from '../services/i18n';
 import { MockDB } from '../services/db';
+import { roleApi } from '../services/roleApi';
 
 const CLINIC_PERFORMANCE = [
   { month: 'Jan', revenue: 4200, consults: 120 },
@@ -16,10 +17,20 @@ const CLINIC_PERFORMANCE = [
 
 const PartnerDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [lang, setLang] = useState<Language>(MockDB.getLang());
+  const [dashboard, setDashboard] = useState<any>(null);
   useEffect(() => {
-    const handleUpdate = () => setLang(MockDB.getLang());
-    window.addEventListener('storage_update', handleUpdate);
-    return () => window.removeEventListener('storage_update', handleUpdate);
+    const handleUpdate = async () => {
+      setLang(MockDB.getLang());
+      try {
+        const data = await roleApi.partnerDashboard();
+        setDashboard(data);
+      } catch {
+        setDashboard(null);
+      }
+    };
+    handleUpdate();
+    window.addEventListener('storage_update', handleUpdate as any);
+    return () => window.removeEventListener('storage_update', handleUpdate as any);
   }, []);
 
   const t = translations[lang];
@@ -43,9 +54,9 @@ const PartnerDashboard: React.FC<{ user: User }> = ({ user }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         {[
-          { label: t.dashboard.partner.activeDocs, val: '24', icon: Users, color: 'text-primary bg-primary/10' },
-          { label: t.dashboard.partner.totalConsults, val: '1,420', icon: Briefcase, color: 'text-accent bg-accent/10' },
-          { label: t.dashboard.partner.revenueMTD, val: '₸5.8M', icon: TrendingUp, color: 'text-success bg-success/10' },
+          { label: t.dashboard.partner.activeDocs, val: String(dashboard?.doctorStats?.active ?? '24'), icon: Users, color: 'text-primary bg-primary/10' },
+          { label: t.dashboard.partner.totalConsults, val: String(dashboard?.analytics?.totalCases ?? '1,420'), icon: Briefcase, color: 'text-accent bg-accent/10' },
+          { label: t.dashboard.partner.revenueMTD, val: `₸${(dashboard?.analytics?.closedCases ?? 0) * 15000 || '5.8M'}`, icon: TrendingUp, color: 'text-success bg-success/10' },
           { label: t.dashboard.partner.whiteLabel, val: 'Active', icon: Globe, color: 'text-purple-600 bg-purple-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-8 rounded-3xl border border-border shadow-sm group hover:scale-[1.02] transition-transform">

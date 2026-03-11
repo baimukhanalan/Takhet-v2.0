@@ -7,26 +7,53 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Link } from 'react-router-dom';
 import { MockDB } from '../services/db';
 import { translations, Language } from '../services/i18n';
+import { roleApi } from '../services/roleApi';
 
 const DoctorDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [swarmCases, setSwarmCases] = useState<SwarmCase[]>([]);
-  const [stats, setStats] = useState(MockDB.getDoctorStats());
+  const [stats, setStats] = useState<any>(MockDB.getDoctorStats());
   const [revenueHistory, setRevenueHistory] = useState<any[]>([]);
   const [lang, setLang] = useState<Language>(MockDB.getLang());
 
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       setLang(MockDB.getLang());
-      setAppointments(MockDB.getAppointments().filter(a => a.status !== 'completed'));
       setSwarmCases(MockDB.getOpenSwarmCases());
-      setStats(MockDB.getDoctorStats());
       setRevenueHistory(MockDB.getRevenueHistory());
+
+      try {
+        const [dashboard, cases] = await Promise.all([
+          roleApi.doctorDashboard(),
+          roleApi.doctorCases()
+        ]);
+
+        setAppointments((cases || []).map((c: any) => ({
+          id: c.id,
+          doctorName: user.name,
+          patientName: c.patientId,
+          date: new Date(c.createdAt).toLocaleDateString(),
+          time: new Date(c.createdAt).toLocaleTimeString(),
+          type: 'video',
+          status: c.status
+        })) as any);
+
+        setStats({
+          sessions: dashboard?.myCasesCount || 0,
+          patients: dashboard?.myCasesCount || 0,
+          revenue: dashboard?.earnings?.totalPaid || 0,
+          rating: 4.9
+        });
+      } catch {
+        setAppointments(MockDB.getAppointments().filter(a => a.status !== 'completed'));
+        setStats(MockDB.getDoctorStats());
+      }
     };
+
     loadData();
-    window.addEventListener('storage_update', loadData);
-    return () => window.removeEventListener('storage_update', loadData);
-  }, []);
+    window.addEventListener('storage_update', loadData as any);
+    return () => window.removeEventListener('storage_update', loadData as any);
+  }, [user.name]);
 
   const t = translations[lang];
 

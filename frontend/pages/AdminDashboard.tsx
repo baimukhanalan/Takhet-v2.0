@@ -16,6 +16,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell, LineChart, Line } from 'recharts';
 import { MockDB, PlatformRequest, PharmacyProduct, PartnerClinic, SystemConfig, AIChatMessage } from '../services/db';
 import { api } from '../services/api';
+import { roleApi } from '../services/roleApi';
 import TakhetLogo from '../components/Logo';
 
 const SYSTEM_HEALTH = [
@@ -41,6 +42,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const [complaints, setComplaints] = useState<any[]>([]);
   const [revenueHistory, setRevenueHistory] = useState<any[]>([]);
   const [sysConfig, setSysConfig] = useState<SystemConfig | null>(null);
+  const [backendDash, setBackendDash] = useState<any>(null);
   
   // Assistant States
   const [aiMessages, setAiMessages] = useState<AIChatMessage[]>([]);
@@ -49,10 +51,9 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const aiScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const load = () => {
+    const load = async () => {
       const db = MockDB.get();
       setRequests(db.platformRequests);
-      setDoctors(db.doctors);
       setPartners(db.partners);
       setMedicines(db.pharmacyProducts);
       setReviews(db.reviews);
@@ -60,10 +61,27 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
       setRevenueHistory(db.revenueHistory);
       setSysConfig(db.config);
       setAiMessages(db.aiChatHistory);
+
+      try {
+        const [dash, usersData, paymentsData] = await Promise.all([
+          roleApi.adminDashboard(),
+          roleApi.adminUsers(),
+          roleApi.adminPayments()
+        ]);
+        setBackendDash(dash);
+        setDoctors(db.doctors);
+        setRevenueHistory((paymentsData || []).slice(0, 7).map((p: any, i: number) => ({
+          name: `P${i + 1}`,
+          amount: Number(p.amount || 0),
+          users: usersData.length
+        })));
+      } catch {
+        setDoctors(db.doctors);
+      }
     };
     load();
-    window.addEventListener('storage_update', load);
-    return () => window.removeEventListener('storage_update', load);
+    window.addEventListener('storage_update', load as any);
+    return () => window.removeEventListener('storage_update', load as any);
   }, []);
 
   useEffect(() => {
@@ -134,9 +152,9 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
           <div className="space-y-6 lg:space-y-10 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
                {[
-                 { label: 'Пользователи', val: '14,204', change: '+12%', icon: Users, color: 'text-blue-500' },
-                 { label: 'Активные сессии', val: '842', change: '+5%', icon: Activity, color: 'text-green-500' },
-                 { label: 'Транзакции MTD', val: '₸42.5M', change: '+22%', icon: TrendingUp, color: 'text-amber-500' },
+                 { label: 'Пользователи', val: String(backendDash?.usersTotal ?? '14,204'), change: '+12%', icon: Users, color: 'text-blue-500' },
+                 { label: 'Активные кейсы', val: String(backendDash?.cases?.active ?? '842'), change: '+5%', icon: Activity, color: 'text-green-500' },
+                 { label: 'Транзакции MTD', val: `₸${Number(backendDash?.payments?.paidAmount ?? 42500000).toLocaleString()}`, change: '+22%', icon: TrendingUp, color: 'text-amber-500' },
                  { label: 'Uptime системы', val: '99.9%', change: 'Stable', icon: ShieldCheck, color: 'text-emerald-500' },
                ].map((s, i) => (
                  <div key={i} className={`${styles.card} p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] border hover:border-primary/20 transition-all group`}>
