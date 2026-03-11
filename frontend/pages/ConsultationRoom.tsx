@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { analyzeHealthData } from '../services/gemini';
 import { MockDB } from '../services/db';
+import { roleApi } from '../services/roleApi';
 
 const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
   const { id = 'default' } = useParams();
@@ -29,6 +30,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
   const [finalReport, setFinalReport] = useState<any>(null);
   const [isSigned, setIsSigned] = useState(false);
   const [patientInput, setPatientInput] = useState('');
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   useEffect(() => {
     const setup = async () => {
@@ -42,11 +44,35 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     return () => streamRef.current?.getTracks().forEach(t => t.stop());
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      MockDB.uploadFile(id, { name: file.name, type: file.type });
+    if (!file) return;
+
+    setIsUploadingFile(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = String(reader.result || '');
+          resolve(result.includes(',') ? result.split(',')[1] : result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      await roleApi.uploadMedicalFile({
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        base64
+      });
+
+      MockDB.uploadFile(id, { name: file.name, type: file.type, synced: true });
       setSessionFiles(MockDB.getFiles(id));
+    } catch {
+      MockDB.uploadFile(id, { name: file.name, type: file.type, synced: false });
+      setSessionFiles(MockDB.getFiles(id));
+    } finally {
+      setIsUploadingFile(false);
     }
   };
 
@@ -58,8 +84,16 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     } catch (e) { console.error(e); } finally { setIsGeneratingReport(false); }
   };
 
-  const handleSign = () => {
+  const handleSign = async () => {
     setIsSigned(true);
+    try {
+      if (isDoctor) {
+        await roleApi.doctorUpdateCaseStatus(id, 'closed');
+      }
+    } catch {
+      // keep local success state even if backend update fails
+    }
+
     MockDB.addRecord({
       title: `Консультация: ${new Date().toLocaleDateString()}`,
       date: new Date().toLocaleDateString(),
@@ -162,13 +196,13 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
                 <label className="flex flex-col items-center justify-center p-12 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[3rem] cursor-pointer hover:bg-slate-100 transition-all group">
                    <input type="file" className="hidden" onChange={handleFileUpload} />
                    <FilePlus className="w-8 h-8 text-primary group-hover:scale-110 transition-transform" />
-                   <span className="text-[10px] font-black text-slate-500 uppercase mt-4">Загрузить файл</span>
+                   <span className="text-[10px] font-black text-slate-500 uppercase mt-4">{isUploadingFile ? 'Загрузка...' : 'Загрузить файл'}</span>
                 </label>
                 <div className="grid gap-3">
                    {sessionFiles.map((f, i) => (
                       <div key={i} className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-4">
                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                         <span className="text-xs font-bold text-slate-700">{f.name}</span>
+                         <div className="flex flex-col"><span className="text-xs font-bold text-slate-700">{f.name}</span><span className="text-[9px] font-bold text-slate-400 uppercase">{f.synced ? 'Cloud synced' : 'Local only'}</span></div>
                       </div>
                    ))}
                 </div>
