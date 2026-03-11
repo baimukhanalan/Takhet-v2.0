@@ -4,6 +4,7 @@ import { BarChart3, TrendingUp, Calendar, ArrowUpRight, DollarSign, Users, Brief
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart as RePieChart, Pie, Cell } from 'recharts';
 import { MockDB } from '../services/db';
 import { translations, Language } from '../services/i18n';
+import { roleApi } from '../services/roleApi';
 
 const DATA_GROWTH = [
   { name: 'Янв', revenue: 4.2, consults: 120 },
@@ -24,14 +25,35 @@ const PIE_DATA = [
 const PartnerReports: React.FC = () => {
   const [lang, setLang] = useState<Language>(MockDB.getLang());
   const [period, setPeriod] = useState('30_days');
+  const [backendStats, setBackendStats] = useState<any>(null);
 
   useEffect(() => {
-    const handleUpdate = () => setLang(MockDB.getLang());
-    window.addEventListener('storage_update', handleUpdate);
-    return () => window.removeEventListener('storage_update', handleUpdate);
+    const handleUpdate = async () => {
+      setLang(MockDB.getLang());
+      try {
+        const [dashboard, payments] = await Promise.all([
+          roleApi.partnerDashboard(),
+          roleApi.partnerPayments()
+        ]);
+        setBackendStats({ dashboard, payments });
+      } catch {
+        setBackendStats(null);
+      }
+    };
+    handleUpdate();
+    window.addEventListener('storage_update', handleUpdate as any);
+    return () => window.removeEventListener('storage_update', handleUpdate as any);
   }, []);
 
   const t = translations[lang];
+
+  const totalPayments = backendStats?.payments?.reduce((acc: number, p: any) => acc + Number(p.amount || 0), 0) || 0;
+  const paymentCount = backendStats?.payments?.length || 0;
+  const avgCheck = paymentCount ? Math.round(totalPayments / paymentCount) : 14200;
+  const totalCases = backendStats?.dashboard?.analytics?.totalCases || 0;
+  const closedCases = backendStats?.dashboard?.analytics?.closedCases || 0;
+  const conversion = totalCases ? Math.min(100, Math.round((closedCases / totalCases) * 100)) : 72;
+
 
   return (
     <div className="max-w-7xl mx-auto space-y-10 pb-20">
@@ -61,7 +83,7 @@ const PartnerReports: React.FC = () => {
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Миллионы тенге (₸)</p>
                </div>
                <div className="bg-primary/5 text-primary px-5 py-2 rounded-2xl flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> <span className="font-black text-sm">+24%</span>
+                  <TrendingUp className="w-4 h-4" /> <span className="font-black text-sm">{backendStats ? `+${backendStats.dashboard?.analytics?.closedCases || 0}` : '+24%'}</span>
                </div>
             </div>
             <div className="h-80 w-full">
@@ -114,10 +136,10 @@ const PartnerReports: React.FC = () => {
          {/* Secondary Stats */}
          <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
-               { label: 'Средний чек', val: '14,200₸', icon: DollarSign, change: '+5%' },
-               { label: 'Конверсия записи', val: '72%', icon: Briefcase, change: '+12%' },
-               { label: 'Новые пациенты', val: '+240', icon: Users, change: '+18%' },
-               { label: 'LTV пациента', val: '48,000₸', icon: BarChart3, change: '+3%' },
+               { label: 'Средний чек', val: `${avgCheck.toLocaleString()}₸`, icon: DollarSign, change: '+5%' },
+               { label: 'Конверсия записи', val: `${conversion}%`, icon: Briefcase, change: '+12%' },
+               { label: 'Новые пациенты', val: `+${backendStats?.dashboard?.analytics?.activeCases || 240}`, icon: Users, change: '+18%' },
+               { label: 'LTV пациента', val: `${((backendStats?.dashboard?.paymentCount || 4) * 12000).toLocaleString()}₸`, icon: BarChart3, change: '+3%' },
             ].map((stat, i) => (
                <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-border shadow-sm group hover:border-primary/20 transition-all">
                   <div className="flex items-center justify-between mb-4">

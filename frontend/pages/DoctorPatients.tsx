@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, MoreVertical, Calendar, ChevronRight } from 'lucide-react';
 import { MockDB } from '../services/db';
+import { roleApi } from '../services/roleApi';
 import { Appointment } from '../types';
 
 const DoctorPatients: React.FC = () => {
@@ -9,10 +10,26 @@ const DoctorPatients: React.FC = () => {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    setAppointments(MockDB.getAppointments());
-    const handleUpdate = () => setAppointments(MockDB.getAppointments());
-    window.addEventListener('storage_update', handleUpdate);
-    return () => window.removeEventListener('storage_update', handleUpdate);
+    const handleUpdate = async () => {
+      try {
+        const data = await roleApi.doctorAppointments();
+        setAppointments((data || []).map((c: any) => ({
+          id: c.id,
+          patientName: c.patientId || 'Patient',
+          doctorName: c.doctorId || 'Doctor',
+          time: new Date(c.createdAt).toLocaleTimeString(),
+          date: new Date(c.createdAt).toLocaleDateString(),
+          status: c.status === 'closed' ? 'completed' : c.status === 'active' ? 'ongoing' : 'upcoming',
+          type: 'Video'
+        })) as Appointment[]);
+      } catch {
+        setAppointments(MockDB.getAppointments());
+      }
+    };
+
+    handleUpdate();
+    window.addEventListener('storage_update', handleUpdate as any);
+    return () => window.removeEventListener('storage_update', handleUpdate as any);
   }, []);
 
   // Get unique patients
