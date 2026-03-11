@@ -10,6 +10,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { MockDB, Notification } from '../services/db';
 import { translations, Language } from '../services/i18n';
+import { roleApi } from '../services/roleApi';
 
 const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
   const navigate = useNavigate();
@@ -18,16 +19,29 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [lang, setLang] = useState<Language>(MockDB.getLang());
+  const [remoteNotifications, setRemoteNotifications] = useState<any[]>([]);
+  const [remotePayments, setRemotePayments] = useState<any[]>([]);
 
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       setLang(MockDB.getLang());
       setFamilyMembers(MockDB.get().familyMembers);
       setActiveData(MockDB.getActiveMemberData());
+      try {
+        const [notifs, payments] = await Promise.all([
+          roleApi.patientNotifications(),
+          roleApi.patientPayments()
+        ]);
+        setRemoteNotifications(notifs || []);
+        setRemotePayments(payments || []);
+      } catch {
+        setRemoteNotifications([]);
+        setRemotePayments([]);
+      }
     };
     loadData();
-    window.addEventListener('storage_update', loadData);
-    return () => window.removeEventListener('storage_update', loadData);
+    window.addEventListener('storage_update', loadData as any);
+    return () => window.removeEventListener('storage_update', loadData as any);
   }, []);
 
   const t = translations[lang];
@@ -47,6 +61,7 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
   };
 
   const notifications = MockDB.getNotifications().filter(n => !n.isRead && n.type === 'invite');
+  const incomingAlertsCount = remoteNotifications.length + notifications.length;
 
   if (!activeData) return null;
 
@@ -97,7 +112,7 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
         </div>
         
         {/* INVITE NOTIFICATIONS AREA - ADDED OPTIONAL CHAINING */}
-        {notifications.length > 0 && (
+        {incomingAlertsCount > 0 && (
            <div className="w-full lg:w-auto bg-amber-50 border border-amber-100 p-6 rounded-[2.5rem] flex items-center justify-between gap-8 animate-in slide-in-from-right duration-700">
               <div className="flex items-center gap-4">
                  <div className="w-10 h-10 bg-amber-200 rounded-xl flex items-center justify-center text-amber-700"><Users className="w-6 h-6" /></div>
@@ -214,11 +229,11 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
               <div className="grid grid-cols-2 gap-4">
                  <div className="p-6 bg-slate-50 rounded-[2.5rem] text-center">
                     <p className="text-[8px] font-black text-slate-400 uppercase mb-2">Анализы</p>
-                    <p className="text-2xl font-black text-primary">14</p>
+                    <p className="text-2xl font-black text-primary">{remoteNotifications.length || 14}</p>
                  </div>
                  <div className="p-6 bg-slate-50 rounded-[2.5rem] text-center">
                     <p className="text-[8px] font-black text-slate-400 uppercase mb-2">Консультации</p>
-                    <p className="text-2xl font-black text-primary">5</p>
+                    <p className="text-2xl font-black text-primary">{remotePayments.length || 5}</p>
                  </div>
               </div>
 

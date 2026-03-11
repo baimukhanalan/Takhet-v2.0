@@ -6,6 +6,12 @@ export const roleApi = {
   doctorAppointments: () => api<any[]>('/doctor/appointments'),
   doctorQueue: () => api<any[]>('/doctor/cases/queue'),
   doctorEarnings: () => api<any>('/doctor/earnings'),
+  doctorProfile: () => api<any>('/doctor/profile'),
+  doctorUpdateProfile: (bio: string) =>
+    api<any>('/doctor/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ bio })
+    }),
   doctorUpdateCaseStatus: (id: string, status: 'active' | 'in_review' | 'closed') =>
     api<any>(`/doctor/case/${id}/status`, {
       method: 'PATCH',

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { MockDB } from '../services/db';
 import { translations, Language } from '../services/i18n';
+import { roleApi } from '../services/roleApi';
 
 const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
   const [formData, setFormData] = useState<any>({});
   const [docData, setDocData] = useState<Partial<Doctor>>({});
   const [admins, setAdmins] = useState<PartnerAdmin[]>([]);
+  const [apiInfo, setApiInfo] = useState<string>('');
 
   useEffect(() => {
     const p = MockDB.getProfile();
@@ -44,25 +46,36 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
     if (user.role === UserRole.DOCTOR) {
       const doc = MockDB.getDoctors().find(d => d.id === user.id) || MockDB.getDoctors()[0];
       if (doc) setDocData(doc);
+      roleApi.doctorProfile().then((remoteDoc) => {
+        setDocData((prev) => ({ ...prev, biography: remoteDoc?.bio || prev.biography }));
+      }).catch(() => undefined);
     }
     if (user.role === UserRole.PARTNER) {
       setAdmins(MockDB.getAdmins());
+      roleApi.partnerDoctors().then((list) => {
+        setApiInfo(`Backend doctors synced: ${list.length}`);
+      }).catch(() => setApiInfo('Backend sync unavailable'));
     }
   }, [user]);
 
   const t = translations[lang];
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
+    try {
       MockDB.updateProfile(formData);
       if (user.role === UserRole.DOCTOR) {
         MockDB.updateDoctor(docData.id!, docData);
+        await roleApi.doctorUpdateProfile(String(docData.biography || ''));
       }
+      setApiInfo('Сохранено (backend sync ok)');
+    } catch {
+      setApiInfo('Сохранено локально (backend недоступен)');
+    } finally {
       setIsSaving(false);
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 3000);
-    }, 800);
+    }
   };
 
   const handleLangChange = (l: Language) => {
@@ -79,7 +92,7 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
         edsVerified: true,
         edsKeyThumbprint: 'SHA256:' + Math.random().toString(16).slice(2, 10).toUpperCase()
       });
-      alert('ЭЦП успешно загружена и верифицирована. Теперь вы доступны в каталоге врачей.');
+      setApiInfo('ЭЦП локально добавлена. Для production нужен backend модуль подписей.');
     }
   };
 
@@ -252,6 +265,7 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
                         <CheckCircle2 className="w-4 h-4" /> <span className="text-[10px] font-black uppercase tracking-widest">OK</span>
                      </div>
                    )}
+                   {apiInfo && <p className="absolute bottom-2 right-10 text-[9px] font-black uppercase tracking-widest text-slate-400">{apiInfo}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
