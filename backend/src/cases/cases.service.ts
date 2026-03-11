@@ -118,4 +118,17 @@ export class CasesService {
     const inReview = await this.casesRepo.count({ where: { status: 'in_review' } });
     return { totalCases: total, activeCases: active, inReviewCases: inReview, closedCases: closed };
   }
+
+  findByStatus(status: 'open' | 'active' | 'in_review' | 'closed') {
+    return this.casesRepo.find({ where: { status }, order: { createdAt: 'DESC' } });
+  }
+
+  async reopenCase(caseId: string, actorId: string) {
+    const found = await this.casesRepo.findOne({ where: { id: caseId } });
+    if (!found) throw new NotFoundException('Case not found');
+    found.status = 'active';
+    const saved = await this.casesRepo.save(found);
+    await this.auditService.log('case.reopened', actorId, { caseId });
+    return saved;
+  }
 }

@@ -77,4 +77,13 @@ export class PaymentsService {
   getMyPayments(userId: string) {
     return this.paymentsRepo.find({ where: { userId }, order: { createdAt: 'DESC' } });
   }
+
+  async revenueSummary() {
+    const all = await this.paymentsRepo.find();
+    const paid = all.filter((p) => p.status === 'paid');
+    const failed = all.filter((p) => p.status === 'failed');
+    const pending = all.filter((p) => p.status === 'pending');
+    const paidAmount = paid.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    return { total: all.length, paid: paid.length, failed: failed.length, pending: pending.length, paidAmount, currency: 'KZT' };
+  }
 }

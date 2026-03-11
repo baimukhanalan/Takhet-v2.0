@@ -76,4 +76,14 @@ export class PartnerController {
   payments(@Req() req: any) {
     return this.paymentsService.getPartnerPayments(req.user.id);
   }
+
+  @Get('requests')
+  async requests() {
+    const [pendingDoctors, openCases] = await Promise.all([
+      this.doctorsService.listAll().then((list) => list.filter((d) => !d.active)),
+      this.casesService.findByStatus('open')
+    ]);
+
+    return { pendingDoctors, openCases };
+  }
 }

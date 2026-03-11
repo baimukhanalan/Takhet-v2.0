@@ -39,6 +39,7 @@ npm run dev
 - `GET /cases/my`
 - `PATCH /cases/:id/respond`
 - `PATCH /cases/:id/close`
+- `GET /doctor/dashboard`
 - `GET /doctor/cases`
 - `GET /doctor/case/:id`
 - `POST /doctor/case/:id/respond`
@@ -48,6 +49,7 @@ npm run dev
 - `GET /doctor/dashboard`
 - `GET /doctor/cases/queue`
 - `PATCH /doctor/case/:id/status`
+- `GET /doctor/appointments`
 - `GET /partner/doctors`
 - `POST /partner/doctors`
 - `PATCH /partner/doctors/:id/activate`
@@ -56,13 +58,16 @@ npm run dev
 - `GET /partner/patients`
 - `GET /partner/analytics`
 - `GET /partner/payments`
+- `GET /partner/requests`
 - `GET /admin/users`
 - `GET /admin/cases`
 - `GET /admin/payments`
 - `GET /admin/dashboard`
+- `GET /admin/kpis`
 - `GET /admin/audit`
 - `PATCH /admin/doctor/:id/approve`
 - `PATCH /admin/case/:id/assign/:doctorId`
+- `PATCH /admin/case/:id/reopen`
 - `POST /admin/notifications/broadcast`
 - `DELETE /admin/user/:id`
 - `POST /payments/create-intent` (Kaspi redirect intent)

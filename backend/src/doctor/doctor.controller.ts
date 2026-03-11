@@ -61,6 +61,11 @@ export class DoctorController {
     return this.casesService.findDoctorQueue();
   }
 
+  @Get('appointments')
+  appointments(@Req() req: any) {
+    return this.casesService.findDoctorCases(req.user.id);
+  }
+
   @Get('case/:id')
   caseById(@Req() req: any, @Param('id') id: string) {
     return this.casesService.findDoctorCaseById(req.user.id, id);

@@ -38,16 +38,26 @@ export class AdminController {
     const [users, cases, payments, doctors] = await Promise.all([
       this.usersService.findAll(),
       this.casesService.getDashboardStats(),
-      this.paymentsService.findAllPayments(),
+      this.paymentsService.revenueSummary(),
       this.doctorsService.getDoctorStats()
     ]);
 
     return {
       usersTotal: users.length,
       cases,
-      paymentsTotal: payments.length,
+      payments,
       doctors
     };
+  }
+
+  @Get('kpis')
+  async kpis() {
+    const [cases, payments, doctors] = await Promise.all([
+      this.casesService.getDashboardStats(),
+      this.paymentsService.revenueSummary(),
+      this.doctorsService.getDoctorStats()
+    ]);
+    return { cases, payments, doctors };
   }
 
   @Get('users')
@@ -78,6 +88,11 @@ export class AdminController {
   @Patch('case/:id/assign/:doctorId')
   assignCase(@Param('id') id: string, @Param('doctorId') doctorId: string, @Req() req: any) {
     return this.casesService.assignDoctor(id, doctorId, req.user.id);
+  }
+
+  @Patch('case/:id/reopen')
+  reopenCase(@Param('id') id: string, @Req() req: any) {
+    return this.casesService.reopenCase(id, req.user.id);
   }
 
   @Delete('user/:id')
