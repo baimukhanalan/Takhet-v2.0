@@ -18,6 +18,26 @@ const mapCaseToAppointment = (c: any): Appointment => ({
 const PatientAppointments: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
+  const createQuickCase = async () => {
+    const summary = window.prompt('Опишите кратко симптомы для создания кейса');
+    if (!summary) return;
+    try {
+      await roleApi.patientCreateCase(summary);
+      const cases = await roleApi.patientCases();
+      setAppointments((cases || []).map(mapCaseToAppointment));
+    } catch {
+      MockDB.addAppointment({
+        doctorName: 'Назначается',
+        patientName: 'Пациент',
+        date: new Date().toLocaleDateString(),
+        time: new Date().toLocaleTimeString(),
+        status: 'upcoming',
+        type: 'Video'
+      });
+      setAppointments(MockDB.getAppointments());
+    }
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -46,6 +66,9 @@ const PatientAppointments: React.FC = () => {
         <Link to="/doctors-search" className="px-10 py-5 bg-white border border-border rounded-[2rem] font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center gap-3">
           Новая запись <Plus className="w-4 h-4" />
         </Link>
+        <button onClick={createQuickCase} className="px-10 py-5 bg-primary text-white rounded-[2rem] font-black text-sm uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm">
+          Быстрый кейс
+        </button>
       </div>
 
       <section className="space-y-8">

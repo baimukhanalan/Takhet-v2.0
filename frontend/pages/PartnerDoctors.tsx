@@ -5,41 +5,43 @@ import { Doctor } from '../types';
 import { translations, Language } from '../services/i18n';
 import { roleApi } from '../services/roleApi';
 
+const toDoctorVm = (d: any): Doctor & { active?: boolean } => ({
+  id: d.id,
+  name: d.fullName || d.name,
+  specialty: d.specialty || 'General',
+  experience: 5,
+  rating: 4.8,
+  reputationPoints: 1000,
+  reviewsCount: 0,
+  pricePrimary: 0,
+  priceSecondary: 0,
+  education: [],
+  biography: d.bio || '',
+  accepts: 'Всех',
+  category: 'Первая',
+  avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400',
+  participatesInCommunity: false,
+  schedule: {},
+  edsVerified: Boolean(d.active),
+  active: Boolean(d.active)
+});
+
 const PartnerDoctors: React.FC = () => {
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [doctors, setDoctors] = useState<(Doctor & { active?: boolean })[]>([]);
   const [search, setSearch] = useState('');
   const [lang, setLang] = useState<Language>(MockDB.getLang());
 
-  useEffect(() => {
-    const load = async () => {
-      setLang(MockDB.getLang());
-      try {
-        const data = await roleApi.partnerDoctors();
-        setDoctors((data || []).map((d: any) => ({
-          id: d.id,
-          name: d.fullName,
-          specialty: d.specialty || 'General',
-          experience: 5,
-          rating: 4.8,
-          reputationPoints: 1000,
-          reviewsCount: 0,
-          pricePrimary: 0,
-          priceSecondary: 0,
-          education: [],
-          biography: d.bio || '',
-          accepts: 'Всех',
-          category: 'Первая',
-          avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400',
-          participatesInCommunity: false,
-          schedule: {},
-          edsVerified: Boolean(d.active),
-          active: d.active
-        })) as any);
-      } catch {
-        setDoctors(MockDB.getDoctors());
-      }
-    };
+  const load = async () => {
+    setLang(MockDB.getLang());
+    try {
+      const data = await roleApi.partnerDoctors();
+      setDoctors((data || []).map(toDoctorVm));
+    } catch {
+      setDoctors(MockDB.getDoctors() as any);
+    }
+  };
 
+  useEffect(() => {
     load();
     window.addEventListener('storage_update', load as any);
     return () => window.removeEventListener('storage_update', load as any);
@@ -52,22 +54,25 @@ const PartnerDoctors: React.FC = () => {
     doc.specialty.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleToggleActive = async (doctor: any) => {
+  const handleToggleActive = async (doctor: Doctor & { active?: boolean }) => {
     try {
       if (doctor.active) await roleApi.partnerDeactivateDoctor(doctor.id);
       else await roleApi.partnerActivateDoctor(doctor.id);
-      const refreshed = await roleApi.partnerDoctors();
-      setDoctors((refreshed || []).map((d: any) => ({
-        ...doctor,
-        id: d.id,
-        name: d.fullName,
-        specialty: d.specialty || 'General',
-        biography: d.bio || '',
-        edsVerified: Boolean(d.active),
-        active: d.active
-      })) as any);
+      await load();
     } catch {
-      // keep optimistic UI untouched on backend failure
+      setDoctors(prev => prev.map(d => (d.id === doctor.id ? { ...d, active: !doctor.active } : d)));
+    }
+  };
+
+  const handleCreateDoctor = async () => {
+    const fullName = window.prompt('ФИО врача');
+    if (!fullName) return;
+    const specialty = window.prompt('Специализация', 'General') || 'General';
+    try {
+      await roleApi.partnerCreateDoctor(fullName, specialty);
+      await load();
+    } catch {
+      // no-op in offline mode
     }
   };
 
@@ -82,7 +87,7 @@ const PartnerDoctors: React.FC = () => {
           <button className="px-6 py-3.5 bg-white border border-border rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
              <Filter className="w-4 h-4" /> Фильтр
           </button>
-          <button className="px-8 py-4 bg-primary text-white rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all">
+          <button onClick={handleCreateDoctor} className="px-8 py-4 bg-primary text-white rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all">
              <UserPlus className="w-5 h-5" /> Добавить врача
           </button>
         </div>
@@ -92,12 +97,10 @@ const PartnerDoctors: React.FC = () => {
          {[
            { label: 'Всего специалистов', val: doctors.length, icon: Users, color: 'text-primary bg-primary/5' },
            { label: 'Средний рейтинг', val: '4.85', icon: Star, color: 'text-amber-500 bg-amber-50' },
-           { label: 'Активных сессий', val: String(filtered.filter((d: any) => d.active).length), icon: TrendingUp, color: 'text-success bg-success/5' },
+           { label: 'Активных сессий', val: String(filtered.filter(d => d.active).length), icon: TrendingUp, color: 'text-success bg-success/5' },
          ].map((s, i) => (
            <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-border shadow-sm flex items-center gap-6">
-              <div className={`w-16 h-16 ${s.color} rounded-2xl flex items-center justify-center`}>
-                 <s.icon className="w-8 h-8" />
-              </div>
+              <div className={`w-16 h-16 ${s.color} rounded-2xl flex items-center justify-center`}><s.icon className="w-8 h-8" /></div>
               <div>
                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</p>
                  <p className="text-3xl font-black text-foreground mt-1">{s.val}</p>
@@ -109,63 +112,19 @@ const PartnerDoctors: React.FC = () => {
       <div className="bg-white rounded-[3rem] border border-border shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-50 flex items-center gap-4 bg-slate-50/30">
           <Search className="w-6 h-6 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по ФИО или специализации..."
-            className="bg-transparent border-none outline-none text-lg font-bold w-full"
-          />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск по ФИО или специализации..." className="bg-transparent border-none outline-none text-lg font-bold w-full" />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-             <thead className="bg-slate-50/50 border-b border-slate-100">
-                <tr>
-                   <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Врач</th>
-                   <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Статус</th>
-                   <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Эффективность</th>
-                   <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Репутация</th>
-                   <th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Действия</th>
-                </tr>
-             </thead>
+             <thead className="bg-slate-50/50 border-b border-slate-100"><tr><th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Врач</th><th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Статус</th><th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Эффективность</th><th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Репутация</th><th className="p-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Действия</th></tr></thead>
              <tbody className="divide-y divide-slate-50">
-                {filtered.map((doc: any) => (
+                {filtered.map(doc => (
                   <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
-                     <td className="p-6">
-                        <div className="flex items-center gap-5">
-                           <div className="relative">
-                              <img src={doc.avatar} className="w-14 h-14 rounded-2xl object-cover shadow-sm border-2 border-white" alt="" />
-                              <div className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full ${doc.active ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                           </div>
-                           <div>
-                              <h4 className="font-black text-foreground leading-tight">{doc.name}</h4>
-                              <p className="text-[10px] font-black text-primary uppercase mt-1 tracking-widest">{doc.specialty}</p>
-                           </div>
-                        </div>
-                     </td>
-                     <td className="p-6">
-                        <button
-                          onClick={() => handleToggleActive(doc)}
-                          className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border flex items-center w-fit gap-2 ${doc.active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
-                        >
-                           <UserCheck className="w-3 h-3" /> {doc.active ? 'В сети' : 'Неактивен'}
-                        </button>
-                     </td>
-                     <td className="p-6">
-                        <div className="flex items-center gap-2">
-                           <Star className="w-4 h-4 text-amber-500 fill-current" />
-                           <span className="font-black text-slate-700">{doc.rating}</span>
-                        </div>
-                     </td>
-                     <td className="p-6">
-                        <span className="font-black text-primary bg-primary/5 px-3 py-1 rounded-full text-xs">{doc.reputationPoints} pts</span>
-                     </td>
-                     <td className="p-6">
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button className="p-3 bg-white border border-slate-200 rounded-xl hover:text-primary hover:border-primary/20 transition-all shadow-sm"><Mail className="w-4 h-4" /></button>
-                           <button className="p-3 bg-white border border-slate-200 rounded-xl hover:text-primary hover:border-primary/20 transition-all shadow-sm"><MoreVertical className="w-4 h-4" /></button>
-                        </div>
-                     </td>
+                     <td className="p-6"><div className="flex items-center gap-5"><div className="relative"><img src={doc.avatar} className="w-14 h-14 rounded-2xl object-cover shadow-sm border-2 border-white" alt="" /><div className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full ${doc.active ? 'bg-emerald-500' : 'bg-slate-300'}`}></div></div><div><h4 className="font-black text-foreground leading-tight">{doc.name}</h4><p className="text-[10px] font-black text-primary uppercase mt-1 tracking-widest">{doc.specialty}</p></div></div></td>
+                     <td className="p-6"><button onClick={() => handleToggleActive(doc)} className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border flex items-center w-fit gap-2 ${doc.active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}><UserCheck className="w-3 h-3" /> {doc.active ? 'В сети' : 'Неактивен'}</button></td>
+                     <td className="p-6"><div className="flex items-center gap-2"><Star className="w-4 h-4 text-amber-500 fill-current" /><span className="font-black text-slate-700">{doc.rating}</span></div></td>
+                     <td className="p-6"><span className="font-black text-primary bg-primary/5 px-3 py-1 rounded-full text-xs">{doc.reputationPoints} pts</span></td>
+                     <td className="p-6"><div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button className="p-3 bg-white border border-slate-200 rounded-xl hover:text-primary hover:border-primary/20 transition-all shadow-sm"><Mail className="w-4 h-4" /></button><button className="p-3 bg-white border border-slate-200 rounded-xl hover:text-primary hover:border-primary/20 transition-all shadow-sm"><MoreVertical className="w-4 h-4" /></button></div></td>
                   </tr>
                 ))}
              </tbody>

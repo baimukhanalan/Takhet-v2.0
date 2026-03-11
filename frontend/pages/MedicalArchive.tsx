@@ -1,13 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FileText, ArrowUpRight, Search, Filter, Plus, Trash2, ShieldCheck, X, Archive, Download, Info, ChevronRight, Zap } from 'lucide-react';
 import { MedicalRecord } from '../types';
 import { MockDB } from '../services/db';
+import { roleApi } from '../services/roleApi';
 
 const MedicalArchive: React.FC = () => {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [search, setSearch] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const load = () => setRecords(MockDB.getRecords());
@@ -24,6 +26,41 @@ const MedicalArchive: React.FC = () => {
     }
   };
 
+
+  const handleFileUpload = async (file?: File) => {
+    if (!file) return;
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || '');
+        resolve(result.includes(',') ? result.split(',')[1] : result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    try {
+      await roleApi.uploadMedicalFile({ fileName: file.name, mimeType: file.type || 'application/octet-stream', base64 });
+      MockDB.addRecord({
+        title: file.name,
+        date: new Date().toISOString().slice(0, 10),
+        type: 'Analysis',
+        summary: 'Файл загружен и ожидает анализа.',
+        status: 'New'
+      });
+      setRecords(MockDB.getRecords());
+    } catch {
+      MockDB.addRecord({
+        title: file.name,
+        date: new Date().toISOString().slice(0, 10),
+        type: 'Analysis',
+        summary: 'Локальное сохранение (offline fallback).',
+        status: 'New'
+      });
+      setRecords(MockDB.getRecords());
+    }
+  };
+
   const filtered = records.filter(r => r.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
@@ -37,9 +74,10 @@ const MedicalArchive: React.FC = () => {
           <button className="px-6 py-3.5 bg-white border border-border rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
             <Filter className="w-4 h-4" /> Фильтр
           </button>
-          <button className="px-6 py-3.5 bg-primary text-white rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+          <button onClick={() => fileInputRef.current?.click()} className="px-6 py-3.5 bg-primary text-white rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95">
             <Plus className="w-4 h-4" /> Добавить файл
           </button>
+          <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => handleFileUpload(e.target.files?.[0])} />
         </div>
       </div>
 

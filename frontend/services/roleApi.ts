@@ -33,6 +33,12 @@ export const roleApi = {
   patientNotifications: () => api<any[]>('/patient/notifications'),
   patientPayments: () => api<any[]>('/patient/payments'),
 
+  uploadMedicalFile: (payload: { fileName: string; mimeType: string; base64: string }) =>
+    api<{ path: string; bucket: string }>('/files/upload', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+
   adminDashboard: () => api<any>('/admin/dashboard'),
   adminKpis: () => api<any>('/admin/kpis'),
   adminCases: () => api<any[]>('/admin/cases'),

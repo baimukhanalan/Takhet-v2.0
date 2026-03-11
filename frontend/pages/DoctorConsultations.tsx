@@ -18,20 +18,29 @@ const mapCaseToAppointment = (c: any): Appointment => ({
 const DoctorConsultations: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const doctorAppointments = await roleApi.doctorAppointments();
-        setAppointments((doctorAppointments || []).map(mapCaseToAppointment));
-      } catch {
-        setAppointments(MockDB.getAppointments());
-      }
-    };
+  const load = async () => {
+    try {
+      const doctorAppointments = await roleApi.doctorAppointments();
+      setAppointments((doctorAppointments || []).map(mapCaseToAppointment));
+    } catch {
+      setAppointments(MockDB.getAppointments());
+    }
+  };
 
+  useEffect(() => {
     load();
     window.addEventListener('storage_update', load as any);
     return () => window.removeEventListener('storage_update', load as any);
   }, []);
+
+  const handleComplete = async (id: string) => {
+    try {
+      await roleApi.doctorUpdateCaseStatus(id, 'closed');
+      await load();
+    } catch {
+      setAppointments(prev => prev.map(a => (a.id === id ? { ...a, status: 'completed' } : a)));
+    }
+  };
 
   const upcoming = appointments.filter(app => app.status !== 'completed' && app.status !== 'cancelled');
   const past = appointments.filter(app => app.status === 'completed');
@@ -70,7 +79,7 @@ const DoctorConsultations: React.FC = () => {
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <Link
                   to={`/consultation/${app.id}`}
-                  className={`flex-1 md:flex-none px-12 py-5 rounded-[2rem] font-black text-sm transition-all flex items-center justify-center gap-3 ${
+                  className={`flex-1 md:flex-none px-8 py-5 rounded-[2rem] font-black text-sm transition-all flex items-center justify-center gap-3 ${
                     app.status === 'ongoing'
                       ? 'bg-red-600 text-white shadow-2xl shadow-red-200 hover:bg-red-700 animate-pulse'
                       : 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-105'
@@ -78,6 +87,9 @@ const DoctorConsultations: React.FC = () => {
                 >
                   {app.status === 'ongoing' ? 'Продолжить' : 'Начать прием'} <ChevronRight className="w-5 h-5" />
                 </Link>
+                <button onClick={() => handleComplete(app.id)} className="px-8 py-5 rounded-[2rem] border border-border font-black text-sm hover:bg-slate-50">
+                  Завершить
+                </button>
               </div>
             </div>
           )) : (
