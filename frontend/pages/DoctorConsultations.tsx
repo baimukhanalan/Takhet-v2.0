@@ -1,19 +1,36 @@
-
 import React, { useState, useEffect } from 'react';
-// Added Activity to the imports to resolve the ReferenceError on line 99
-import { Video, Clock, CheckCircle2, ChevronRight, User, Calendar, FileText, Settings, Plus, Key, ShieldCheck, Download, Activity } from 'lucide-react';
+import { Video, Clock, CheckCircle2, ChevronRight, User, Calendar, Settings, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MockDB } from '../services/db';
 import { Appointment } from '../types';
+import { roleApi } from '../services/roleApi';
+
+const mapCaseToAppointment = (c: any): Appointment => ({
+  id: c.id,
+  doctorName: c.doctorId || 'Doctor',
+  patientName: c.patientId || 'Patient',
+  date: new Date(c.createdAt).toLocaleDateString(),
+  time: new Date(c.createdAt).toLocaleTimeString(),
+  type: 'Video',
+  status: c.status === 'closed' ? 'completed' : c.status === 'active' ? 'ongoing' : 'upcoming'
+});
 
 const DoctorConsultations: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
-    const load = () => setAppointments(MockDB.getAppointments());
+    const load = async () => {
+      try {
+        const doctorAppointments = await roleApi.doctorAppointments();
+        setAppointments((doctorAppointments || []).map(mapCaseToAppointment));
+      } catch {
+        setAppointments(MockDB.getAppointments());
+      }
+    };
+
     load();
-    window.addEventListener('storage_update', load);
-    return () => window.removeEventListener('storage_update', load);
+    window.addEventListener('storage_update', load as any);
+    return () => window.removeEventListener('storage_update', load as any);
   }, []);
 
   const upcoming = appointments.filter(app => app.status !== 'completed' && app.status !== 'cancelled');
@@ -51,73 +68,47 @@ const DoctorConsultations: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-4 w-full md:w-auto">
-                <Link 
+                <Link
                   to={`/consultation/${app.id}`}
                   className={`flex-1 md:flex-none px-12 py-5 rounded-[2rem] font-black text-sm transition-all flex items-center justify-center gap-3 ${
-                    app.status === 'ongoing' 
-                      ? 'bg-red-600 text-white shadow-2xl shadow-red-200 hover:bg-red-700 animate-pulse' 
+                    app.status === 'ongoing'
+                      ? 'bg-red-600 text-white shadow-2xl shadow-red-200 hover:bg-red-700 animate-pulse'
                       : 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-105'
                   }`}
                 >
                   {app.status === 'ongoing' ? 'Продолжить' : 'Начать прием'} <ChevronRight className="w-5 h-5" />
                 </Link>
-                <button className="px-8 py-5 border border-border rounded-[2rem] font-black text-sm hover:bg-slate-50 transition-all">
-                  Карта
-                </button>
               </div>
             </div>
           )) : (
-             <div className="py-24 bg-slate-50/50 rounded-[4rem] border-4 border-dashed border-slate-100 text-center opacity-30">
-               <p className="font-black text-xl uppercase tracking-widest">Записей на сегодня нет</p>
-             </div>
+            <div className="py-24 bg-slate-50/50 rounded-[4rem] border-4 border-dashed border-slate-100 text-center opacity-30">
+              <p className="font-black text-xl uppercase tracking-widest">Записей на сегодня нет</p>
+            </div>
           )}
         </div>
       </section>
 
-      {/* ARCHIVE SECTION */}
       <section className="space-y-8">
         <div className="flex items-center justify-between px-6">
-           <h2 className="text-xl font-black uppercase tracking-[0.3em] text-muted-foreground">Архив консультаций</h2>
-           <span className="text-[10px] font-black uppercase tracking-widest text-success bg-success/5 px-3 py-1 rounded-lg border border-success/10 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3" /> Все отчеты подписаны ЭЦП
-           </span>
+          <h2 className="text-xl font-black uppercase tracking-[0.3em] text-muted-foreground">Архив консультаций</h2>
+          <span className="text-[10px] font-black uppercase tracking-widest text-success bg-success/5 px-3 py-1 rounded-lg border border-success/10 flex items-center gap-2">
+            <ShieldCheck className="w-3 h-3" /> Все отчеты подписаны ЭЦП
+          </span>
         </div>
         <div className="grid gap-4">
           {past.length > 0 ? past.map(app => (
-            <div key={app.id} className="bg-slate-50 p-8 rounded-[3.5rem] border border-border flex flex-col md:flex-row items-center justify-between gap-8 group hover:bg-white transition-all">
+            <div key={app.id} className="bg-slate-50 p-8 rounded-[3.5rem] border border-border flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="flex items-center gap-8">
                 <div className="w-16 h-16 rounded-[1.5rem] bg-white text-emerald-500 flex items-center justify-center shadow-sm">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
                 <div>
                   <h3 className="font-black text-2xl text-foreground tracking-tight">{app.patientName}</h3>
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{app.date}</p>
-                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        <Clock className="w-3 h-3 text-primary" /> Конец: {app.completedAt || '14:25'}
-                     </div>
-                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        <Activity className="w-3 h-3 text-primary" /> Длит.: {app.durationMinutes || 25} мин
-                     </div>
-                  </div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{app.date} • {app.time}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <div className="px-5 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
-                   <Key className="w-4 h-4 text-emerald-600" />
-                   <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Подписано ЭЦП</span>
-                </div>
-                <button className="p-4 bg-white border border-border rounded-2xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
-                   <Download className="w-5 h-5" />
-                </button>
-                <button className="px-6 py-4 bg-white border border-border rounded-2xl font-black text-[10px] uppercase tracking-widest hover:shadow-lg transition-all">
-                  Детали
-                </button>
               </div>
             </div>
-          )) : (
-             <div className="text-center py-20 opacity-30 font-black uppercase tracking-[0.4em]">История приемов пуста</div>
-          )}
+          )) : <div className="text-center py-20 opacity-30 font-black uppercase tracking-[0.4em]">Архив пуст</div>}
         </div>
       </section>
     </div>
