@@ -10,4 +10,8 @@ export class AuditService {
   log(event: string, actorId: string, payload: Record<string, unknown>) {
     return this.auditRepo.save(this.auditRepo.create({ event, actorId, payload }));
   }
+
+  recent(limit = 100) {
+    return this.auditRepo.find({ order: { createdAt: 'DESC' }, take: limit });
+  }
 }

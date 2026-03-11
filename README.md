@@ -45,15 +45,25 @@ npm run dev
 - `GET /doctor/profile`
 - `PATCH /doctor/profile`
 - `GET /doctor/earnings`
+- `GET /doctor/dashboard`
+- `GET /doctor/cases/queue`
+- `PATCH /doctor/case/:id/status`
 - `GET /partner/doctors`
 - `POST /partner/doctors`
+- `PATCH /partner/doctors/:id/activate`
+- `PATCH /partner/doctors/:id/deactivate`
+- `GET /partner/dashboard`
 - `GET /partner/patients`
 - `GET /partner/analytics`
 - `GET /partner/payments`
 - `GET /admin/users`
 - `GET /admin/cases`
 - `GET /admin/payments`
+- `GET /admin/dashboard`
+- `GET /admin/audit`
 - `PATCH /admin/doctor/:id/approve`
+- `PATCH /admin/case/:id/assign/:doctorId`
+- `POST /admin/notifications/broadcast`
 - `DELETE /admin/user/:id`
 - `POST /payments/create-intent` (Kaspi redirect intent)
 - `POST /payments/webhook` (Kaspi callback + signature verify)

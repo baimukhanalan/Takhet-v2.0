@@ -24,7 +24,7 @@ create table if not exists patient_medications (id uuid primary key default uuid
 create table if not exists patient_family_history (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), condition text, relation text);
 
 -- DOCTORS
-create table if not exists doctors (id uuid primary key default uuid_generate_v4(), full_name text not null, specialty text not null, active boolean default true, created_at timestamptz default now());
+create table if not exists doctors (id uuid primary key default uuid_generate_v4(), full_name text not null, specialty text not null, active boolean default true, bio text default '', approved_by uuid, created_at timestamptz default now(), updated_at timestamptz default now());
 create table if not exists doctor_profiles (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), bio text, experience_years int);
 create table if not exists doctor_specialties (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), code text, label text);
 create table if not exists doctor_licenses (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), license_number text, valid_until date);

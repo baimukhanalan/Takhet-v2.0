@@ -27,8 +27,21 @@ export class CasesService {
     return this.casesRepo.find({ order: { createdAt: 'DESC' } });
   }
 
+  async getDashboardStats() {
+    const total = await this.casesRepo.count();
+    const open = await this.casesRepo.count({ where: { status: 'open' } });
+    const active = await this.casesRepo.count({ where: { status: 'active' } });
+    const inReview = await this.casesRepo.count({ where: { status: 'in_review' } });
+    const closed = await this.casesRepo.count({ where: { status: 'closed' } });
+    return { total, open, active, inReview, closed };
+  }
+
   findDoctorCases(doctorId: string) {
     return this.casesRepo.find({ where: [{ doctorId }, { status: 'active' }], order: { createdAt: 'DESC' } });
+  }
+
+  findDoctorQueue() {
+    return this.casesRepo.find({ where: [{ status: 'active' }, { status: 'open' }], order: { createdAt: 'DESC' } });
   }
 
   async findDoctorCaseById(doctorId: string, caseId: string) {
@@ -47,6 +60,25 @@ export class CasesService {
     await this.auditService.log('case.responded', doctorId, { caseId, response });
     await this.notificationsService.create(found.patientId, 'Ответ врача', 'Врач добавил ответ по вашему кейсу.');
     return updated;
+  }
+
+  async setDoctorCaseStatus(caseId: string, doctorId: string, status: 'active' | 'in_review' | 'closed') {
+    const found = await this.findDoctorCaseById(doctorId, caseId);
+    found.doctorId = doctorId;
+    found.status = status;
+    const updated = await this.casesRepo.save(found);
+    await this.auditService.log('case.status.changed', doctorId, { caseId, status });
+    return updated;
+  }
+
+  async assignDoctor(caseId: string, doctorId: string, actorId: string) {
+    const found = await this.casesRepo.findOne({ where: { id: caseId } });
+    if (!found) throw new NotFoundException('Case not found');
+    found.doctorId = doctorId;
+    found.status = 'active';
+    const saved = await this.casesRepo.save(found);
+    await this.auditService.log('case.assigned', actorId, { caseId, doctorId });
+    return saved;
   }
 
   async doctorRespond(caseId: string, doctorId: string, status: 'in_review' | 'closed') {
@@ -83,6 +115,7 @@ export class CasesService {
     const total = await this.casesRepo.count();
     const active = await this.casesRepo.count({ where: { status: 'active' } });
     const closed = await this.casesRepo.count({ where: { status: 'closed' } });
-    return { totalCases: total, activeCases: active, closedCases: closed };
+    const inReview = await this.casesRepo.count({ where: { status: 'in_review' } });
+    return { totalCases: total, activeCases: active, inReviewCases: inReview, closedCases: closed };
   }
 }

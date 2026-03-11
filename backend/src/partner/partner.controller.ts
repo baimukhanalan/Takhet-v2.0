@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { IsString, MinLength } from 'class-validator';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -27,14 +27,39 @@ export class PartnerController {
     private readonly paymentsService: PaymentsService
   ) {}
 
+  @Get('dashboard')
+  async dashboard(@Req() req: any) {
+    const [analytics, doctorStats, payments] = await Promise.all([
+      this.casesService.partnerAnalytics(),
+      this.doctorsService.getDoctorStats(),
+      this.paymentsService.getPartnerPayments(req.user.id)
+    ]);
+
+    return {
+      analytics,
+      doctorStats,
+      paymentCount: payments.length
+    };
+  }
+
   @Get('doctors')
   doctors() {
-    return this.doctorsService.listActive();
+    return this.doctorsService.listAll();
   }
 
   @Post('doctors')
   createDoctor(@Body() dto: CreatePartnerDoctorDto) {
     return this.doctorsService.createPartnerDoctor(dto.fullName, dto.specialty);
+  }
+
+  @Patch('doctors/:id/activate')
+  activateDoctor(@Param('id') id: string, @Req() req: any) {
+    return this.doctorsService.setDoctorActive(id, true, req.user.id);
+  }
+
+  @Patch('doctors/:id/deactivate')
+  deactivateDoctor(@Param('id') id: string, @Req() req: any) {
+    return this.doctorsService.setDoctorActive(id, false, req.user.id);
   }
 
   @Get('patients')
