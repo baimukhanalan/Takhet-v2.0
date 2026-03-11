@@ -20,10 +20,10 @@ export class AuthService {
 
   login(email: string, password: string, role: LoginRole) {
     const credentials: Record<LoginRole, { email: string; password: string; userId: string }> = {
-      admin: { email: env.appAdminEmail, password: env.appAdminPassword, userId: 'admin-user-id' },
-      doctor: { email: env.appDoctorEmail, password: env.appDoctorPassword, userId: 'doctor-user-id' },
-      partner: { email: env.appPartnerEmail, password: env.appPartnerPassword, userId: 'partner-user-id' },
-      patient: { email: env.appPatientEmail, password: env.appPatientPassword, userId: 'patient-user-id' }
+      admin: { email: env.appAdminEmail, password: env.appAdminPassword, userId: '11111111-1111-1111-1111-111111111111' },
+      doctor: { email: env.appDoctorEmail, password: env.appDoctorPassword, userId: '22222222-2222-2222-2222-222222222222' },
+      partner: { email: env.appPartnerEmail, password: env.appPartnerPassword, userId: '33333333-3333-3333-3333-333333333333' },
+      patient: { email: env.appPatientEmail, password: env.appPatientPassword, userId: '44444444-4444-4444-4444-444444444444' }
     };
 
     const allowed = credentials[role];

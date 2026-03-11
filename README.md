@@ -59,6 +59,10 @@ npm run dev
 - `POST /payments/webhook` (Kaspi callback + signature verify)
 - `POST /files/upload`
 - `GET /users`
+- `GET /patient/cases`
+- `POST /patient/cases`
+- `GET /patient/notifications`
+- `GET /patient/payments`
 
 ## 4) База данных
 
@@ -67,6 +71,14 @@ npm run dev
 - `backend/sql/schema.sql`
 
 Запуск: вставить SQL в Supabase SQL Editor и выполнить.
+
+После RLS обязательно выполните seed:
+
+```sql
+-- выполнить backend/sql/seed_users.sql
+```
+
+Он создаёт стартовых пользователей: `admin`, `doctor`, `partner`, `patient`.
 
 ## 5) Что нужно от владельца проекта для production
 

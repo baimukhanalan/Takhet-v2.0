@@ -17,6 +17,7 @@ import { DoctorModule } from './doctor/doctor.module';
 import { PartnerModule } from './partner/partner.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PatientModule } from './patient/patient.module';
 
 @Module({
   imports: [
@@ -40,7 +41,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     NotificationsModule,
     DoctorModule,
     PartnerModule,
-    AdminModule
+    AdminModule,
+    PatientModule
   ],
   providers: [
     {

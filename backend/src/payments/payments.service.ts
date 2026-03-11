@@ -73,4 +73,8 @@ export class PaymentsService {
   getPartnerPayments(partnerId: string) {
     return this.paymentsRepo.find({ where: { userId: partnerId }, order: { createdAt: 'DESC' } });
   }
+
+  getMyPayments(userId: string) {
+    return this.paymentsRepo.find({ where: { userId }, order: { createdAt: 'DESC' } });
+  }
 }
