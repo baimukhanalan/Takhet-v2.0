@@ -1,20 +1,123 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Takhet+ Workspace (Frontend + Backend)
 
-# Run and deploy your AI Studio app
+Проект разделён на:
 
-This contains everything you need to run your app locally.
+- `frontend/` — React/Vite приложение.
+- `backend/` — NestJS API (MVP домены: auth, users, triage, cases, doctors, payments, files).
 
-View your app in AI Studio: https://ai.studio/apps/drive/1j2F1oVJQ1kDg8AOfy2LqBX5kJrP0EUdJ
+## 1) Быстрый запуск backend
 
-## Run Locally
+```bash
+npm config set registry https://registry.npmjs.org/
+npm cache clean --force
 
-**Prerequisites:**  Node.js
+cd backend
+cp .env.example .env
+npm install
+npm run start:dev
+```
+
+Ожидаемый лог:
+
+```bash
+Server started on port 3000
+```
+
+## 2) Быстрый запуск frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## 3) Ключевые API (MVP)
+
+- `POST /auth/login`
+- `POST /triage` (JWT + rate limit)
+- `POST /cases`
+- `GET /cases/my`
+- `PATCH /cases/:id/respond`
+- `PATCH /cases/:id/close`
+- `GET /doctor/dashboard`
+- `GET /doctor/cases`
+- `GET /doctor/case/:id`
+- `POST /doctor/case/:id/respond`
+- `GET /doctor/profile`
+- `PATCH /doctor/profile`
+- `GET /doctor/earnings`
+- `GET /doctor/dashboard`
+- `GET /doctor/cases/queue`
+- `PATCH /doctor/case/:id/status`
+- `GET /doctor/appointments`
+- `GET /partner/doctors`
+- `POST /partner/doctors`
+- `PATCH /partner/doctors/:id/activate`
+- `PATCH /partner/doctors/:id/deactivate`
+- `GET /partner/dashboard`
+- `GET /partner/patients`
+- `GET /partner/analytics`
+- `GET /partner/payments`
+- `GET /partner/requests`
+- `GET /admin/users`
+- `GET /admin/cases`
+- `GET /admin/payments`
+- `GET /admin/dashboard`
+- `GET /admin/kpis`
+- `GET /admin/audit`
+- `PATCH /admin/doctor/:id/approve`
+- `PATCH /admin/case/:id/assign/:doctorId`
+- `PATCH /admin/case/:id/reopen`
+- `POST /admin/notifications/broadcast`
+- `DELETE /admin/user/:id`
+- `POST /payments/create-intent` (Kaspi redirect intent)
+- `POST /payments/webhook` (Kaspi callback + signature verify)
+- `POST /files/upload`
+- `GET /users`
+- `GET /patient/cases`
+- `POST /patient/cases`
+- `GET /patient/notifications`
+- `GET /patient/payments`
+
+## 4) База данных
+
+Полная SQL схема (MVP + расширение до health-tech платформы) находится в:
+
+- `backend/sql/schema.sql`
+
+Запуск: вставить SQL в Supabase SQL Editor и выполнить.
+
+После RLS обязательно выполните seed:
+
+```sql
+-- выполнить backend/sql/seed_users.sql
+```
+
+Он создаёт стартовых пользователей: `admin`, `doctor`, `partner`, `patient`.
+
+## 5) Что нужно от владельца проекта для production
+
+1. Создать Supabase проект и передать реальные значения:
+   - `DATABASE_URL`
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_KEY`
+   - `SUPABASE_JWT_SECRET`
+2. Создать и выдать `GEMINI_API_KEY`.
+3. Подписать договор с Kaspi Pay и получить:
+   - `KASPI_MERCHANT_ID`
+   - `KASPI_SECRET_KEY`
+   - webhook/callback URL в публичном домене.
+4. Настроить публичный HTTPS домен для webhook-ов Kaspi.
+5. Для полностью реальной авторизации заполнить:
+   - `APP_ADMIN_EMAIL` / `APP_ADMIN_PASSWORD`
+   - `APP_DOCTOR_EMAIL` / `APP_DOCTOR_PASSWORD`
+   - `APP_PARTNER_EMAIL` / `APP_PARTNER_PASSWORD`
+   - `APP_PATIENT_EMAIL` / `APP_PATIENT_PASSWORD`
+   - `APP_JWT_SECRET`
+
+Без этих данных backend работает как технический каркас, но не как полнофункциональная production-система.
 
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Security note
+
+Если вы публиковали `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET` или `GEMINI_API_KEY` в открытом чате/репозитории, считайте их скомпрометированными и обязательно **ротируйте** в провайдерах.
