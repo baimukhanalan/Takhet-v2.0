@@ -1,78 +1,68 @@
-# Takhet+ MVP Execution Status (updated with your checklist)
+# Takhet+ MVP Execution Status (final payout + clinic scope)
 
-## Что выполнено сейчас
+## Выполнено
 
-1. **LiveKit config внесён в проект**
-- В `.env.example` добавлены:
-  - `LIVEKIT_URL=wss://tahet-mjsltgnt.livekit.cloud`
-  - `LIVEKIT_API_KEY=APIsEdHJVc24QwT`
-  - `LIVEKIT_PROJECT_ID=p_28qk0bhcpr2`
-  - `LIVEKIT_SIP_URI=sip:28qk0bhcpr2.sip.livekit.cloud`
-- Добавлен `POST /rtc/token` (и также `POST /rtc/session/token`) для выдачи LiveKit-compatible токена.
+1. **LiveKit keys подставлены в env-example**
+- `LIVEKIT_URL=wss://tahet-mjsltgnt.livekit.cloud`
+- `LIVEKIT_API_KEY=APIsEdHJVc24QwT`
+- `LIVEKIT_API_SECRET=sheOj02LrDiC0yiTVOS1wbIBfLSq8T6eBCfuya8gqMTB`
+- Project/SIP metadata добавлены.
 
-2. **PDF generation усилен**
-- Реальная генерация PDF в `backend/storage/...`.
-- Если Puppeteer доступен, используется он.
-- Если Puppeteer недоступен, работает встроенный PDF fallback (чтобы контур не ломался).
+2. **Финальная payout-модель внедрена (70/10/20)**
+- doctor = 70%
+- clinic_partner = 10%
+- platform = 20%
 
-3. **RLS + policies добавлены в SQL**
-- Включение RLS для таблиц (users/patients/doctors/cases/consultations/medical_records/documents/payments/notifications).
-- Добавлены policy-блоки `users_self`, `patient_records`, `patient_cases`, `doctor_cases`, `document_access`.
-- Добавлены storage buckets/policies для `medical-files`, `documents-draft`, `documents-signed`.
+3. **Правило создания earning внедрено**
+- earning создаётся только когда:
+  - `payment.status = paid`
+  - и `case.status IN (consultation_finished, closed)`
+- если консультация ещё не завершена, earning откладывается.
 
-4. **PII encryption (AES-256) добавлен в backend**
-- Добавлен `PiiCryptoService` (AES-256-CBC на backend).
-- Добавлены endpoints пациента:
-  - `POST /patient/pii` (сохранение phone/insurance/policy_number в зашифрованном виде)
-  - `GET /patient/pii` (чтение и дешифровка)
+4. **Hold period внедрён**
+- `hold_until = now() + 7 days`
+- стартовый статус earning: `hold`
 
-5. **Ledger baseline сохранён**
-- Комиссия 30/70: `platform_commission` / `doctor_earnings` при `payment=paid`.
+5. **Clinic scope добавлен**
+- добавлена таблица `clinics`
+- `doctors.clinic_id`
+- `cases.clinic_id`
+- `payments.clinic_id`
+- добавлена таблица `clinic_commission`
 
-6. **Observability env readiness**
-- Добавлен `SENTRY_DSN` в env config/example.
-
----
-
-## Что не получилось (конкретно)
-
-1. **LIVEKIT_API_SECRET отсутствует во входных данных**
-- Ключ API есть, но секрет не предоставлен.
-- Токен endpoint работает только как контракт до подстановки секрета.
-
-2. **Установка Puppeteer в этом окружении заблокирована**
-- `npm install` получает `403 Forbidden` по policy registry.
-- Поэтому оставлен runtime fallback PDF-движок, и динамический import Puppeteer.
-
-3. **NCALayer / НУЦ РК не интегрирован физически**
-- Нет SDK/драйвера/доступа к рабочему контуру в этом окружении.
-- Нужны входные данные провайдера и тестовый стенд подписи.
-
-4. **RLS/storage SQL не применяются автоматически в вашем Supabase**
-- SQL подготовлен в `schema.sql`, но фактически должен быть выполнен в SQL Editor/migrations вашей среды.
+6. **Антифрод baseline усилен**
+- `provider_payment_id UNIQUE` (already)
+- webhook idempotent (`status=paid` повторно не обрабатывается)
+- earning создаётся один раз на case (`ux_doctor_earnings_case`)
+- payout duplicate baseline (`ux_payout_doctor_period`)
 
 ---
 
-## Что требуется от вас конкретно
+## Что не получилось
 
-1. `LIVEKIT_API_SECRET` (обязательно).
-2. Решение по ЭЦП провайдеру: NCALayer/НУЦ РК + формат CMS/PKCS7.
-3. Доступ к staging Supabase для применения RLS/storage policies.
-4. Подтверждение финальной RLS матрицы ролей (patient/doctor/partner/admin).
-5. Подтверждение production payout-правил (кроме 30/70 split).
+1. Полноценная интеграция NCALayer/НУЦ РК всё ещё не закрыта
+- нужен отдельный контур подписи PKCS7 и верификации.
+
+2. Автоматический payout-джоб (hold -> ready_for_payout -> paid_out) пока не добавлен
+- нужны cron/worker и процессинг выплат.
+
+3. Puppeteer install в окружении блокируется registry policy (403)
+- остаётся рабочий runtime fallback PDF engine.
 
 ---
 
-## Что можно сделать без вашего участия для прод-видео
+## Что ещё требуется от вас
 
-1. Доделать полноценный `LiveKitAdapterModule`:
-   - retries, token TTL policies, room naming, join rules.
-2. Добавить guardrails:
-   - таймауты сессии,
-   - participant authorization,
-   - авто-завершение и cleanup.
-3. Добавить RTC метрики и алерты:
-   - started/failed/ended,
-   - ICE/offer/answer error buckets.
-4. Добавить e2e smoke tests только для signaling/token API.
-5. Добавить idempotency keys для критических rtc endpoints.
+1. Подтвердить clinic-партнёра для каждого врача в staging/prod (маппинг doctors -> clinics).
+2. Подтвердить финальный процесс payout (кто запускает, как часто, статус paid_out/reversed).
+3. Дать параметры реального ЭЦП провайдера (NCALayer) и тестовый стенд.
+4. Подтвердить матрицу RLS для partner (clinic-scoped доступ) на production данных.
+
+---
+
+## Что можно сделать без вашего участия
+
+1. Добавить cron-процесс перевода `hold -> ready_for_payout`.
+2. Добавить endpoint batch payout generation.
+3. Добавить partner analytics по clinic commission.
+4. Добавить e2e тесты на payout и antifraud правила.

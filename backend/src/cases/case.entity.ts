@@ -20,6 +20,9 @@ export class CaseEntity {
   @Column({ name: 'doctor_id', nullable: true })
   doctorId!: string | null;
 
+  @Column({ name: 'clinic_id', nullable: true })
+  clinicId!: string | null;
+
   @Column({ default: 'created' })
   status!: CaseStatus;
 

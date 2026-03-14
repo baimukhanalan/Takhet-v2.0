@@ -18,8 +18,17 @@ export class PaymentsService {
   ) {}
 
   async createIntent(userId: string, amount: number, caseId: string) {
+    const linkedCase = await this.casesService.findById(caseId);
     const payment = await this.paymentsRepo.save(
-      this.paymentsRepo.create({ userId, amount, caseId, status: 'pending', providerId: null, providerPaymentId: null })
+      this.paymentsRepo.create({
+        userId,
+        amount,
+        caseId,
+        clinicId: linkedCase?.clinicId || null,
+        status: 'pending',
+        providerId: null,
+        providerPaymentId: null
+      })
     );
 
     await this.casesService.setPaymentPending(caseId);
@@ -40,6 +49,7 @@ export class PaymentsService {
     const payment = await this.paymentsRepo.findOne({ where: { id: payload.orderId } });
     if (!payment) return { received: true, message: 'payment not found' };
 
+    // idempotency / duplicate protection
     if (payment.status === 'paid') {
       return { received: true, message: 'already processed' };
     }
@@ -51,7 +61,7 @@ export class PaymentsService {
 
     if (payload.status === 'paid') {
       await this.casesService.activateCase(payment.caseId);
-      await this.applyLedger(payment.caseId, payment.id, Number(payment.amount || 0));
+      await this.tryCreateEarning(payment.caseId, payment.id, Number(payment.amount || 0));
       await this.notificationsService.create(payment.userId, 'Оплата подтверждена', 'Ваш платёж успешно обработан.');
       await this.auditService.log('payment.success', payment.userId, {
         paymentId: payment.id,
@@ -67,10 +77,14 @@ export class PaymentsService {
     return this.paymentsRepo.find({ order: { createdAt: 'DESC' } });
   }
 
-  async getDoctorEarnings(_doctorId: string) {
-    const paid = await this.paymentsRepo.find({ where: { status: 'paid' } });
-    const total = paid.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-    return { totalPaid: total, currency: 'KZT', count: paid.length };
+  async getDoctorEarnings(doctorId: string) {
+    const rows = await this.paymentsRepo.query(
+      'select coalesce(sum(doctor_share),0) as total, count(*)::int as count from doctor_earnings where doctor_id = $1',
+      [doctorId]
+    );
+    const total = Number(rows?.[0]?.total || 0);
+    const count = Number(rows?.[0]?.count || 0);
+    return { totalPaid: total, currency: 'KZT', count };
   }
 
   getPartnerPayments(partnerId: string) {
@@ -81,26 +95,66 @@ export class PaymentsService {
     return this.paymentsRepo.find({ where: { userId }, order: { createdAt: 'DESC' } });
   }
 
-
-  private async applyLedger(caseId: string, paymentId: string, amount: number) {
-    const platformCommissionRate = 0.3;
-    const platformAmount = Math.round(amount * platformCommissionRate);
-    const doctorAmount = Math.max(0, amount - platformAmount);
-
+  private async tryCreateEarning(caseId: string, paymentId: string, grossAmount: number) {
     const linkedCase = await this.casesService.findById(caseId);
-    const doctorId = linkedCase?.doctorId;
+    if (!linkedCase) return;
 
-    if (doctorId) {
-      await this.paymentsRepo.query(
-        'insert into doctor_earnings (doctor_id, payment_id, amount) values ($1, $2, $3)',
-        [doctorId, paymentId, doctorAmount]
-      );
+    // earning only when payment is paid and consultation already finished/closed
+    if (!['consultation_finished', 'closed'].includes(linkedCase.status)) {
+      await this.auditService.log('earning.waiting_for_consultation', linkedCase.patientId, { caseId, paymentId, status: linkedCase.status });
+      return;
     }
 
+    // create earning once per case
+    const existing = await this.paymentsRepo.query('select id from doctor_earnings where case_id = $1 limit 1', [caseId]);
+    if (existing?.length) {
+      return;
+    }
+
+    const doctorId = linkedCase.doctorId;
+    if (!doctorId) return;
+
+    const clinicId = linkedCase.clinicId || null;
+    const platformShare = Math.round(grossAmount * 0.2);
+    const clinicShare = Math.round(grossAmount * 0.1);
+    const doctorShare = Math.max(0, grossAmount - platformShare - clinicShare);
+
+    const holdUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
     await this.paymentsRepo.query(
-      'insert into platform_commission (payment_id, amount) values ($1, $2)',
-      [paymentId, platformAmount]
+      `insert into doctor_earnings
+        (doctor_id, case_id, gross_amount, doctor_share, clinic_share, platform_share, hold_until, status, payment_id)
+       values ($1,$2,$3,$4,$5,$6,$7,'hold',$8)`,
+      [doctorId, caseId, grossAmount, doctorShare, clinicShare, platformShare, holdUntil.toISOString(), paymentId]
     );
+
+    await this.paymentsRepo.query(
+      'insert into platform_commission (case_id, payment_id, amount) values ($1, $2, $3)',
+      [caseId, paymentId, platformShare]
+    );
+
+    await this.paymentsRepo.query(
+      'insert into clinic_commission (clinic_id, case_id, amount) values ($1, $2, $3)',
+      [clinicId, caseId, clinicShare]
+    );
+
+    await this.auditService.log('earning.created', doctorId, {
+      caseId,
+      grossAmount,
+      doctorShare,
+      clinicShare,
+      platformShare,
+      holdUntil: holdUntil.toISOString(),
+      status: 'hold'
+    });
+  }
+
+
+  async reconcileCaseEarnings(caseId: string) {
+    const payment = await this.paymentsRepo.findOne({ where: { caseId, status: 'paid' }, order: { createdAt: 'DESC' } as any });
+    if (!payment) return { reconciled: false, reason: 'no_paid_payment' };
+    await this.tryCreateEarning(caseId, payment.id, Number(payment.amount || 0));
+    return { reconciled: true };
   }
 
   async revenueSummary() {

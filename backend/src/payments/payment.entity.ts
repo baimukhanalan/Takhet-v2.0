@@ -11,6 +11,9 @@ export class Payment {
   @Column({ name: 'case_id' })
   caseId!: string;
 
+  @Column({ name: 'clinic_id', nullable: true })
+  clinicId!: string | null;
+
   @Column('bigint')
   amount!: number;
 

@@ -20,6 +20,9 @@ export class Doctor {
   @Column({ name: 'approved_by', nullable: true })
   approvedBy!: string | null;
 
+  @Column({ name: 'clinic_id', nullable: true })
+  clinicId!: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

@@ -72,13 +72,19 @@ export class DoctorController {
   }
 
   @Post('case/:id/respond')
-  respond(@Req() req: any, @Param('id') id: string, @Body() dto: RespondCaseDto) {
-    return this.casesService.addDoctorResponse(id, req.user.id, dto.response);
+  async respond(@Req() req: any, @Param('id') id: string, @Body() dto: RespondCaseDto) {
+    const result = await this.casesService.addDoctorResponse(id, req.user.id, dto.response);
+    await this.paymentsService.reconcileCaseEarnings(id);
+    return result;
   }
 
   @Patch('case/:id/status')
-  status(@Req() req: any, @Param('id') id: string, @Body() dto: SetCaseStatusDto) {
-    return this.casesService.setDoctorCaseStatus(id, req.user.id, dto.status);
+  async status(@Req() req: any, @Param('id') id: string, @Body() dto: SetCaseStatusDto) {
+    const result = await this.casesService.setDoctorCaseStatus(id, req.user.id, dto.status);
+    if (dto.status === 'consultation_finished' || dto.status === 'closed') {
+      await this.paymentsService.reconcileCaseEarnings(id);
+    }
+    return result;
   }
 
   @Get('profile')

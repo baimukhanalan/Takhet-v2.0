@@ -365,3 +365,49 @@ USING (
 -- buckets:
 --  medical-files
 --  documents-signed
+
+-- =========================
+-- Clinic scope + final payout model (70/10/20)
+-- =========================
+
+create table if not exists clinics (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  license_number text,
+  address text,
+  created_at timestamptz default now()
+);
+
+alter table if exists doctors add column if not exists clinic_id uuid references clinics(id);
+alter table if exists cases add column if not exists clinic_id uuid references clinics(id);
+alter table if exists payments add column if not exists clinic_id uuid references clinics(id);
+alter table if exists payments add column if not exists gross_amount bigint;
+update payments set gross_amount = coalesce(gross_amount, amount);
+
+alter table if exists doctor_earnings add column if not exists case_id uuid references cases(id);
+alter table if exists doctor_earnings add column if not exists payment_id uuid references payments(id);
+alter table if exists doctor_earnings add column if not exists gross_amount bigint;
+alter table if exists doctor_earnings add column if not exists doctor_share bigint;
+alter table if exists doctor_earnings add column if not exists clinic_share bigint;
+alter table if exists doctor_earnings add column if not exists platform_share bigint;
+alter table if exists doctor_earnings add column if not exists hold_until timestamptz;
+alter table if exists doctor_earnings add column if not exists status text default 'pending';
+
+create table if not exists clinic_commission (
+  id uuid primary key default uuid_generate_v4(),
+  clinic_id uuid references clinics(id),
+  case_id uuid references cases(id),
+  amount bigint,
+  created_at timestamptz default now()
+);
+
+alter table if exists platform_commission add column if not exists case_id uuid references cases(id);
+alter table if exists payouts add column if not exists period_start date;
+alter table if exists payouts add column if not exists period_end date;
+alter table if exists payouts add column if not exists paid_at timestamptz;
+
+create unique index if not exists ux_doctor_earnings_case on doctor_earnings(case_id);
+create unique index if not exists ux_payout_doctor_period on payouts(doctor_id, period_start, period_end);
+
+-- payout statuses baseline
+-- pending | hold | ready_for_payout | paid_out | reversed
