@@ -1,0 +1,60 @@
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { DatabaseModule } from './database/database.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { TriageModule } from './triage/triage.module';
+import { CasesModule } from './cases/cases.module';
+import { DoctorsModule } from './doctors/doctors.module';
+import { PaymentsModule } from './payments/payments.module';
+import { AiModule } from './ai/ai.module';
+import { FilesModule } from './files/files.module';
+import { AuditModule } from './audit/audit.module';
+import { SignatureModule } from './signatures/signature.module';
+import { env } from './config/env.config';
+import { DoctorModule } from './doctor/doctor.module';
+import { PartnerModule } from './partner/partner.module';
+import { AdminModule } from './admin/admin.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { PatientModule } from './patient/patient.module';
+import { DocumentsModule } from './documents/documents.module';
+import { RtcModule } from './rtc/rtc.module';
+
+@Module({
+  controllers: [AppController],
+  imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: env.rateLimitTtlMs,
+        limit: env.rateLimitMax
+      }
+    ]),
+    DatabaseModule,
+    AuthModule,
+    UsersModule,
+    TriageModule,
+    CasesModule,
+    DoctorsModule,
+    PaymentsModule,
+    AiModule,
+    FilesModule,
+    AuditModule,
+    SignatureModule,
+    NotificationsModule,
+    DoctorModule,
+    PartnerModule,
+    AdminModule,
+    PatientModule,
+    DocumentsModule,
+    RtcModule
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard
+    }
+  ]
+})
+export class AppModule {}
