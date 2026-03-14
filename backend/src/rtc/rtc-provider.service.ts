@@ -10,7 +10,7 @@ export class RtcProviderService {
 
     return sign(
       {
-        iss: env.rtcApiKey || 'takhet-local-rtc',
+        iss: env.livekitApiKey || 'takhet-local-rtc',
         sub: input.userId,
         nbf: now,
         exp,
@@ -21,7 +21,7 @@ export class RtcProviderService {
           metadata: { role: input.role }
         }
       },
-      env.rtcApiSecret || env.appJwtSecret
+      env.livekitApiSecret || env.appJwtSecret
     );
   }
 }

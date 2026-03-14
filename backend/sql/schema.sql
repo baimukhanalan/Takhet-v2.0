@@ -303,3 +303,65 @@ for select using (
   bucket_id = 'documents-signed'
   and owner = app_current_user_id()
 );
+
+-- =========================
+-- Supabase RLS quick-start (requested explicit policies)
+-- =========================
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE doctors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consultations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE medical_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY IF NOT EXISTS users_self
+ON users
+FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY IF NOT EXISTS patient_records
+ON medical_records
+FOR SELECT
+USING (
+  patient_id IN (
+    SELECT id FROM patients WHERE user_id = auth.uid()
+  )
+);
+
+CREATE POLICY IF NOT EXISTS patient_cases
+ON cases
+FOR SELECT
+USING (
+  patient_id IN (
+    SELECT id FROM patients WHERE user_id = auth.uid()
+  )
+);
+
+CREATE POLICY IF NOT EXISTS doctor_cases
+ON cases
+FOR SELECT
+USING (
+  doctor_id IN (
+    SELECT id FROM doctors
+  )
+);
+
+CREATE POLICY IF NOT EXISTS document_access
+ON documents
+FOR SELECT
+USING (
+  case_id IN (
+    SELECT id FROM cases
+    WHERE patient_id IN (
+      SELECT id FROM patients WHERE user_id = auth.uid()
+    )
+  )
+);
+
+-- Storage bucket policies (Supabase)
+-- buckets:
+--  medical-files
+--  documents-signed

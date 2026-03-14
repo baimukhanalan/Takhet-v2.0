@@ -1,104 +1,78 @@
-# Takhet+ MVP Execution Status (updated)
+# Takhet+ MVP Execution Status (updated with your checklist)
 
-## Что выполнено по вашим указаниям
+## Что выполнено сейчас
 
-1. **PDF generator**
-- Внедрён `PdfService` в модуле документов.
-- Логика: сначала пытается использовать Puppeteer (`import('puppeteer')` динамически), если пакет/браузер недоступен — генерирует валидный PDF встроенным fallback-движком.
-- `documents.render-pdf` теперь реально создаёт файл в `backend/storage/...`.
+1. **LiveKit config внесён в проект**
+- В `.env.example` добавлены:
+  - `LIVEKIT_URL=wss://tahet-mjsltgnt.livekit.cloud`
+  - `LIVEKIT_API_KEY=APIsEdHJVc24QwT`
+  - `LIVEKIT_PROJECT_ID=p_28qk0bhcpr2`
+  - `LIVEKIT_SIP_URI=sip:28qk0bhcpr2.sip.livekit.cloud`
+- Добавлен `POST /rtc/token` (и также `POST /rtc/session/token`) для выдачи LiveKit-compatible токена.
 
-2. **WebRTC инфраструктура (production-ready direction)**
-- Signaling endpoints сохранены.
-- Добавлен `RtcProviderService` и endpoint `POST /rtc/session/token` для LiveKit-compatible токенов.
-- Это позволяет перейти к managed RTC без переписывания доменной логики.
+2. **PDF generation усилен**
+- Реальная генерация PDF в `backend/storage/...`.
+- Если Puppeteer доступен, используется он.
+- Если Puppeteer недоступен, работает встроенный PDF fallback (чтобы контур не ломался).
 
-3. **RLS и storage policies (baseline)**
-- Добавлены SQL-блоки для `enable row level security` и минимальных policy для:
-  - `cases`
-  - `documents`
-  - `document_versions`
-  - `rtc_sessions`
-  - `payments`
-  - `notifications`
-- Добавлены bucket/policy SQL для Supabase storage:
-  - `medical-files`
-  - `documents-draft`
-  - `documents-signed`
+3. **RLS + policies добавлены в SQL**
+- Включение RLS для таблиц (users/patients/doctors/cases/consultations/medical_records/documents/payments/notifications).
+- Добавлены policy-блоки `users_self`, `patient_records`, `patient_cases`, `doctor_cases`, `document_access`.
+- Добавлены storage buckets/policies для `medical-files`, `documents-draft`, `documents-signed`.
 
-4. **Ledger расчёты**
-- В `payments.handleWebhook` при `paid` добавлен расчёт:
-  - platform commission 30%
-  - doctor earnings 70%
-- Добавлены insert в `platform_commission` и `doctor_earnings`.
+4. **PII encryption (AES-256) добавлен в backend**
+- Добавлен `PiiCryptoService` (AES-256-CBC на backend).
+- Добавлены endpoints пациента:
+  - `POST /patient/pii` (сохранение phone/insurance/policy_number в зашифрованном виде)
+  - `GET /patient/pii` (чтение и дешифровка)
 
-5. **Audit logging расширен**
-- Документы: `document.created`, `document.updated`, `document.rendered`, `document.ready_for_sign`, `document.signed`, `document.viewed`, `document.downloaded`, `document.archived`.
-- RTC/consultation: `consultation.scheduled`, `consultation.started`, `consultation.ended`, а также `rtc.offer/answer/ice`.
+5. **Ledger baseline сохранён**
+- Комиссия 30/70: `platform_commission` / `doctor_earnings` при `payment=paid`.
 
-6. **Seed расширен для всех ролей и связанного MVP-контура**
-- Пользователи: admin/doctor/partner/patient.
-- Доктор/пациент сущности.
-- Seed кейсов, платежей, документов, версии документа, подписи, rtc_session, earnings/commission, notifications.
+6. **Observability env readiness**
+- Добавлен `SENTRY_DSN` в env config/example.
 
 ---
 
-## Что конкретно не получилось (ограничения)
+## Что не получилось (конкретно)
 
-1. **Не удалось установить `puppeteer` через npm в этом окружении**
-- Установка падает с `403 Forbidden` в npm registry policy.
-- Поэтому реализован production-safe fallback:
-  - dynamic import Puppeteer (если в окружении доступен — будет использоваться);
-  - иначе встроенный PDF writer, который формирует PDF-файл без внешней зависимости.
+1. **LIVEKIT_API_SECRET отсутствует во входных данных**
+- Ключ API есть, но секрет не предоставлен.
+- Токен endpoint работает только как контракт до подстановки секрета.
 
-2. **RLS policy для storage.objects требуют выполнения в Supabase Postgres**
-- SQL добавлен, но фактическая активация зависит от выполнения миграции в вашей Supabase среде.
+2. **Установка Puppeteer в этом окружении заблокирована**
+- `npm install` получает `403 Forbidden` по policy registry.
+- Поэтому оставлен runtime fallback PDF-движок, и динамический import Puppeteer.
 
-3. **LiveKit/coturn физически не подняты в этом инкременте**
-- Добавлена backend-абстракция/token API.
-- Нужна отдельная инфраструктурная поставка (managed LiveKit или coturn deployment).
+3. **NCALayer / НУЦ РК не интегрирован физически**
+- Нет SDK/драйвера/доступа к рабочему контуру в этом окружении.
+- Нужны входные данные провайдера и тестовый стенд подписи.
+
+4. **RLS/storage SQL не применяются автоматически в вашем Supabase**
+- SQL подготовлен в `schema.sql`, но фактически должен быть выполнен в SQL Editor/migrations вашей среды.
 
 ---
 
 ## Что требуется от вас конкретно
 
-1. **RTC provider choice (обязательно)**
-- Подтвердить: `LiveKit` (рекомендуется) или self-host `coturn + SFU`.
-- Если LiveKit: дать `API key`, `API secret`, `ws/wss URL`.
-
-2. **ЭЦП провайдер (обязательно для юридической силы)**
-- Подтвердить интеграцию с `NCALayer/НУЦ РК`.
-- Утвердить формат подписи (`CMS/PKCS7`) и процесс проверки.
-
-3. **RLS rollout approval**
-- Подтвердить финальную policy matrix (patient/doctor/admin/partner доступ к строкам).
-- Разрешить применение SQL миграций в staging/prod.
-
-4. **Финансы**
-- Подтвердить формулу комиссии (сейчас 30/70, закодирована как baseline).
-- Утвердить payout rules (периодичность, статусы, hold/review).
-
-5. **PII encryption scope**
-- Утвердить какие поля точно шифруем (phone/passport/insurance и др.), и требования к key management.
+1. `LIVEKIT_API_SECRET` (обязательно).
+2. Решение по ЭЦП провайдеру: NCALayer/НУЦ РК + формат CMS/PKCS7.
+3. Доступ к staging Supabase для применения RLS/storage policies.
+4. Подтверждение финальной RLS матрицы ролей (patient/doctor/partner/admin).
+5. Подтверждение production payout-правил (кроме 30/70 split).
 
 ---
 
-## Что можно сделать без вашего участия для прод-видео (я могу сделать сразу)
+## Что можно сделать без вашего участия для прод-видео
 
-1. Подготовить полноценный **LiveKit adapter module** (provider abstraction + health + retries + room policy), оставив только env-подключение.
-2. Добавить backend **session guardrails**:
-   - participant authorization
-   - session timeout
-   - forced end cleanup
-3. Добавить **RTC observability hooks**:
-   - session started/failed/ended metrics
-   - error buckets по ICE/offer/answer
-4. Добавить **e2e smoke tests** для signaling API (без реального media-plane).
-5. Добавить **idempotency** для критических RTC endpoint-операций.
-
----
-
-## Следующий технический приоритет (безотлагательно)
-1. Применить SQL миграции в staging.
-2. Поднять RTC provider (LiveKit).
-3. Подключить реальный EDS provider.
-4. Включить monitoring stack (Sentry + Prometheus + Grafana).
+1. Доделать полноценный `LiveKitAdapterModule`:
+   - retries, token TTL policies, room naming, join rules.
+2. Добавить guardrails:
+   - таймауты сессии,
+   - participant authorization,
+   - авто-завершение и cleanup.
+3. Добавить RTC метрики и алерты:
+   - started/failed/ended,
+   - ICE/offer/answer error buckets.
+4. Добавить e2e smoke tests только для signaling/token API.
+5. Добавить idempotency keys для критических rtc endpoints.

@@ -4,9 +4,11 @@ import { PatientController } from './patient.controller';
 import { CasesModule } from '../cases/cases.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { PiiCryptoService } from '../common/pii-crypto.service';
 
 @Module({
   imports: [AuthModule, CasesModule, NotificationsModule, PaymentsModule],
-  controllers: [PatientController]
+  controllers: [PatientController],
+  providers: [PiiCryptoService]
 })
 export class PatientModule {}

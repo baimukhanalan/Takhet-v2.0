@@ -78,6 +78,7 @@ export class RtcController {
   token(@Req() req: any, @Body() dto: TokenDto) {
     return {
       provider: 'livekit-compatible',
+      url: process.env.LIVEKIT_URL || '',
       token: this.rtcProviderService.createAccessToken({ roomName: dto.roomName, userId: req.user.id, role: dto.role })
     };
   }
@@ -98,6 +99,7 @@ export class RtcTokenController {
   token(@Req() req: any, @Body() dto: TokenDto) {
     return {
       provider: 'livekit-compatible',
+      url: process.env.LIVEKIT_URL || '',
       token: this.rtcProviderService.createAccessToken({ roomName: dto.roomName, userId: req.user.id, role: dto.role })
     };
   }

@@ -20,8 +20,11 @@ export const env = {
   appPatientEmail: process.env.APP_PATIENT_EMAIL || 'patient@takhet.local',
   appPatientPassword: process.env.APP_PATIENT_PASSWORD || 'patient_password',
   appJwtSecret: process.env.APP_JWT_SECRET || 'takhet-dev-jwt-secret',
-  rtcApiKey: process.env.RTC_API_KEY || '',
-  rtcApiSecret: process.env.RTC_API_SECRET || '',
+  livekitUrl: process.env.LIVEKIT_URL || '',
+  livekitApiKey: process.env.LIVEKIT_API_KEY || '',
+  livekitApiSecret: process.env.LIVEKIT_API_SECRET || '',
+  sentryDsn: process.env.SENTRY_DSN || '',
+  piiEncryptionKey: process.env.PII_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef',
   rateLimitTtlMs: Number(process.env.RATE_LIMIT_TTL_MS || 60000),
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX || 30)
 };
