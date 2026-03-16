@@ -68,10 +68,6 @@ values ('66666666-6666-6666-6666-666666666666', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaa
 on conflict do nothing;
 
 -- Optional seed rows for expanded checklist tables
-insert into family_members (patient_id, full_name, relation)
-values ('55555555-5555-5555-5555-555555555555', 'Demo Child', 'child')
-on conflict do nothing;
-
 insert into packages (code, title, consultations_limit, price)
 values ('PKG-START-3', 'Starter 3 Consultations', 3, 27000)
 on conflict (code) do nothing;

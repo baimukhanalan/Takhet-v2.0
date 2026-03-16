@@ -1,7 +1,7 @@
-# Takhet+ Full Backend Checklist Status (excluding delivery + home visit by decision)
+# Takhet+ Full Backend Checklist Status (excluding family account + delivery + home visit by decision)
 
 ## Scope note
-- Per current product decision, **home visit** and **delivery** blocks are intentionally excluded from current implementation scope.
+- Per current product decision, **family account**, **home visit** and **delivery** blocks are intentionally excluded from current implementation scope.
 
 ## A) What is already implemented (or scaffolded strongly)
 - Identity/Auth/Roles/JWT guards + role guards.
@@ -21,7 +21,7 @@
 5. Add stricter DB constraints/indexes and migration split files.
 
 ## C) What I can implement, but it needs more time (medium effort)
-1. Full EMR write/read APIs per section (diagnoses/symptoms/vitals/labs/imaging/procedures/family).
+1. Full EMR write/read APIs per section (diagnoses/symptoms/vitals/labs/imaging/procedures).
 2. Complete consultation domain (chat history APIs, revisit API, urgent queue controls).
 3. Subscription/package/installment business logic with billing states.
 4. Doctor collaboration workflows (doctor_consultations/expert_reviews) with RBAC.
@@ -47,7 +47,7 @@
 5. Data governance:
    - retention policy for medical docs/chat/audit and deletion policy
 
-## F) Tables currently required/available for full checklist (excluding delivery/home visit)
+## F) Tables currently required/available for full checklist (excluding family account/delivery/home visit)
 
 ### Identity/RBAC
 - `users`, `roles`, `permissions`, `sessions`, `devices`
@@ -55,7 +55,6 @@
 ### Patient profile + EMR
 - `patients`, `patient_profiles`, `patient_conditions`, `patient_allergies`, `patient_contacts`, `patient_addresses`, `patient_family_history`
 - `medical_records`, `diagnoses`, `symptoms`, `vitals`, `lab_results`, `imaging_results`, `procedures`
-- `family_members`, `family_member_records`
 
 ### Consultations/RTC
 - `cases`, `consultations`, `consultation_messages`, `consultation_files`, `rtc_sessions`

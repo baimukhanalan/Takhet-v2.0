@@ -445,22 +445,6 @@ for select using (
 -- Additional full-scope checklist tables (excluding home-visit and delivery per decision)
 -- =========================
 
-create table if not exists family_members (
-  id uuid primary key default uuid_generate_v4(),
-  patient_id uuid references patients(id),
-  full_name text not null,
-  relation text not null,
-  birth_date date,
-  created_at timestamptz default now()
-);
-
-create table if not exists family_member_records (
-  id uuid primary key default uuid_generate_v4(),
-  family_member_id uuid references family_members(id),
-  summary text,
-  created_at timestamptz default now()
-);
-
 create table if not exists packages (
   id uuid primary key default uuid_generate_v4(),
   code text unique,
