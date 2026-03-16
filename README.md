@@ -131,6 +131,33 @@ npm run dev
 
 Критично подтвердить: EDS policy, payout schedule/reversal rules, production RLS matrix, staging integration credentials/API docs, retention/deletion policy.
 
+## 7) Если GitHub сообщает "This branch has conflicts"
+
+Выполните локально:
+
+```bash
+git fetch origin
+git merge origin/main
+# или: git rebase origin/main
+```
+
+Далее проверьте чистоту merge-состояния:
+
+```bash
+./scripts/verify-merge-clean.sh
+```
+
+Если есть конфликты, откройте конфликтные файлы, оставьте итоговую версию, затем:
+
+```bash
+git add <resolved_files>
+git commit
+```
+
+## 8) Что должен подтвердить только владелец продукта
+
+Сводный чеклист owner-only решений: `docs/OWNER_REQUIRED_INPUTS.md`.
+
 ## Security note
 
 Если вы публиковали `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET` или `GEMINI_API_KEY` в открытом чате/репозитории, считайте их скомпрометированными и обязательно **ротируйте** в провайдерах.
