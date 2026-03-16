@@ -440,3 +440,104 @@ create policy if not exists clinic_commission_partner_select on clinic_commissio
 for select using (
   clinic_id in (select id from clinics where partner_user_id = auth.uid())
 );
+
+-- =========================
+-- Additional full-scope checklist tables (excluding home-visit and delivery per decision)
+-- =========================
+
+create table if not exists family_members (
+  id uuid primary key default uuid_generate_v4(),
+  patient_id uuid references patients(id),
+  full_name text not null,
+  relation text not null,
+  birth_date date,
+  created_at timestamptz default now()
+);
+
+create table if not exists family_member_records (
+  id uuid primary key default uuid_generate_v4(),
+  family_member_id uuid references family_members(id),
+  summary text,
+  created_at timestamptz default now()
+);
+
+create table if not exists packages (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  title text,
+  consultations_limit int,
+  price bigint,
+  created_at timestamptz default now()
+);
+
+create table if not exists package_usage (
+  id uuid primary key default uuid_generate_v4(),
+  package_id uuid references packages(id),
+  user_id uuid references users(id),
+  used_count int default 0,
+  updated_at timestamptz default now()
+);
+
+create table if not exists installment_plans (
+  id uuid primary key default uuid_generate_v4(),
+  payment_id uuid references payments(id),
+  total_amount bigint,
+  months int,
+  monthly_amount bigint,
+  status text,
+  created_at timestamptz default now()
+);
+
+create table if not exists community_groups (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  title text,
+  is_anonymous boolean default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists doctor_consultations (
+  id uuid primary key default uuid_generate_v4(),
+  case_id uuid references cases(id),
+  requester_doctor_id uuid references doctors(id),
+  reviewer_doctor_id uuid references doctors(id),
+  note text,
+  status text default 'requested',
+  created_at timestamptz default now()
+);
+
+create table if not exists expert_reviews (
+  id uuid primary key default uuid_generate_v4(),
+  case_id uuid references cases(id),
+  doctor_consultation_id uuid references doctor_consultations(id),
+  expert_doctor_id uuid references doctors(id),
+  recommendation text,
+  created_at timestamptz default now()
+);
+
+create table if not exists lab_integrations (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  name text,
+  api_url text,
+  status text default 'disabled',
+  created_at timestamptz default now()
+);
+
+create table if not exists pharmacy_partners (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  name text,
+  api_url text,
+  status text default 'disabled',
+  created_at timestamptz default now()
+);
+
+create table if not exists insurance_providers (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  name text,
+  api_url text,
+  status text default 'disabled',
+  created_at timestamptz default now()
+);

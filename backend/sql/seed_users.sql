@@ -66,3 +66,29 @@ on conflict do nothing;
 insert into clinic_commission (clinic_id, case_id, amount)
 values ('66666666-6666-6666-6666-666666666666', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1000)
 on conflict do nothing;
+
+-- Optional seed rows for expanded checklist tables
+insert into family_members (patient_id, full_name, relation)
+values ('55555555-5555-5555-5555-555555555555', 'Demo Child', 'child')
+on conflict do nothing;
+
+insert into packages (code, title, consultations_limit, price)
+values ('PKG-START-3', 'Starter 3 Consultations', 3, 27000)
+on conflict (code) do nothing;
+
+insert into package_usage (package_id, user_id, used_count)
+select p.id, '44444444-4444-4444-4444-444444444444', 1
+from packages p where p.code = 'PKG-START-3'
+on conflict do nothing;
+
+insert into community_groups (code, title, is_anonymous)
+values ('diabetes', 'Diabetes Support Group', true)
+on conflict (code) do nothing;
+
+insert into lab_integrations (code, name, api_url, status)
+values ('demo-lab', 'Demo Lab Partner', 'https://lab.example/api', 'disabled')
+on conflict (code) do nothing;
+
+insert into insurance_providers (code, name, api_url, status)
+values ('demo-ins', 'Demo Insurance', 'https://insurance.example/api', 'disabled')
+on conflict (code) do nothing;
