@@ -63,3 +63,11 @@
 1. Добавить cron job перевода `hold -> ready_for_payout` по расписанию, оставив `paid_out` ручным.
 2. Добавить clinic-scoped partner analytics endpoints по комиссиям и выплатам.
 3. Добавить e2e тесты на payout antifraud правила и partner scope access.
+
+
+## Incremental update (current)
+- Added partner clinic commission analytics endpoint: `GET /partner/commissions`.
+- Added admin payout dry-run endpoint: `POST /admin/payouts/dry-run` before actual payout creation.
+- Frontend API adapter extended with:
+  - `partnerCommissions()`
+  - `adminPayoutDryRun(...)`

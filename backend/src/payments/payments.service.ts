@@ -87,8 +87,34 @@ export class PaymentsService {
     return { totalPaid: total, currency: 'KZT', count };
   }
 
-  getPartnerPayments(partnerId: string) {
-    return this.paymentsRepo.find({ where: { userId: partnerId }, order: { createdAt: 'DESC' } });
+  async getPartnerPayments(partnerId: string) {
+    const clinicRows = await this.paymentsRepo.query('select id from clinics where partner_user_id = $1 limit 1', [partnerId]);
+    const clinicId = clinicRows?.[0]?.id;
+    if (!clinicId) return [];
+    return this.paymentsRepo.find({ where: { clinicId }, order: { createdAt: 'DESC' } });
+  }
+
+  async getPartnerClinicCommissionSummary(partnerId: string) {
+    const clinicRows = await this.paymentsRepo.query('select id from clinics where partner_user_id = $1 limit 1', [partnerId]);
+    const clinicId = clinicRows?.[0]?.id;
+    if (!clinicId) return { clinicId: null, totalCommission: 0, totalCases: 0, recent: [] };
+
+    const totalRows = await this.paymentsRepo.query(
+      'select coalesce(sum(amount),0) as total, count(*)::int as count from clinic_commission where clinic_id = $1',
+      [clinicId]
+    );
+
+    const recent = await this.paymentsRepo.query(
+      'select * from clinic_commission where clinic_id = $1 order by created_at desc limit 50',
+      [clinicId]
+    );
+
+    return {
+      clinicId,
+      totalCommission: Number(totalRows?.[0]?.total || 0),
+      totalCases: Number(totalRows?.[0]?.count || 0),
+      recent
+    };
   }
 
   getMyPayments(userId: string) {
@@ -163,6 +189,25 @@ export class PaymentsService {
       "update doctor_earnings set status='ready_for_payout' where status='hold' and hold_until <= now() returning id"
     );
     return { moved: updated.length };
+  }
+
+  async dryRunManualPayout(doctorId: string, periodStart: string, periodEnd: string) {
+    const rows = await this.paymentsRepo.query(
+      `select coalesce(sum(doctor_share),0) as total, count(*)::int as entries from doctor_earnings
+       where doctor_id = $1 and status = 'ready_for_payout' and created_at::date between $2::date and $3::date`,
+      [doctorId, periodStart, periodEnd]
+    );
+    const amount = Number(rows?.[0]?.total || 0);
+    const entries = Number(rows?.[0]?.entries || 0);
+
+    return {
+      doctorId,
+      periodStart,
+      periodEnd,
+      amount,
+      entries,
+      canCreate: amount > 0
+    };
   }
 
   async createManualPayout(doctorId: string, periodStart: string, periodEnd: string, actorId: string) {

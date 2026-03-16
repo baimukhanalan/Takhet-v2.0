@@ -31,6 +31,7 @@ export const roleApi = {
   partnerDeactivateDoctor: (id: string) => api<any>(`/partner/doctors/${id}/deactivate`, { method: 'PATCH' }),
   partnerRequests: () => api<any>('/partner/requests'),
   partnerPayments: () => api<any[]>('/partner/payments'),
+  partnerCommissions: () => api<any>('/partner/commissions'),
 
   patientCases: () => api<any[]>('/patient/cases'),
   patientCreateCase: (summary: string) =>
@@ -72,6 +73,11 @@ export const roleApi = {
     }),
   adminPreparePayouts: () => api<any>('/admin/payouts/prepare', { method: 'POST' }),
   adminPayouts: () => api<any[]>('/admin/payouts'),
+  adminPayoutDryRun: (doctorId: string, periodStart: string, periodEnd: string) =>
+    api<any>('/admin/payouts/dry-run', {
+      method: 'POST',
+      body: JSON.stringify({ doctorId, periodStart, periodEnd })
+    }),
   adminCreatePayout: (doctorId: string, periodStart: string, periodEnd: string) =>
     api<any>('/admin/payouts/create', {
       method: 'POST',

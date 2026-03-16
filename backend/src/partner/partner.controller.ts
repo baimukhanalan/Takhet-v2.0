@@ -85,6 +85,11 @@ export class PartnerController {
     return this.paymentsService.getPartnerPayments(req.user.id);
   }
 
+  @Get('commissions')
+  commissions(@Req() req: any) {
+    return this.paymentsService.getPartnerClinicCommissionSummary(req.user.id);
+  }
+
   @Get('requests')
   async requests(@Req() req: any) {
     const clinicId = await this.doctorsService.getClinicByPartnerUser(req.user.id);

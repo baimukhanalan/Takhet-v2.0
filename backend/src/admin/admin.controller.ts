@@ -21,6 +21,18 @@ class BroadcastDto {
 }
 
 
+
+class DryRunPayoutDto {
+  @IsString()
+  doctorId!: string;
+
+  @IsString()
+  periodStart!: string;
+
+  @IsString()
+  periodEnd!: string;
+}
+
 class CreatePayoutDto {
   @IsString()
   doctorId!: string;
@@ -125,6 +137,11 @@ export class AdminController {
   @Get('payouts')
   payoutsList() {
     return this.paymentsService.listPayouts();
+  }
+
+  @Post('payouts/dry-run')
+  payoutDryRun(@Body() dto: DryRunPayoutDto) {
+    return this.paymentsService.dryRunManualPayout(dto.doctorId, dto.periodStart, dto.periodEnd);
   }
 
   @Post('payouts/create')
