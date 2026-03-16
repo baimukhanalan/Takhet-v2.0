@@ -14,7 +14,7 @@ export const roleApi = {
       method: 'PATCH',
       body: JSON.stringify({ bio })
     }),
-  doctorUpdateCaseStatus: (id: string, status: 'active' | 'in_review' | 'closed') =>
+  doctorUpdateCaseStatus: (id: string, status: 'assigned' | 'consultation_started' | 'consultation_finished' | 'closed') =>
     api<any>(`/doctor/case/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
@@ -70,4 +70,12 @@ export const roleApi = {
       method: 'POST',
       body: JSON.stringify({ title, body })
     }),
+  adminPreparePayouts: () => api<any>('/admin/payouts/prepare', { method: 'POST' }),
+  adminPayouts: () => api<any[]>('/admin/payouts'),
+  adminCreatePayout: (doctorId: string, periodStart: string, periodEnd: string) =>
+    api<any>('/admin/payouts/create', {
+      method: 'POST',
+      body: JSON.stringify({ doctorId, periodStart, periodEnd })
+    }),
+  adminReversePayout: (payoutId: string) => api<any>(`/admin/payout/${payoutId}/reverse`, { method: 'PATCH' }),
 };

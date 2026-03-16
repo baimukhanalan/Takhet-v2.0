@@ -411,3 +411,32 @@ create unique index if not exists ux_payout_doctor_period on payouts(doctor_id, 
 
 -- payout statuses baseline
 -- pending | hold | ready_for_payout | paid_out | reversed
+
+-- partner clinic ownership for scoped access
+alter table if exists clinics add column if not exists partner_user_id uuid references users(id);
+
+-- enforce MVP rule: one doctor belongs to one clinic
+-- (clinic_id is mandatory in practice for new records)
+
+alter table if exists doctors enable row level security;
+alter table if exists clinic_commission enable row level security;
+
+create policy if not exists doctors_partner_clinic_select on doctors
+for select using (
+  clinic_id in (select id from clinics where partner_user_id = auth.uid())
+);
+
+create policy if not exists cases_partner_clinic_select on cases
+for select using (
+  clinic_id in (select id from clinics where partner_user_id = auth.uid())
+);
+
+create policy if not exists payments_partner_clinic_select on payments
+for select using (
+  clinic_id in (select id from clinics where partner_user_id = auth.uid())
+);
+
+create policy if not exists clinic_commission_partner_select on clinic_commission
+for select using (
+  clinic_id in (select id from clinics where partner_user_id = auth.uid())
+);

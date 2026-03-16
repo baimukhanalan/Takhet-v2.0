@@ -109,8 +109,17 @@ export class CasesService {
     return this.casesRepo.findOne({ where: { id: caseId } });
   }
 
-  async listPartnerPatients() {
-    const cases = await this.casesRepo.find({ order: { createdAt: 'DESC' } });
+  async listPartnerPatients(partnerUserId?: string) {
+    let cases = await this.casesRepo.find({ order: { createdAt: 'DESC' } });
+    if (partnerUserId) {
+      const rows = await this.casesRepo.query('select id from clinics where partner_user_id = $1 limit 1', [partnerUserId]);
+      const clinicId = rows?.[0]?.id;
+      if (clinicId) {
+        cases = cases.filter((c) => c.clinicId === clinicId);
+      } else {
+        cases = [];
+      }
+    }
     const map = new Map<string, { patientId: string; casesCount: number }>();
     for (const c of cases) {
       map.set(c.patientId, { patientId: c.patientId, casesCount: (map.get(c.patientId)?.casesCount || 0) + 1 });
@@ -118,18 +127,19 @@ export class CasesService {
     return [...map.values()];
   }
 
-  async partnerAnalytics() {
-    const total = await this.casesRepo.count();
-    const paid = await this.casesRepo.count({ where: { status: 'paid' } });
-    const assigned = await this.casesRepo.count({ where: { status: 'assigned' } });
-    const consultationStarted = await this.casesRepo.count({ where: { status: 'consultation_started' } });
-    const consultationFinished = await this.casesRepo.count({ where: { status: 'consultation_finished' } });
-    const closed = await this.casesRepo.count({ where: { status: 'closed' } });
+  async partnerAnalytics(clinicId?: string | null) {
+    const by = clinicId ? { clinicId } : undefined as any;
+    const total = await this.casesRepo.count(by ? { where: by } : undefined as any);
+    const paid = await this.casesRepo.count(by ? { where: { ...by, status: 'paid' } } : { where: { status: 'paid' } });
+    const assigned = await this.casesRepo.count(by ? { where: { ...by, status: 'assigned' } } : { where: { status: 'assigned' } });
+    const consultationStarted = await this.casesRepo.count(by ? { where: { ...by, status: 'consultation_started' } } : { where: { status: 'consultation_started' } });
+    const consultationFinished = await this.casesRepo.count(by ? { where: { ...by, status: 'consultation_finished' } } : { where: { status: 'consultation_finished' } });
+    const closed = await this.casesRepo.count(by ? { where: { ...by, status: 'closed' } } : { where: { status: 'closed' } });
     return { totalCases: total, paidCases: paid, assignedCases: assigned, consultationStartedCases: consultationStarted, consultationFinishedCases: consultationFinished, closedCases: closed };
   }
 
-  findByStatus(status: CaseStatus) {
-    return this.casesRepo.find({ where: { status }, order: { createdAt: 'DESC' } });
+  findByStatus(status: CaseStatus, clinicId?: string) {
+    return this.casesRepo.find({ where: clinicId ? ({ status, clinicId } as any) : { status }, order: { createdAt: 'DESC' } });
   }
 
 

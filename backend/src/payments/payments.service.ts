@@ -157,6 +157,59 @@ export class PaymentsService {
     return { reconciled: true };
   }
 
+
+  async markReadyForPayouts() {
+    const updated = await this.paymentsRepo.query(
+      "update doctor_earnings set status='ready_for_payout' where status='hold' and hold_until <= now() returning id"
+    );
+    return { moved: updated.length };
+  }
+
+  async createManualPayout(doctorId: string, periodStart: string, periodEnd: string, actorId: string) {
+    const rows = await this.paymentsRepo.query(
+      `select coalesce(sum(doctor_share),0) as total from doctor_earnings
+       where doctor_id = $1 and status = 'ready_for_payout' and created_at::date between $2::date and $3::date`,
+      [doctorId, periodStart, periodEnd]
+    );
+    const amount = Number(rows?.[0]?.total || 0);
+    if (amount <= 0) return { created: false, reason: 'no_ready_earnings' };
+
+    await this.paymentsRepo.query(
+      `insert into payouts (doctor_id, period_start, period_end, amount, status, paid_at)
+       values ($1,$2,$3,$4,'paid_out', now())`,
+      [doctorId, periodStart, periodEnd, amount]
+    );
+
+    await this.paymentsRepo.query(
+      `update doctor_earnings set status='paid_out'
+       where doctor_id = $1 and status='ready_for_payout' and created_at::date between $2::date and $3::date`,
+      [doctorId, periodStart, periodEnd]
+    );
+
+    await this.auditService.log('payout.created', actorId, { doctorId, periodStart, periodEnd, amount });
+    return { created: true, amount };
+  }
+
+  async reversePayout(payoutId: string, actorId: string) {
+    const rows = await this.paymentsRepo.query('select * from payouts where id = $1 limit 1', [payoutId]);
+    const payout = rows?.[0];
+    if (!payout) return { reversed: false, reason: 'not_found' };
+
+    await this.paymentsRepo.query("update payouts set status='reversed' where id = $1", [payoutId]);
+    await this.paymentsRepo.query(
+      `update doctor_earnings set status='reversed'
+       where doctor_id = $1 and created_at::date between $2::date and $3::date and status='paid_out'`,
+      [payout.doctor_id, payout.period_start, payout.period_end]
+    );
+
+    await this.auditService.log('payout.reversed', actorId, { payoutId });
+    return { reversed: true };
+  }
+
+  async listPayouts() {
+    return this.paymentsRepo.query('select * from payouts order by created_at desc limit 500');
+  }
+
   async revenueSummary() {
     const all = await this.paymentsRepo.find();
     const paid = all.filter((p) => p.status === 'paid');

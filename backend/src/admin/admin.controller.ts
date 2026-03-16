@@ -20,6 +20,18 @@ class BroadcastDto {
   body!: string;
 }
 
+
+class CreatePayoutDto {
+  @IsString()
+  doctorId!: string;
+
+  @IsString()
+  periodStart!: string;
+
+  @IsString()
+  periodEnd!: string;
+}
+
 @Controller('admin')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('admin')
@@ -104,4 +116,25 @@ export class AdminController {
   broadcast(@Body() dto: BroadcastDto) {
     return this.notificationsService.broadcast(dto.title, dto.body);
   }
+
+  @Post('payouts/prepare')
+  preparePayouts() {
+    return this.paymentsService.markReadyForPayouts();
+  }
+
+  @Get('payouts')
+  payoutsList() {
+    return this.paymentsService.listPayouts();
+  }
+
+  @Post('payouts/create')
+  createPayout(@Req() req: any, @Body() dto: CreatePayoutDto) {
+    return this.paymentsService.createManualPayout(dto.doctorId, dto.periodStart, dto.periodEnd, req.user.id);
+  }
+
+  @Patch('payout/:id/reverse')
+  reversePayout(@Req() req: any, @Param('id') id: string) {
+    return this.paymentsService.reversePayout(id, req.user.id);
+  }
 }
+

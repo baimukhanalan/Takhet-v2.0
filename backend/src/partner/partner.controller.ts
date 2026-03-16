@@ -29,9 +29,10 @@ export class PartnerController {
 
   @Get('dashboard')
   async dashboard(@Req() req: any) {
+    const clinicId = await this.doctorsService.getClinicByPartnerUser(req.user.id);
     const [analytics, doctorStats, payments] = await Promise.all([
-      this.casesService.partnerAnalytics(),
-      this.doctorsService.getDoctorStats(),
+      this.casesService.partnerAnalytics(clinicId),
+      this.doctorsService.getDoctorStats(clinicId || undefined),
       this.paymentsService.getPartnerPayments(req.user.id)
     ]);
 
@@ -43,33 +44,40 @@ export class PartnerController {
   }
 
   @Get('doctors')
-  doctors() {
-    return this.doctorsService.listAll();
+  async doctors(@Req() req: any) {
+    const clinicId = await this.doctorsService.getClinicByPartnerUser(req.user.id);
+    if (!clinicId) return [];
+    return this.doctorsService.listByClinic(clinicId);
   }
 
   @Post('doctors')
-  createDoctor(@Body() dto: CreatePartnerDoctorDto) {
-    return this.doctorsService.createPartnerDoctor(dto.fullName, dto.specialty);
+  async createDoctor(@Req() req: any, @Body() dto: CreatePartnerDoctorDto) {
+    const clinicId = await this.doctorsService.getClinicByPartnerUser(req.user.id);
+    if (!clinicId) return { error: 'Partner clinic mapping not found' };
+    return this.doctorsService.createPartnerDoctor(dto.fullName, dto.specialty, clinicId);
   }
 
   @Patch('doctors/:id/activate')
-  activateDoctor(@Param('id') id: string, @Req() req: any) {
-    return this.doctorsService.setDoctorActive(id, true, req.user.id);
+  async activateDoctor(@Param('id') id: string, @Req() req: any) {
+    const clinicId = await this.doctorsService.getClinicByPartnerUser(req.user.id);
+    return this.doctorsService.setDoctorActive(id, true, req.user.id, clinicId || undefined);
   }
 
   @Patch('doctors/:id/deactivate')
-  deactivateDoctor(@Param('id') id: string, @Req() req: any) {
-    return this.doctorsService.setDoctorActive(id, false, req.user.id);
+  async deactivateDoctor(@Param('id') id: string, @Req() req: any) {
+    const clinicId = await this.doctorsService.getClinicByPartnerUser(req.user.id);
+    return this.doctorsService.setDoctorActive(id, false, req.user.id, clinicId || undefined);
   }
 
   @Get('patients')
-  patients() {
-    return this.casesService.listPartnerPatients();
+  patients(@Req() req: any) {
+    return this.casesService.listPartnerPatients(req.user.id);
   }
 
   @Get('analytics')
-  analytics() {
-    return this.casesService.partnerAnalytics();
+  async analytics(@Req() req: any) {
+    const clinicId = await this.doctorsService.getClinicByPartnerUser(req.user.id);
+    return this.casesService.partnerAnalytics(clinicId);
   }
 
   @Get('payments')
@@ -78,10 +86,11 @@ export class PartnerController {
   }
 
   @Get('requests')
-  async requests() {
+  async requests(@Req() req: any) {
+    const clinicId = await this.doctorsService.getClinicByPartnerUser(req.user.id);
     const [pendingDoctors, openCases] = await Promise.all([
-      this.doctorsService.listAll().then((list) => list.filter((d) => !d.active)),
-      this.casesService.findByStatus('created')
+      clinicId ? this.doctorsService.listByClinic(clinicId).then((list) => list.filter((d) => !d.active)) : Promise.resolve([]),
+      this.casesService.findByStatus('created', clinicId || undefined)
     ]);
 
     return { pendingDoctors, openCases };

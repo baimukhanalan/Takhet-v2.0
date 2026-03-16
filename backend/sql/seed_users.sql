@@ -11,12 +11,13 @@ set email = excluded.email,
     role = excluded.role,
     disabled = excluded.disabled;
 
-insert into clinics (id, name, license_number, address)
-values ('66666666-6666-6666-6666-666666666666', 'Takhet Clinic Hub', 'KZ-LIC-001', 'Almaty, Demo Street 1')
+insert into clinics (id, name, license_number, address, partner_user_id)
+values ('66666666-6666-6666-6666-666666666666', 'Takhet Clinic Hub', 'KZ-LIC-001', 'Almaty, Demo Street 1', '33333333-3333-3333-3333-333333333333')
 on conflict (id) do update
 set name = excluded.name,
     license_number = excluded.license_number,
-    address = excluded.address;
+    address = excluded.address,
+    partner_user_id = excluded.partner_user_id;
 
 insert into doctors (id, full_name, specialty, active, clinic_id)
 values ('22222222-2222-2222-2222-222222222222', 'Dr. Takhet Demo', 'General Practice', true, '66666666-6666-6666-6666-666666666666')
