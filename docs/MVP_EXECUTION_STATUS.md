@@ -71,3 +71,14 @@
 - Frontend API adapter extended with:
   - `partnerCommissions()`
   - `adminPayoutDryRun(...)`
+
+
+## Incremental update (readme cleanup + checklist continuation)
+- README сокращён до архитектуры, code style и главных проектных правил без operational шума.
+- Owner-only решения остаются обязательным внешним входом перед production finalization:
+  - EDS policy
+  - payout schedule/reversal policy
+  - production RLS governance matrix
+  - staging integration credentials/contracts
+  - retention/deletion policy
+- Для merge hygiene сохранена проверка `scripts/verify-merge-clean.sh` перед push/PR.

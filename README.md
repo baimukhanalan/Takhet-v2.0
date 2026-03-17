@@ -1,163 +1,65 @@
-# Takhet+ Workspace (Frontend + Backend)
+# Takhet+ — Architecture & Project Rules
 
-Проект разделён на:
+## 1) Архитектура
 
-- `frontend/` — React/Vite приложение.
-- `backend/` — NestJS API (MVP домены: auth, users, triage, cases, doctors, payments, files).
+### Monorepo layout
+- `frontend/` — React + Vite клиентское приложение.
+- `backend/` — NestJS API (RBAC, cases, triage, payments, files, RTC, docs).
+- `backend/sql/` — SQL schema + seed для Postgres/Supabase.
+- `docs/` — governance/ops/legal документы (RLS, payout, EDS, audits).
+- `scripts/` — инфраструктурные утилиты репозитория.
 
-## 1) Быстрый запуск backend
+### Backend architecture (NestJS)
+- Модульная структура по доменам: `auth`, `users`, `cases`, `doctor`, `partner`, `patient`, `payments`, `documents`, `signatures`, `rtc`, `files`, `notifications`, `audit`.
+- Доменные сущности через TypeORM entities.
+- Контроль доступа: JWT + role guards.
+- Интеграционный слой: платежи (Kaspi scaffold), file storage, AI triage wrapper.
 
-```bash
-npm config set registry https://registry.npmjs.org/
-npm cache clean --force
+### Frontend architecture
+- Ролевая навигация и страницы по сценариям (`admin`, `doctor`, `partner`, `patient`).
+- API-слой в `frontend/services/`:
+  - `api.ts` — базовый HTTP-клиент,
+  - `roleApi.ts` — role-oriented API adapter.
+- UI-компоненты в `frontend/components/`, маршруто-ориентированные страницы в `frontend/pages/`.
 
-cd backend
-cp .env.example .env
-npm install
-npm run start:dev
-```
+---
 
-Ожидаемый лог:
+## 2) Стилевые правила (code style)
 
-```bash
-Server started on port 3000
-```
+### Общие
+- Не добавлять функциональность вне согласованного scope.
+- Избегать “магических” значений: выносить конфиг в env/constants.
+- Любые критичные операции (платежи, доступ к PII) должны быть audit-friendly.
 
-## 2) Быстрый запуск frontend
+### Backend
+- Следовать модульности NestJS: controller -> service -> entity.
+- Ролевые ограничения применять на endpoint-уровне.
+- Новые бизнес-правила фиксировать в доменном сервисе, а не в контроллере.
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Frontend
+- Не смешивать сетевую логику с UI: API вызовы через `services/*`.
+- Страницы должны быть устойчивы к API-ошибкам (graceful fallback/UI state).
+- Переиспользовать общие компоненты вместо дублирования JSX.
 
-## 3) Ключевые API (MVP)
+---
 
-- `POST /auth/login`
-- `POST /triage` (JWT + rate limit)
-- `POST /cases`
-- `GET /cases/my`
-- `PATCH /cases/:id/respond`
-- `PATCH /cases/:id/close`
-- `GET /doctor/dashboard`
-- `GET /doctor/cases`
-- `GET /doctor/case/:id`
-- `POST /doctor/case/:id/respond`
-- `GET /doctor/profile`
-- `PATCH /doctor/profile`
-- `GET /doctor/earnings`
-- `GET /doctor/dashboard`
-- `GET /doctor/cases/queue`
-- `PATCH /doctor/case/:id/status`
-- `GET /doctor/appointments`
-- `GET /partner/doctors`
-- `POST /partner/doctors`
-- `PATCH /partner/doctors/:id/activate`
-- `PATCH /partner/doctors/:id/deactivate`
-- `GET /partner/dashboard`
-- `GET /partner/patients`
-- `GET /partner/analytics`
-- `GET /partner/payments`
-- `GET /partner/requests`
-- `GET /admin/users`
-- `GET /admin/cases`
-- `GET /admin/payments`
-- `GET /admin/dashboard`
-- `GET /admin/kpis`
-- `GET /admin/audit`
-- `PATCH /admin/doctor/:id/approve`
-- `PATCH /admin/case/:id/assign/:doctorId`
-- `PATCH /admin/case/:id/reopen`
-- `POST /admin/notifications/broadcast`
-- `DELETE /admin/user/:id`
-- `POST /payments/create-intent` (Kaspi redirect intent)
-- `POST /payments/webhook` (Kaspi callback + signature verify)
-- `POST /files/upload`
-- `GET /users`
-- `GET /patient/cases`
-- `POST /patient/cases`
-- `GET /patient/notifications`
-- `GET /patient/payments`
+## 3) Главные правила проекта
 
-## 4) База данных
+1. **Scope lock:** вне текущего scope исключены:
+   - family account,
+   - home visit,
+   - delivery.
+2. **Security-first:** секреты и service keys не хранятся в репозитории.
+3. **RLS/RBAC consistency:** доступ к данным только по утверждённой role/scope модели.
+4. **Payout discipline:** payout lifecycle и reversal-действия должны соответствовать утверждённой ops-политике.
+5. **Legal discipline (EDS):** юридически значимые документы и подписи внедряются только после финального policy approval.
 
-Полная SQL схема (MVP + расширение до health-tech платформы) находится в:
+---
 
-- `backend/sql/schema.sql`
-
-Запуск: вставить SQL в Supabase SQL Editor и выполнить.
-
-После RLS обязательно выполните seed:
-
-```sql
--- выполнить backend/sql/seed_users.sql
-```
-
-Он создаёт стартовых пользователей: `admin`, `doctor`, `partner`, `patient`.
-
-## 5) Что нужно от владельца проекта для production
-
-1. Создать Supabase проект и передать реальные значения:
-   - `DATABASE_URL`
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_KEY`
-   - `SUPABASE_JWT_SECRET`
-2. Создать и выдать `GEMINI_API_KEY`.
-3. Подписать договор с Kaspi Pay и получить:
-   - `KASPI_MERCHANT_ID`
-   - `KASPI_SECRET_KEY`
-   - webhook/callback URL в публичном домене.
-4. Настроить публичный HTTPS домен для webhook-ов Kaspi.
-5. Для полностью реальной авторизации заполнить:
-   - `APP_ADMIN_EMAIL` / `APP_ADMIN_PASSWORD`
-   - `APP_DOCTOR_EMAIL` / `APP_DOCTOR_PASSWORD`
-   - `APP_PARTNER_EMAIL` / `APP_PARTNER_PASSWORD`
-   - `APP_PATIENT_EMAIL` / `APP_PATIENT_PASSWORD`
-   - `APP_JWT_SECRET`
-
-Без этих данных backend работает как технический каркас, но не как полнофункциональная production-система.
-
-
-
-## 6) Governance docs to approve before production
-
-Для закрытия оставшихся юридических/операционных блокеров заполните и утвердите:
+## 4) Важные документы
 
 - `docs/FINAL_DECISIONS_MVP.md`
 - `docs/RLS_MATRIX.md`
 - `docs/PAYOUT_RUNBOOK.md`
 - `docs/EDS_INTEGRATION_PLAN.md`
-- `docs/INTEGRATIONS_STAGING_SECRETS.md`
-
-Критично подтвердить: EDS policy, payout schedule/reversal rules, production RLS matrix, staging integration credentials/API docs, retention/deletion policy.
-
-## 7) Если GitHub сообщает "This branch has conflicts"
-
-Выполните локально:
-
-```bash
-git fetch origin
-git merge origin/main
-# или: git rebase origin/main
-```
-
-Далее проверьте чистоту merge-состояния:
-
-```bash
-./scripts/verify-merge-clean.sh
-```
-
-Если есть конфликты, откройте конфликтные файлы, оставьте итоговую версию, затем:
-
-```bash
-git add <resolved_files>
-git commit
-```
-
-## 8) Что должен подтвердить только владелец продукта
-
-Сводный чеклист owner-only решений: `docs/OWNER_REQUIRED_INPUTS.md`.
-
-## Security note
-
-Если вы публиковали `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET` или `GEMINI_API_KEY` в открытом чате/репозитории, считайте их скомпрометированными и обязательно **ротируйте** в провайдерах.
+- `docs/OWNER_REQUIRED_INPUTS.md`
