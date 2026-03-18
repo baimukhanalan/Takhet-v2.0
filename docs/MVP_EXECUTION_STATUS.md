@@ -40,11 +40,7 @@
 1. **Реальный ЭЦП NCALayer/НУЦ РК**
 - Пока остаётся интеграционный пробел (PKCS7/verify flow).
 
-2. **Автоматический payout scheduler**
-- Сейчас процесс ручной (что и требуется для MVP),
-- auto-cron не внедрялся в этом шаге.
-
-3. **Puppeteer install policy**
+2. **Puppeteer install policy**
 - Установка в окружении блокируется 403, используется fallback PDF engine.
 
 ---
@@ -90,3 +86,11 @@
   - `PAYOUT_AUTO_PREPARE_ENABLED`
   - `PAYOUT_AUTO_PREPARE_INTERVAL_MS`
 - `paid_out` stage remains manual by admin flow as per MVP ops control.
+
+
+## Incremental update (db hardening for payouts/partner scope)
+- Added SQL indexes for payout and partner analytics hot paths (`doctor_earnings`, `payments`, `clinic_commission`, `payouts`).
+- Added integrity checks for payout statuses via DB constraints:
+  - `chk_doctor_earnings_status`
+  - `chk_payouts_status`
+- Added unique index `ux_clinic_commission_case` to prevent duplicate clinic commission per case.

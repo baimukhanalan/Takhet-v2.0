@@ -525,3 +525,44 @@ create table if not exists insurance_providers (
   status text default 'disabled',
   created_at timestamptz default now()
 );
+
+
+-- =========================
+-- Payout/partner performance + integrity hardening
+-- =========================
+
+create index if not exists ix_doctor_earnings_status_hold_until on doctor_earnings(status, hold_until);
+create index if not exists ix_doctor_earnings_doctor_status_created on doctor_earnings(doctor_id, status, created_at);
+create index if not exists ix_payments_clinic_created on payments(clinic_id, created_at);
+create index if not exists ix_clinic_commission_clinic_created on clinic_commission(clinic_id, created_at);
+create index if not exists ix_payouts_status_created on payouts(status, created_at);
+
+create unique index if not exists ux_clinic_commission_case on clinic_commission(case_id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'chk_doctor_earnings_status'
+  ) THEN
+    ALTER TABLE doctor_earnings
+      ADD CONSTRAINT chk_doctor_earnings_status
+      CHECK (status IN ('pending', 'hold', 'ready_for_payout', 'paid_out', 'reversed'));
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'chk_payouts_status'
+  ) THEN
+    ALTER TABLE payouts
+      ADD CONSTRAINT chk_payouts_status
+      CHECK (status IN ('pending', 'ready_for_payout', 'paid_out', 'reversed'));
+  END IF;
+END
+$$;

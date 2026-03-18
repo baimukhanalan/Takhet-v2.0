@@ -88,3 +88,9 @@
 3. `docs/PAYOUT_RUNBOOK.md` (manual weekly payout operational steps)
 4. `docs/EDS_INTEGRATION_PLAN.md` (NCALayer flows, API contracts, verification)
 5. `docs/INTEGRATIONS_STAGING_SECRETS.md` (non-secret placeholders + ownership)
+
+
+## H) Incremental progress updates
+- ✅ Auto worker for `hold -> ready_for_payout` added in backend (env-controlled interval).
+- ✅ Partner/finance DB hardening added: additional indexes + payout status constraints + unique clinic commission per case.
+- ⏳ Still pending owner approvals: legal EDS policy, final RLS governance sign-off, payout reversal/dispute ops policy, external staging credentials/contracts, retention/deletion policy.
