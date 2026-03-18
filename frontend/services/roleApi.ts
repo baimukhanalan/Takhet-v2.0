@@ -32,6 +32,7 @@ export const roleApi = {
   partnerRequests: () => api<any>('/partner/requests'),
   partnerPayments: () => api<any[]>('/partner/payments'),
   partnerCommissions: () => api<any>('/partner/commissions'),
+  partnerPayoutBacklog: () => api<any>('/partner/payout-backlog'),
 
   patientCases: () => api<any[]>('/patient/cases'),
   patientCreateCase: (summary: string) =>

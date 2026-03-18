@@ -93,4 +93,5 @@
 ## H) Incremental progress updates
 - ✅ Auto worker for `hold -> ready_for_payout` added in backend (env-controlled interval).
 - ✅ Partner/finance DB hardening added: additional indexes + payout status constraints + unique clinic commission per case.
+- ✅ Partner clinic-scoped payout backlog analytics endpoint added (`GET /partner/payout-backlog`).
 - ⏳ Still pending owner approvals: legal EDS policy, final RLS governance sign-off, payout reversal/dispute ops policy, external staging credentials/contracts, retention/deletion policy.

@@ -117,6 +117,60 @@ export class PaymentsService {
     };
   }
 
+
+  async getPartnerPayoutBacklog(partnerId: string) {
+    const clinicRows = await this.paymentsRepo.query('select id from clinics where partner_user_id = $1 limit 1', [partnerId]);
+    const clinicId = clinicRows?.[0]?.id;
+    if (!clinicId) {
+      return {
+        clinicId: null,
+        totals: { holdAmount: 0, holdCount: 0, readyAmount: 0, readyCount: 0 },
+        doctorBreakdown: []
+      };
+    }
+
+    const totalsRows = await this.paymentsRepo.query(
+      `select
+         coalesce(sum(case when de.status = 'hold' then de.doctor_share else 0 end),0) as hold_amount,
+         coalesce(sum(case when de.status = 'ready_for_payout' then de.doctor_share else 0 end),0) as ready_amount,
+         count(*) filter (where de.status = 'hold')::int as hold_count,
+         count(*) filter (where de.status = 'ready_for_payout')::int as ready_count
+       from doctor_earnings de
+       join cases c on c.id = de.case_id
+       where c.clinic_id = $1`,
+      [clinicId]
+    );
+
+    const doctorBreakdown = await this.paymentsRepo.query(
+      `select
+         d.id as doctor_id,
+         d.full_name as doctor_name,
+         coalesce(sum(case when de.status = 'hold' then de.doctor_share else 0 end),0) as hold_amount,
+         coalesce(sum(case when de.status = 'ready_for_payout' then de.doctor_share else 0 end),0) as ready_amount,
+         count(*) filter (where de.status = 'hold')::int as hold_count,
+         count(*) filter (where de.status = 'ready_for_payout')::int as ready_count
+       from doctor_earnings de
+       join cases c on c.id = de.case_id
+       join doctors d on d.id = de.doctor_id
+       where c.clinic_id = $1
+       group by d.id, d.full_name
+       order by ready_amount desc, hold_amount desc`,
+      [clinicId]
+    );
+
+    const t = totalsRows?.[0] || {};
+    return {
+      clinicId,
+      totals: {
+        holdAmount: Number(t.hold_amount || 0),
+        holdCount: Number(t.hold_count || 0),
+        readyAmount: Number(t.ready_amount || 0),
+        readyCount: Number(t.ready_count || 0)
+      },
+      doctorBreakdown
+    };
+  }
+
   getMyPayments(userId: string) {
     return this.paymentsRepo.find({ where: { userId }, order: { createdAt: 'DESC' } });
   }

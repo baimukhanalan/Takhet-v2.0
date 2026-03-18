@@ -94,3 +94,9 @@
   - `chk_doctor_earnings_status`
   - `chk_payouts_status`
 - Added unique index `ux_clinic_commission_case` to prevent duplicate clinic commission per case.
+
+
+## Incremental update (partner payout backlog analytics)
+- Added clinic-scoped partner payout backlog endpoint: `GET /partner/payout-backlog`.
+- Endpoint returns aggregated backlog by status (`hold`, `ready_for_payout`) and doctor-level breakdown inside partner clinic scope.
+- Frontend role API extended with `partnerPayoutBacklog()`.
