@@ -26,5 +26,7 @@ export const env = {
   sentryDsn: process.env.SENTRY_DSN || '',
   piiEncryptionKey: process.env.PII_ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef',
   rateLimitTtlMs: Number(process.env.RATE_LIMIT_TTL_MS || 60000),
-  rateLimitMax: Number(process.env.RATE_LIMIT_MAX || 30)
+  rateLimitMax: Number(process.env.RATE_LIMIT_MAX || 30),
+  payoutAutoPrepareEnabled: (process.env.PAYOUT_AUTO_PREPARE_ENABLED || 'false').toLowerCase() === 'true',
+  payoutAutoPrepareIntervalMs: Number(process.env.PAYOUT_AUTO_PREPARE_INTERVAL_MS || 300000),
 };

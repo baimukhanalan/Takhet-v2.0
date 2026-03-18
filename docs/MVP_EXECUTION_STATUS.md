@@ -82,3 +82,11 @@
   - staging integration credentials/contracts
   - retention/deletion policy
 - Для merge hygiene сохранена проверка `scripts/verify-merge-clean.sh` перед push/PR.
+
+
+## Incremental update (auto payout prepare scheduler)
+- Added background scheduler in backend payments module to automatically run `hold -> ready_for_payout`.
+- Scheduler is controlled by env flags:
+  - `PAYOUT_AUTO_PREPARE_ENABLED`
+  - `PAYOUT_AUTO_PREPARE_INTERVAL_MS`
+- `paid_out` stage remains manual by admin flow as per MVP ops control.
