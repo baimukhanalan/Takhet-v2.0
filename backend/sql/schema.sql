@@ -1,0 +1,568 @@
+-- Takhet+ backend schema (MVP + phase-2/3 expansion)
+create extension if not exists "uuid-ossp";
+
+-- CORE
+create table if not exists users (id uuid primary key default uuid_generate_v4(), email text unique not null, role text not null, disabled boolean default false, created_at timestamptz default now());
+create table if not exists roles (id uuid primary key default uuid_generate_v4(), code text unique, name text);
+create table if not exists permissions (id uuid primary key default uuid_generate_v4(), code text unique, description text);
+create table if not exists sessions (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), device_id text, expires_at timestamptz);
+create table if not exists devices (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), platform text, push_token text);
+create table if not exists audit_logs (id uuid primary key default uuid_generate_v4(), event text not null, actor_id uuid not null, payload jsonb default '{}'::jsonb, created_at timestamptz default now());
+create table if not exists notifications (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), title text, body text, is_read boolean default false, created_at timestamptz default now());
+create table if not exists settings (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), key text, value jsonb);
+
+-- PATIENTS
+create table if not exists patients (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), birth_date date, gender text, created_at timestamptz default now());
+create table if not exists patient_profiles (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), anamnesis text, chronic_conditions text, allergies text);
+create table if not exists patient_contacts (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), phone text, emergency_name text, emergency_phone text);
+create table if not exists patient_addresses (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), address_line text, city text, is_primary boolean default false);
+create table if not exists patient_insurance (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), provider text, policy_number text, valid_until date);
+create table if not exists patient_preferences (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), timezone text, notification_mode text);
+create table if not exists patient_conditions (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), title text, status text);
+create table if not exists patient_allergies (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), allergen text, reaction text);
+create table if not exists patient_medications (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), title text, dosage text);
+create table if not exists patient_family_history (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), condition text, relation text);
+
+-- DOCTORS
+create table if not exists doctors (id uuid primary key default uuid_generate_v4(), full_name text not null, specialty text not null, active boolean default true, bio text default '', approved_by uuid, created_at timestamptz default now(), updated_at timestamptz default now());
+create table if not exists doctor_profiles (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), bio text, experience_years int);
+create table if not exists doctor_specialties (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), code text, label text);
+create table if not exists doctor_licenses (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), license_number text, valid_until date);
+create table if not exists doctor_availability (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), starts_at timestamptz, ends_at timestamptz, mode text);
+create table if not exists doctor_reviews (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), patient_id uuid references patients(id), review text, created_at timestamptz default now());
+create table if not exists doctor_ratings (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), score numeric(2,1), source text);
+create table if not exists doctor_payouts (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), amount bigint, period_start date, period_end date);
+create table if not exists doctor_sessions (id uuid primary key default uuid_generate_v4(), doctor_id uuid references doctors(id), session_date timestamptz, mode text);
+
+-- CONSULTATIONS / CASES
+create table if not exists cases (id uuid primary key default uuid_generate_v4(), patient_id uuid not null, doctor_id uuid, status text default 'open', summary text not null, created_at timestamptz default now());
+create table if not exists consultations (id uuid primary key default uuid_generate_v4(), case_id uuid references cases(id), mode text, started_at timestamptz, ended_at timestamptz);
+create table if not exists consultation_messages (id uuid primary key default uuid_generate_v4(), consultation_id uuid references consultations(id), author_id uuid references users(id), body text, created_at timestamptz default now());
+create table if not exists consultation_notes (id uuid primary key default uuid_generate_v4(), consultation_id uuid references consultations(id), doctor_id uuid references doctors(id), note text, created_at timestamptz default now());
+create table if not exists consultation_files (id uuid primary key default uuid_generate_v4(), consultation_id uuid references consultations(id), file_id uuid, uploaded_at timestamptz default now());
+create table if not exists consultation_status (id uuid primary key default uuid_generate_v4(), case_id uuid references cases(id), from_status text, to_status text, changed_at timestamptz default now());
+create table if not exists treatment_plans (id uuid primary key default uuid_generate_v4(), case_id uuid references cases(id), plan_json jsonb, created_at timestamptz default now());
+create table if not exists follow_up_tasks (id uuid primary key default uuid_generate_v4(), case_id uuid references cases(id), task text, due_at timestamptz, done boolean default false);
+
+-- MEDICAL RECORDS
+create table if not exists medical_records (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), case_id uuid references cases(id), summary text, created_at timestamptz default now());
+create table if not exists diagnoses (id uuid primary key default uuid_generate_v4(), record_id uuid references medical_records(id), code text, title text, confidence numeric(5,2));
+create table if not exists symptoms (id uuid primary key default uuid_generate_v4(), record_id uuid references medical_records(id), label text, severity text);
+create table if not exists vitals (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), heart_rate int, systolic int, diastolic int, measured_at timestamptz default now());
+create table if not exists lab_results (id uuid primary key default uuid_generate_v4(), record_id uuid references medical_records(id), marker text, value text, unit text, range_text text);
+create table if not exists prescriptions (id uuid primary key default uuid_generate_v4(), case_id uuid references cases(id), doctor_id uuid references doctors(id), patient_id uuid references patients(id), status text, created_at timestamptz default now());
+create table if not exists procedures (id uuid primary key default uuid_generate_v4(), record_id uuid references medical_records(id), title text, details text);
+create table if not exists imaging_results (id uuid primary key default uuid_generate_v4(), record_id uuid references medical_records(id), modality text, findings text);
+create table if not exists documents (id uuid primary key default uuid_generate_v4(), case_id uuid references cases(id), type text, title text, created_at timestamptz default now());
+create table if not exists document_versions (id uuid primary key default uuid_generate_v4(), document_id uuid references documents(id), version int, payload jsonb, created_at timestamptz default now());
+create table if not exists medications (id uuid primary key default uuid_generate_v4(), prescription_id uuid references prescriptions(id), title text, dosage text, duration_days int);
+create table if not exists care_pathways (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), pathway text, stage text, updated_at timestamptz default now());
+
+-- AI
+create table if not exists triage_sessions (id uuid primary key default uuid_generate_v4(), patient_id uuid not null, symptoms text not null, ai_result jsonb default '{}'::jsonb, created_at timestamptz default now());
+create table if not exists ai_evaluations (id uuid primary key default uuid_generate_v4(), triage_id uuid references triage_sessions(id), model text, output jsonb, created_at timestamptz default now());
+create table if not exists ai_recommendations (id uuid primary key default uuid_generate_v4(), triage_id uuid references triage_sessions(id), recommendation text, priority text);
+create table if not exists ai_risk_scores (id uuid primary key default uuid_generate_v4(), triage_id uuid references triage_sessions(id), risk_code text, risk_value numeric(5,2));
+create table if not exists ai_symptom_vectors (id uuid primary key default uuid_generate_v4(), triage_id uuid references triage_sessions(id), vector jsonb);
+
+-- PAYMENTS
+create table if not exists payments (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), case_id uuid references cases(id), amount bigint, currency text default 'KZT', status text, provider text default 'kaspi', provider_id text, provider_payment_id text unique, created_at timestamptz default now());
+create table if not exists payment_methods (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), provider text, token text, is_default boolean default false);
+create table if not exists transactions (id uuid primary key default uuid_generate_v4(), payment_id uuid references payments(id), amount bigint, status text, raw_payload jsonb, created_at timestamptz default now());
+create table if not exists refunds (id uuid primary key default uuid_generate_v4(), payment_id uuid references payments(id), amount bigint, reason text, status text);
+create table if not exists invoices (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), total bigint, status text, due_at timestamptz);
+create table if not exists subscriptions (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), plan_code text, status text, renews_at timestamptz);
+
+-- HEALTH TRACKING
+create table if not exists health_metrics (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), metric text, value numeric, measured_at timestamptz default now());
+create table if not exists sleep_data (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), duration_minutes int, quality_score int, date date);
+create table if not exists activity_data (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), steps int, calories int, date date);
+create table if not exists nutrition_logs (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), calories int, protein numeric, carbs numeric, fats numeric, date date);
+create table if not exists glucose_logs (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), value numeric, measured_at timestamptz default now());
+create table if not exists blood_pressure_logs (id uuid primary key default uuid_generate_v4(), patient_id uuid references patients(id), systolic int, diastolic int, measured_at timestamptz default now());
+
+-- CONTENT / COMMUNITY
+create table if not exists articles (id uuid primary key default uuid_generate_v4(), title text, body text, author_id uuid references users(id), published_at timestamptz);
+create table if not exists article_categories (id uuid primary key default uuid_generate_v4(), code text unique, title text);
+create table if not exists article_views (id uuid primary key default uuid_generate_v4(), article_id uuid references articles(id), user_id uuid references users(id), viewed_at timestamptz default now());
+create table if not exists comments (id uuid primary key default uuid_generate_v4(), article_id uuid references articles(id), user_id uuid references users(id), body text, created_at timestamptz default now());
+create table if not exists likes (id uuid primary key default uuid_generate_v4(), article_id uuid references articles(id), user_id uuid references users(id), created_at timestamptz default now());
+create table if not exists bookmarks (id uuid primary key default uuid_generate_v4(), article_id uuid references articles(id), user_id uuid references users(id), created_at timestamptz default now());
+
+-- GAMIFICATION
+create table if not exists achievements (id uuid primary key default uuid_generate_v4(), code text unique, title text, description text);
+create table if not exists user_points (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), points int default 0, updated_at timestamptz default now());
+create table if not exists health_goals (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), goal_type text, target_value numeric, starts_at date, ends_at date);
+create table if not exists goal_progress (id uuid primary key default uuid_generate_v4(), goal_id uuid references health_goals(id), progress_value numeric, logged_at timestamptz default now());
+create table if not exists leaderboards (id uuid primary key default uuid_generate_v4(), scope text, period text, ranking jsonb);
+
+-- SIGNATURES + SECURITY
+create table if not exists signatures (id uuid primary key default uuid_generate_v4(), user_id uuid not null, document_id uuid not null, signature_hash text not null, created_at timestamptz default now());
+create table if not exists document_signatures (id uuid primary key default uuid_generate_v4(), document_id uuid references documents(id), signature_id uuid references signatures(id), signed_at timestamptz default now());
+create table if not exists login_attempts (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), ip text, success boolean, created_at timestamptz default now());
+create table if not exists access_logs (id uuid primary key default uuid_generate_v4(), user_id uuid references users(id), endpoint text, method text, created_at timestamptz default now());
+create table if not exists security_events (id uuid primary key default uuid_generate_v4(), event text, severity text, details jsonb, created_at timestamptz default now());
+
+-- MVP DOCUMENTS + RTC hardening
+alter table if exists documents add column if not exists patient_id uuid;
+alter table if exists documents add column if not exists doctor_id uuid;
+alter table if exists documents add column if not exists status text default 'draft';
+alter table if exists documents add column if not exists updated_at timestamptz default now();
+
+alter table if exists document_versions add column if not exists version_number int;
+alter table if exists document_versions add column if not exists payload_json jsonb;
+alter table if exists document_versions add column if not exists pdf_path text;
+alter table if exists document_versions add column if not exists created_by uuid;
+alter table if exists document_versions add column if not exists created_at timestamptz default now();
+
+create table if not exists rtc_sessions (
+  id uuid primary key default uuid_generate_v4(),
+  case_id uuid references cases(id),
+  doctor_id uuid,
+  patient_id uuid,
+  status text default 'waiting',
+  offer_sdp text,
+  answer_sdp text,
+  ice_candidates jsonb default '[]'::jsonb,
+  started_at timestamptz,
+  ended_at timestamptz,
+  duration int,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists doctor_earnings (
+  id uuid primary key default uuid_generate_v4(),
+  doctor_id uuid,
+  payment_id uuid references payments(id),
+  amount bigint,
+  created_at timestamptz default now()
+);
+
+create table if not exists platform_commission (
+  id uuid primary key default uuid_generate_v4(),
+  payment_id uuid references payments(id),
+  amount bigint,
+  created_at timestamptz default now()
+);
+
+create table if not exists payouts (
+  id uuid primary key default uuid_generate_v4(),
+  doctor_id uuid,
+  amount bigint,
+  status text,
+  created_at timestamptz default now()
+);
+
+-- =========================
+-- RLS + STORAGE POLICIES (MVP baseline)
+-- =========================
+
+-- helper to read current app user id from JWT claim in Postgres session
+create or replace function app_current_user_id()
+returns uuid
+language sql
+stable
+as $$
+  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
+$$;
+
+alter table if exists cases enable row level security;
+alter table if exists documents enable row level security;
+alter table if exists document_versions enable row level security;
+alter table if exists rtc_sessions enable row level security;
+alter table if exists payments enable row level security;
+alter table if exists notifications enable row level security;
+
+-- cases policies
+create policy if not exists cases_select_owner_or_doctor on cases
+for select using (
+  patient_id = app_current_user_id()::text
+  or doctor_id = app_current_user_id()::text
+);
+
+create policy if not exists cases_insert_patient on cases
+for insert with check (
+  patient_id = app_current_user_id()::text
+);
+
+create policy if not exists cases_update_doctor_or_owner on cases
+for update using (
+  patient_id = app_current_user_id()::text
+  or doctor_id = app_current_user_id()::text
+);
+
+-- documents policies
+create policy if not exists documents_select_owner_or_doctor on documents
+for select using (
+  patient_id = app_current_user_id()::text
+  or doctor_id = app_current_user_id()::text
+);
+
+create policy if not exists documents_insert_doctor on documents
+for insert with check (
+  doctor_id = app_current_user_id()::text
+);
+
+create policy if not exists documents_update_doctor on documents
+for update using (
+  doctor_id = app_current_user_id()::text
+);
+
+-- versions policies
+create policy if not exists document_versions_select_linked on document_versions
+for select using (
+  exists (
+    select 1 from documents d
+    where d.id = document_versions.document_id
+      and (d.patient_id = app_current_user_id()::text or d.doctor_id = app_current_user_id()::text)
+  )
+);
+
+create policy if not exists document_versions_insert_linked_doctor on document_versions
+for insert with check (
+  exists (
+    select 1 from documents d
+    where d.id = document_versions.document_id
+      and d.doctor_id = app_current_user_id()::text
+  )
+);
+
+-- rtc session policies
+create policy if not exists rtc_select_participants on rtc_sessions
+for select using (
+  doctor_id = app_current_user_id()::text
+  or patient_id = app_current_user_id()::text
+);
+
+create policy if not exists rtc_insert_participants on rtc_sessions
+for insert with check (
+  doctor_id = app_current_user_id()::text
+  or patient_id = app_current_user_id()::text
+);
+
+create policy if not exists rtc_update_participants on rtc_sessions
+for update using (
+  doctor_id = app_current_user_id()::text
+  or patient_id = app_current_user_id()::text
+);
+
+-- payments policies
+create policy if not exists payments_select_owner on payments
+for select using (user_id = app_current_user_id());
+
+create policy if not exists payments_insert_owner on payments
+for insert with check (user_id = app_current_user_id());
+
+-- notifications policies
+create policy if not exists notifications_select_owner on notifications
+for select using (user_id = app_current_user_id());
+
+create policy if not exists notifications_update_owner on notifications
+for update using (user_id = app_current_user_id());
+
+-- Supabase storage buckets/policies (execute in Supabase SQL editor)
+insert into storage.buckets (id, name, public)
+values ('medical-files', 'medical-files', false)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('documents-draft', 'documents-draft', false)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('documents-signed', 'documents-signed', false)
+on conflict (id) do nothing;
+
+create policy if not exists "medical-files read own" on storage.objects
+for select using (
+  bucket_id = 'medical-files'
+  and owner = app_current_user_id()
+);
+
+create policy if not exists "medical-files write own" on storage.objects
+for insert with check (
+  bucket_id = 'medical-files'
+  and owner = app_current_user_id()
+);
+
+create policy if not exists "documents-draft read own" on storage.objects
+for select using (
+  bucket_id = 'documents-draft'
+  and owner = app_current_user_id()
+);
+
+create policy if not exists "documents-draft write own" on storage.objects
+for insert with check (
+  bucket_id = 'documents-draft'
+  and owner = app_current_user_id()
+);
+
+create policy if not exists "documents-signed read own" on storage.objects
+for select using (
+  bucket_id = 'documents-signed'
+  and owner = app_current_user_id()
+);
+
+-- =========================
+-- Supabase RLS quick-start (requested explicit policies)
+-- =========================
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE doctors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consultations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE medical_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY IF NOT EXISTS users_self
+ON users
+FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY IF NOT EXISTS patient_records
+ON medical_records
+FOR SELECT
+USING (
+  patient_id IN (
+    SELECT id FROM patients WHERE user_id = auth.uid()
+  )
+);
+
+CREATE POLICY IF NOT EXISTS patient_cases
+ON cases
+FOR SELECT
+USING (
+  patient_id IN (
+    SELECT id FROM patients WHERE user_id = auth.uid()
+  )
+);
+
+CREATE POLICY IF NOT EXISTS doctor_cases
+ON cases
+FOR SELECT
+USING (
+  doctor_id IN (
+    SELECT id FROM doctors
+  )
+);
+
+CREATE POLICY IF NOT EXISTS document_access
+ON documents
+FOR SELECT
+USING (
+  case_id IN (
+    SELECT id FROM cases
+    WHERE patient_id IN (
+      SELECT id FROM patients WHERE user_id = auth.uid()
+    )
+  )
+);
+
+-- Storage bucket policies (Supabase)
+-- buckets:
+--  medical-files
+--  documents-signed
+
+-- =========================
+-- Clinic scope + final payout model (70/10/20)
+-- =========================
+
+create table if not exists clinics (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  license_number text,
+  address text,
+  created_at timestamptz default now()
+);
+
+alter table if exists doctors add column if not exists clinic_id uuid references clinics(id);
+alter table if exists cases add column if not exists clinic_id uuid references clinics(id);
+alter table if exists payments add column if not exists clinic_id uuid references clinics(id);
+alter table if exists payments add column if not exists gross_amount bigint;
+update payments set gross_amount = coalesce(gross_amount, amount);
+
+alter table if exists doctor_earnings add column if not exists case_id uuid references cases(id);
+alter table if exists doctor_earnings add column if not exists payment_id uuid references payments(id);
+alter table if exists doctor_earnings add column if not exists gross_amount bigint;
+alter table if exists doctor_earnings add column if not exists doctor_share bigint;
+alter table if exists doctor_earnings add column if not exists clinic_share bigint;
+alter table if exists doctor_earnings add column if not exists platform_share bigint;
+alter table if exists doctor_earnings add column if not exists hold_until timestamptz;
+alter table if exists doctor_earnings add column if not exists status text default 'pending';
+
+create table if not exists clinic_commission (
+  id uuid primary key default uuid_generate_v4(),
+  clinic_id uuid references clinics(id),
+  case_id uuid references cases(id),
+  amount bigint,
+  created_at timestamptz default now()
+);
+
+alter table if exists platform_commission add column if not exists case_id uuid references cases(id);
+alter table if exists payouts add column if not exists period_start date;
+alter table if exists payouts add column if not exists period_end date;
+alter table if exists payouts add column if not exists paid_at timestamptz;
+
+create unique index if not exists ux_doctor_earnings_case on doctor_earnings(case_id);
+create unique index if not exists ux_payout_doctor_period on payouts(doctor_id, period_start, period_end);
+
+-- payout statuses baseline
+-- pending | hold | ready_for_payout | paid_out | reversed
+
+-- partner clinic ownership for scoped access
+alter table if exists clinics add column if not exists partner_user_id uuid references users(id);
+
+-- enforce MVP rule: one doctor belongs to one clinic
+-- (clinic_id is mandatory in practice for new records)
+
+alter table if exists doctors enable row level security;
+alter table if exists clinic_commission enable row level security;
+
+create policy if not exists doctors_partner_clinic_select on doctors
+for select using (
+  clinic_id in (select id from clinics where partner_user_id = auth.uid())
+);
+
+create policy if not exists cases_partner_clinic_select on cases
+for select using (
+  clinic_id in (select id from clinics where partner_user_id = auth.uid())
+);
+
+create policy if not exists payments_partner_clinic_select on payments
+for select using (
+  clinic_id in (select id from clinics where partner_user_id = auth.uid())
+);
+
+create policy if not exists clinic_commission_partner_select on clinic_commission
+for select using (
+  clinic_id in (select id from clinics where partner_user_id = auth.uid())
+);
+
+-- =========================
+-- Additional full-scope checklist tables (excluding home-visit and delivery per decision)
+-- =========================
+
+create table if not exists packages (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  title text,
+  consultations_limit int,
+  price bigint,
+  created_at timestamptz default now()
+);
+
+create table if not exists package_usage (
+  id uuid primary key default uuid_generate_v4(),
+  package_id uuid references packages(id),
+  user_id uuid references users(id),
+  used_count int default 0,
+  updated_at timestamptz default now()
+);
+
+create table if not exists installment_plans (
+  id uuid primary key default uuid_generate_v4(),
+  payment_id uuid references payments(id),
+  total_amount bigint,
+  months int,
+  monthly_amount bigint,
+  status text,
+  created_at timestamptz default now()
+);
+
+create table if not exists community_groups (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  title text,
+  is_anonymous boolean default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists doctor_consultations (
+  id uuid primary key default uuid_generate_v4(),
+  case_id uuid references cases(id),
+  requester_doctor_id uuid references doctors(id),
+  reviewer_doctor_id uuid references doctors(id),
+  note text,
+  status text default 'requested',
+  created_at timestamptz default now()
+);
+
+create table if not exists expert_reviews (
+  id uuid primary key default uuid_generate_v4(),
+  case_id uuid references cases(id),
+  doctor_consultation_id uuid references doctor_consultations(id),
+  expert_doctor_id uuid references doctors(id),
+  recommendation text,
+  created_at timestamptz default now()
+);
+
+create table if not exists lab_integrations (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  name text,
+  api_url text,
+  status text default 'disabled',
+  created_at timestamptz default now()
+);
+
+create table if not exists pharmacy_partners (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  name text,
+  api_url text,
+  status text default 'disabled',
+  created_at timestamptz default now()
+);
+
+create table if not exists insurance_providers (
+  id uuid primary key default uuid_generate_v4(),
+  code text unique,
+  name text,
+  api_url text,
+  status text default 'disabled',
+  created_at timestamptz default now()
+);
+
+
+-- =========================
+-- Payout/partner performance + integrity hardening
+-- =========================
+
+create index if not exists ix_doctor_earnings_status_hold_until on doctor_earnings(status, hold_until);
+create index if not exists ix_doctor_earnings_doctor_status_created on doctor_earnings(doctor_id, status, created_at);
+create index if not exists ix_payments_clinic_created on payments(clinic_id, created_at);
+create index if not exists ix_clinic_commission_clinic_created on clinic_commission(clinic_id, created_at);
+create index if not exists ix_payouts_status_created on payouts(status, created_at);
+
+create unique index if not exists ux_clinic_commission_case on clinic_commission(case_id);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'chk_doctor_earnings_status'
+  ) THEN
+    ALTER TABLE doctor_earnings
+      ADD CONSTRAINT chk_doctor_earnings_status
+      CHECK (status IN ('pending', 'hold', 'ready_for_payout', 'paid_out', 'reversed'));
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'chk_payouts_status'
+  ) THEN
+    ALTER TABLE payouts
+      ADD CONSTRAINT chk_payouts_status
+      CHECK (status IN ('pending', 'ready_for_payout', 'paid_out', 'reversed'));
+  END IF;
+END
+$$;

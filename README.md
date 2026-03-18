@@ -1,20 +1,65 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Takhet+ — Architecture & Project Rules
 
-# Run and deploy your AI Studio app
+## 1) Архитектура
 
-This contains everything you need to run your app locally.
+### Monorepo layout
+- `frontend/` — React + Vite клиентское приложение.
+- `backend/` — NestJS API (RBAC, cases, triage, payments, files, RTC, docs).
+- `backend/sql/` — SQL schema + seed для Postgres/Supabase.
+- `docs/` — governance/ops/legal документы (RLS, payout, EDS, audits).
+- `scripts/` — инфраструктурные утилиты репозитория.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1j2F1oVJQ1kDg8AOfy2LqBX5kJrP0EUdJ
+### Backend architecture (NestJS)
+- Модульная структура по доменам: `auth`, `users`, `cases`, `doctor`, `partner`, `patient`, `payments`, `documents`, `signatures`, `rtc`, `files`, `notifications`, `audit`.
+- Доменные сущности через TypeORM entities.
+- Контроль доступа: JWT + role guards.
+- Интеграционный слой: платежи (Kaspi scaffold), file storage, AI triage wrapper.
 
-## Run Locally
+### Frontend architecture
+- Ролевая навигация и страницы по сценариям (`admin`, `doctor`, `partner`, `patient`).
+- API-слой в `frontend/services/`:
+  - `api.ts` — базовый HTTP-клиент,
+  - `roleApi.ts` — role-oriented API adapter.
+- UI-компоненты в `frontend/components/`, маршруто-ориентированные страницы в `frontend/pages/`.
 
-**Prerequisites:**  Node.js
+---
 
+## 2) Стилевые правила (code style)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Общие
+- Не добавлять функциональность вне согласованного scope.
+- Избегать “магических” значений: выносить конфиг в env/constants.
+- Любые критичные операции (платежи, доступ к PII) должны быть audit-friendly.
+
+### Backend
+- Следовать модульности NestJS: controller -> service -> entity.
+- Ролевые ограничения применять на endpoint-уровне.
+- Новые бизнес-правила фиксировать в доменном сервисе, а не в контроллере.
+
+### Frontend
+- Не смешивать сетевую логику с UI: API вызовы через `services/*`.
+- Страницы должны быть устойчивы к API-ошибкам (graceful fallback/UI state).
+- Переиспользовать общие компоненты вместо дублирования JSX.
+
+---
+
+## 3) Главные правила проекта
+
+1. **Scope lock:** вне текущего scope исключены:
+   - family account,
+   - home visit,
+   - delivery.
+2. **Security-first:** секреты и service keys не хранятся в репозитории.
+3. **RLS/RBAC consistency:** доступ к данным только по утверждённой role/scope модели.
+4. **Payout discipline:** payout lifecycle и reversal-действия должны соответствовать утверждённой ops-политике.
+5. **Legal discipline (EDS):** юридически значимые документы и подписи внедряются только после финального policy approval.
+
+---
+
+## 4) Важные документы
+
+- `docs/FINAL_DECISIONS_MVP.md`
+- `docs/RLS_MATRIX.md`
+- `docs/PAYOUT_RUNBOOK.md`
+- `docs/EDS_INTEGRATION_PLAN.md`
+- `docs/OWNER_REQUIRED_INPUTS.md`
