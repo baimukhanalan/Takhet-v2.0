@@ -1,12 +1,20 @@
 # EDS_INTEGRATION_PLAN (NCALayer / NCA RK)
 
-Статус: **integration plan draft**.
+Статус: **deferred for post-MVP**.
 
-## Goal
+## MVP decision
 
-Обеспечить юридически валидное подписание медицинских документов через НУЦ РК/NCALayer с проверкой подписи и цепочки доверия.
+На MVP:
+- юридически значимая ЭЦП не внедряется,
+- NCALayer / NCA RK integration не требуется,
+- юридически значимые медицинские документы не выпускаются.
 
-## Target flow (high-level)
+Разрешены только:
+- консультации,
+- рекомендации врача,
+- PDF-артефакты без юридического EDS-статуса.
+
+## Future target flow (phase 2+)
 
 1. Backend формирует canonical document hash + payload.
 2. Client инициирует подпись через NCALayer.
@@ -14,17 +22,18 @@
 4. Backend выполняет verify:
    - целостность payload/hash
    - валидность сертификата
-   - revocation check (OCSP/CRL)
-   - timestamp policy (если обязательна)
+   - basic verification against default NCA RK chain
 5. Backend сохраняет signature metadata + artifact linkage.
 
-## Required decisions
+## Future baseline decisions already fixed
 
-1. Обязательные для ЭЦП типы документов на MVP.
-2. Формат подписи (detached/attached CMS, XML).
-3. Offline/online verify mode и fallback.
-4. Нужна ли countersign организации/клиники.
-5. Требования к long-term validation (LTV).
+- Signature format: PKCS#7 (CMS)
+- Verify mode: basic verification
+- Trust chain: default NCA RK chain
+- Timestamp/LTV: not required for MVP stage
+- Signer: doctor only
+- Signing stage: after consultation
+- Co-sign organization: no
 
 ## Data model impact (already scaffolded)
 
@@ -33,15 +42,9 @@
 - `signatures`
 - `document_signatures`
 
-## Security requirements
+## What remains external when phase 2 starts
 
-- Хранить только необходимые signature артефакты.
-- Логировать verify result в audit (without secret material).
-- Запретить клиентам прямой доступ к service credentials.
-
-## External dependencies needed from owner
-
-- Доступ к staging NCALayer/NCA RK окружению
-- API/spec документация verify endpoints
-- Сертификаты/chain требования
-- Юридические acceptance criteria
+- staging access to NCALayer / NCA RK
+- provider verify API docs
+- certificate chain requirements
+- formal legal acceptance criteria

@@ -29,5 +29,5 @@ export const env = {
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX || 30),
   payoutAutoPrepareEnabled: (process.env.PAYOUT_AUTO_PREPARE_ENABLED || 'false').toLowerCase() === 'true',
   payoutAutoPrepareIntervalMs: Number(process.env.PAYOUT_AUTO_PREPARE_INTERVAL_MS || 300000),
-  payoutReversalWindowDays: Number(process.env.PAYOUT_REVERSAL_WINDOW_DAYS || 14),
+  payoutReversalWindowDays: Number(process.env.PAYOUT_REVERSAL_WINDOW_DAYS || 7)
 };

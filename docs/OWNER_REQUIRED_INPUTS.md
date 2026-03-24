@@ -1,72 +1,61 @@
-# OWNER_REQUIRED_INPUTS (что может закрыть только владелец продукта)
+# OWNER_REQUIRED_INPUTS
 
-Ниже собраны пункты из checklist, которые невозможно корректно финализировать только кодом.
+Статус: **resolved for MVP baseline on 2026-03-18**.
 
-## 1) Legal / EDS policy (обязательные решения)
+Ниже зафиксированы owner-side решения, которые были необходимы для завершения MVP checklist и теперь утверждены.
 
-1. Утвердить перечень юридически обязательных подписываемых документов на MVP:
-   - `medical_report`
-   - `prescription`
-   - `consent`
-   - `sick_leave` (если в scope)
-2. Утвердить технический формат подписи:
-   - CMS/PKCS#7 (attached/detached) или другой допустимый формат
-3. Утвердить verify-политику:
-   - OCSP/CRL/mixed
-   - доверенная цепочка сертификатов
-   - требование timestamp/LTV
-4. Утвердить юридический workflow:
-   - кто подписывает (врач/пациент/оба)
-   - на каком шаге процесса
-   - нужна ли countersign подпись организации
+## 1) Legal / EDS policy
+- На MVP юридически значимая ЭЦП не требуется.
+- На MVP юридически значимые медицинские документы не выпускаются.
+- Future phase baseline:
+  - PKCS#7 (CMS)
+  - doctor only
+  - post-consultation signing
+  - no co-sign
+  - no strict LTV for MVP phase
 
 ## 2) Financial ops / payout policy
-
-1. Подтвердить payout график:
-   - день недели
-   - время
-   - таймзона
-2. Подтвердить reversal/dispute policy:
-   - окно reversals (кол-во дней)
-   - кто имеет полномочия на reversal
-   - список оснований reversal
-   - dispute SLA и эскалация
-3. Подтвердить нужен ли отдельный `finance-admin` и/или second approval для крупных reversals.
+- Weekly payout: Monday, 12:00, Asia/Almaty
+- Reversal window: 7 days
+- Reversal authority: admin only
+- Reversal grounds:
+  - refund
+  - duplicate payment
+  - fraud
+  - dispute
+- Dispute SLA: 3 business days
+- Escalation: admin -> product owner
+- No finance-admin role in MVP
+- No dual approval in MVP
 
 ## 3) Production RLS governance
+- Doctor scope: assigned only
+- Partner documents scope: full content, clinic-scoped only
+- Admin PII access remains audit-logged
+- Service-role remains backend-only
 
-1. Утвердить итоговую роль-матрицу доступа (`docs/RLS_MATRIX.md`).
-2. Подтвердить edge-cases:
-   - doctor видимость (только assigned cases или весь clinic scope)
-   - partner доступ к документам (metadata only vs content)
-   - admin доступ к PII и обязательный аудит
-3. Подписать ответственных (Product/Security/Compliance) и дату ввода в prod.
-
-## 4) External integrations (доступы и контракты)
-
-1. Передать staging credentials и API docs для:
-   - labs
-   - pharmacy
-   - insurance
-   - additional payment providers (если есть)
-2. Подтвердить webhook contracts:
-   - callback URL
-   - подпись/verify
-   - replay protection
+## 4) External integrations
+- MVP integrations:
+  - Kaspi only
+- Not in MVP:
+  - labs
+  - pharmacy
+  - insurance
+  - additional payment providers
+- Webhook baseline:
+  - HTTPS POST
+  - `paid` / `failed`
+  - HMAC verification
+  - idempotent processing
 
 ## 5) Data governance
+- Medical documents retention: 10 years
+- Chat retention: 3 years
+- Audit retention: 5 years
+- Soft-delete window: 30 days
+- Hard-delete: manual admin deletion only
+- Responsible approver: admin
+- Legal hold: enabled for disputes and compliance cases
 
-1. Зафиксировать retention policy:
-   - medical documents
-   - chat/consultation artifacts
-   - audit logs
-2. Зафиксировать deletion policy:
-   - soft-delete window
-   - hard-delete процесс и ответственные
-   - legal hold исключения
-
----
-
-## Почему это не закрывается только разработкой
-
-Эти решения меняют юридическую валидность, финансовые риски и compliance-обязательства компании. Они должны быть утверждены владельцем продукта совместно с legal/compliance/security/finance, после чего команда имплементирует их как code/config/runbooks.
+## Outcome
+Эти решения сняли owner-side блокеры для MVP completion. Post-MVP scope остаётся возможным отдельным этапом.
