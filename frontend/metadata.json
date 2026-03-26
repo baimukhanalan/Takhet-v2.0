@@ -1,8 +1,8 @@
 {
+  "name": "Takhet+ Telemedicine Ecosystem",
+  "description": "A comprehensive telemedicine platform with AI consultations, digital twins, and medical archives.",
   "requestFramePermissions": [
     "camera",
     "microphone"
-  ],
-  "name": "Takhet+ Telemedicine Ecosystem",
-  "description": "Secure telemedicine platform with AI diagnostics"
+  ]
 }

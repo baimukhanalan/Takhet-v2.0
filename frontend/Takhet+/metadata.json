@@ -1,0 +1,8 @@
+{
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "name": "Takhet+ Telemedicine Ecosystem",
+  "description": "Secure telemedicine platform with AI diagnostics"
+}
