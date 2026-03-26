@@ -677,7 +677,6 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
           </div>
         );
 
-      case 'overview':
       default: return null;
     }
   };
