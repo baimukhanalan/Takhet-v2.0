@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { DoctorsService } from './doctors.service';
 
 @Controller('doctors')
@@ -8,5 +8,10 @@ export class DoctorsController {
   @Get()
   list() {
     return this.doctorsService.listActive();
+  }
+
+  @Get(':id')
+  profile(@Param('id') id: string) {
+    return this.doctorsService.getPublicDoctorProfile(id);
   }
 }

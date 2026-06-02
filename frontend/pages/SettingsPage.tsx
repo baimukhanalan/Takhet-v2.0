@@ -66,7 +66,20 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
       MockDB.updateProfile(formData);
       if (user.role === UserRole.DOCTOR) {
         MockDB.updateDoctor(docData.id!, docData);
-        await roleApi.doctorUpdateProfile(String(docData.biography || ''));
+        await roleApi.doctorUpdateProfile({
+          bio: String(docData.biography || ''),
+          headline: String(docData.specialty || 'Digital care specialist'),
+          languages: ['Русский', 'Қазақша'],
+          consultationModes: ['Chat', 'Video'],
+          focusAreas: [String(docData.specialty || 'General Practice')],
+          education: Array.isArray(docData.education) ? docData.education : [],
+          city: 'Almaty',
+          clinicName: 'Takhet+ Network',
+          responseTargetHours: 2,
+          pricePrimary: Number(docData.pricePrimary || 15000),
+          accepts: String(docData.accepts || 'Взрослых'),
+          availability: []
+        });
       }
       setApiInfo('Сохранено (backend sync ok)');
     } catch {

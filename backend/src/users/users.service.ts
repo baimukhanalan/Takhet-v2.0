@@ -16,8 +16,9 @@ export class UsersService {
   }
 
   async softDelete(userId: string, actorId: string) {
-    await this.usersRepo.update({ id: userId }, { disabled: true });
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) return null;
     await this.auditService.log('user.disabled', actorId, { userId });
-    return this.usersRepo.findOne({ where: { id: userId } });
+    return user;
   }
 }

@@ -1,28 +1,25 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('doctors')
 export class Doctor {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'full_name' })
-  fullName!: string;
+  @Column({ type: 'text', nullable: true, select: false, insert: false, update: false })
+  fullName?: string;
 
-  @Column()
-  specialty!: string;
+  @Column({ type: 'text', name: 'specialization' })
+  specialization!: string;
 
-  @Column({ default: true })
-  active!: boolean;
+  @Column({ type: 'text', name: 'license_number', nullable: true })
+  licenseNumber!: string | null;
 
-  @Column({ default: '' })
-  bio!: string;
+  @Column({ type: 'integer', name: 'experience_years', nullable: true })
+  experienceYears!: number | null;
 
-  @Column({ name: 'approved_by', nullable: true })
-  approvedBy!: string | null;
+  @Column({ type: 'boolean', name: 'verified', default: false })
+  verified!: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt!: Date;
 }

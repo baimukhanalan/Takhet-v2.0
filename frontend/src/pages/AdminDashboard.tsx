@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { Suspense, lazy, useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { User, UserRole, Doctor } from '../types';
 import { 
@@ -12,29 +12,121 @@ import {
   ShieldEllipsis, History, BarChartHorizontal, LineChart as LineChartIcon, Radar, Layers,
   UserCheck, ArrowRight
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell, LineChart, Line } from 'recharts';
-import { MockDB, PlatformRequest, PharmacyProduct, PartnerClinic, SystemConfig, AIChatMessage } from '../services/db';
-import { GoogleGenAI } from '@google/genai';
+import type { PlatformRequest, PharmacyProduct, PartnerClinic, PartnerContract, SystemConfig, AIChatMessage } from '../services/db';
 import TakhetLogo from '../components/Logo';
+import { roleApi } from '../../services/roleApi';
+import { advancedChatStream } from '../services/gemini';
+import { useLiveRefresh } from '../services/useLiveRefresh';
 
-const SYSTEM_HEALTH = [
-  { time: '00:00', cpu: 12, ram: 45, reqs: 120 },
-  { time: '04:00', cpu: 8, ram: 42, reqs: 80 },
-  { time: '08:00', cpu: 34, ram: 58, reqs: 450 },
-  { time: '12:00', cpu: 56, ram: 65, reqs: 890 },
-  { time: '16:00', cpu: 42, ram: 62, reqs: 720 },
-  { time: '20:00', cpu: 28, ram: 55, reqs: 340 },
-  { time: '23:59', cpu: 15, ram: 48, reqs: 180 },
-];
+const AdminSystemLoadChart = lazy(() =>
+  import('../components/charts/DashboardCharts').then((module) => ({ default: module.AdminSystemLoadChart }))
+);
+const AdminRevenueChart = lazy(() =>
+  import('../components/charts/DashboardCharts').then((module) => ({ default: module.AdminRevenueChart }))
+);
+const AdminAudienceChart = lazy(() =>
+  import('../components/charts/DashboardCharts').then((module) => ({ default: module.AdminAudienceChart }))
+);
 
-type AdminTab = 'overview' | 'requests' | 'doctors' | 'partners' | 'qa' | 'reviews' | 'medicines' | 'analytics' | 'settings' | 'assistant';
+type AdminDoctorRow = {
+  id: string;
+  fullName: string;
+  specialty: string;
+  experienceYears: number;
+  rating: number;
+  reviewsCount: number;
+  casesCount: number;
+  reputationPoints: number;
+  verified: boolean;
+};
+
+type AdminUserRow = {
+  id: string;
+  email: string;
+  role: string;
+  createdAt: string;
+};
+
+type AdminSystemHealth = {
+  current: {
+    time: string;
+    cpu: number;
+    ram: number;
+    reqs: number;
+  };
+  history: {
+    time: string;
+    cpu: number;
+    ram: number;
+    reqs: number;
+  }[];
+  uptimeSeconds: number;
+  activeRequestsPerMinute: number;
+  status: 'stable' | 'attention';
+};
+
+const formatRequestType = (type: string) => (type === 'DoctorOnboarding' ? 'Врач' : 'Партнер');
+const formatRequestStatus = (status: string) =>
+  status === 'Approved' ? 'Верифицирован' : status === 'Rejected' ? 'Отклонен' : 'Новая';
+
+const normalizeCatalogAudience = (value: string | null): 'doctor' | 'mental' | 'both' => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'mental' || normalized === 'душевный' || normalized === 'специалист') return 'mental';
+  if (normalized === 'both' || normalized === 'оба' || normalized === 'везде') return 'both';
+  return 'doctor';
+};
+
+const looksCorrupted = (value?: string) =>
+  typeof value === 'string' &&
+  (value.includes('Р') || value.includes('�') || value.includes('вЂ') || value.includes('???'));
+
+const sanitizeAdminText = (value: string, fallback: string) => {
+  const normalized = value?.trim() || '';
+  if (!normalized || looksCorrupted(normalized)) return fallback;
+  return normalized;
+};
+
+const normalizePartnerRows = (items: any[] = []): PartnerClinic[] =>
+  items.map((item: any) => ({
+    ...item,
+    name: sanitizeAdminText(item.name, 'Партнер Takhet+')
+  }));
+
+const buildVerificationRequests = (apiDoctors: any[] = [], partnerRows: PartnerClinic[] = []): PlatformRequest[] => {
+  const doctorRequests = apiDoctors
+    .filter((doctor) => !(doctor.verified ?? doctor.active))
+    .map((doctor) => ({
+      id: doctor.id,
+      type: 'DoctorOnboarding' as const,
+      status: 'Pending' as const,
+      sender: doctor.fullName || 'Новый врач',
+      senderId: doctor.id,
+      date: new Date(doctor.createdAt || Date.now()).toLocaleDateString('ru-RU')
+    }));
+
+  const partnerRequests = partnerRows
+    .filter((partner) => partner.status === 'Pending')
+    .map((partner) => ({
+      id: partner.id,
+      type: 'PartnerVerification' as const,
+      status: 'Pending' as const,
+      sender: partner.name || 'Новый партнер',
+      senderId: partner.id,
+      date: new Date().toLocaleDateString('ru-RU')
+    }));
+
+  return [...doctorRequests, ...partnerRequests];
+};
+
+type AdminTab = 'overview' | 'requests' | 'doctors' | 'partners' | 'contracts' | 'qa' | 'reviews' | 'medicines' | 'analytics' | 'settings' | 'assistant';
 
 const NAV_ITEMS: { id: AdminTab, icon: any, label: string }[] = [
   { id: 'overview', icon: BarChart3, label: 'Дашборд' },
-  { id: 'assistant', icon: Sparkles, label: 'Secretary' },
+  { id: 'assistant', icon: Sparkles, label: 'Ассистент' },
   { id: 'requests', icon: ClipboardList, label: 'Заявки' },
   { id: 'doctors', icon: Stethoscope, label: 'Врачи' },
   { id: 'partners', icon: Building2, label: 'Партнеры' },
+  { id: 'contracts', icon: FileText, label: 'Договоры' },
   { id: 'qa', icon: MessageSquare, label: 'Вопросы' },
   { id: 'reviews', icon: Star, label: 'Отзывы' },
   { id: 'medicines', icon: Pill, label: 'Аптека' },
@@ -81,18 +173,23 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [requests, setRequests] = useState<PlatformRequest[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [doctors, setDoctors] = useState<AdminDoctorRow[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
   const [partners, setPartners] = useState<PartnerClinic[]>([]);
+  const [contracts, setContracts] = useState<PartnerContract[]>([]);
   const [medicines, setMedicines] = useState<PharmacyProduct[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
   const [revenueHistory, setRevenueHistory] = useState<any[]>([]);
+  const [adminStats, setAdminStats] = useState<any | null>(null);
+  const [systemHealth, setSystemHealth] = useState<AdminSystemHealth | null>(null);
+  const [adminError, setAdminError] = useState<string | null>(null);
   const [sysConfig, setSysConfig] = useState<SystemConfig>({
     theme: 'light',
     maintenanceMode: false,
     serviceFeePercent: 15,
     aiModel: 'Gemini 2.0 Flash',
-    supportEmail: 'support@takhet.kz'
+    supportEmail: 'support@takhet.com'
   });
   
   // Assistant States
@@ -102,22 +199,146 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const aiScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const load = () => {
-      const db = MockDB.get();
-      setRequests(db.platformRequests);
-      setDoctors(db.doctors);
-      setPartners(db.partners);
-      setMedicines(db.pharmacyProducts);
-      setReviews(db.reviews);
-      setComplaints(db.complaints);
-      setRevenueHistory(db.revenueHistory);
-      setSysConfig(db.config);
-      setAiMessages(db.aiChatHistory);
+    const load = async () => {
+      try {
+        const [dashboard, apiDoctors, apiUsers, portalState, health] = await Promise.all([
+          roleApi.adminDashboard(),
+          roleApi.adminDoctors(),
+          roleApi.adminUsers(),
+          roleApi.adminPortalState(),
+          roleApi.adminSystemHealth()
+        ]);
+
+        const partnerRows = normalizePartnerRows(portalState.partners || []);
+        setPartners(partnerRows);
+        setContracts(
+          (portalState.contracts || []).map((item: any) => ({
+            ...item,
+            partnerName: sanitizeAdminText(item.partnerName, 'Партнер Takhet+'),
+            contractNumber: sanitizeAdminText(item.contractNumber, 'Договор')
+          }))
+        );
+        setMedicines(
+          (portalState.medicines || []).map((item: any) => ({
+          ...item,
+          name: sanitizeAdminText(item.name, 'Препарат'),
+          category: sanitizeAdminText(item.category, 'Каталог'),
+          img: looksCorrupted(item.img) ? '💊' : item.img
+        }))
+        );
+        setReviews(
+          (portalState.reviews || []).map((item: any) => ({
+          ...item,
+          author: sanitizeAdminText(item.author, 'Пациент'),
+          text: sanitizeAdminText(item.text, 'Комментарий временно недоступен.')
+        }))
+        );
+        setComplaints(
+          (portalState.complaints || []).map((item: any) => ({
+          ...item,
+          author: sanitizeAdminText(item.author, 'Анонимно'),
+          title: sanitizeAdminText(item.title, 'Вопрос пациента'),
+          category: sanitizeAdminText(item.category, 'Общее'),
+          replies: (item.replies || []).map((reply: any) => ({
+            ...reply,
+            author: sanitizeAdminText(reply.author, 'Врач Takhet+'),
+            text: sanitizeAdminText(reply.text, 'Ответ врача временно недоступен.')
+          }))
+        }))
+        );
+        setRevenueHistory(portalState.revenueHistory || []);
+        setSysConfig(portalState.config || sysConfig);
+        setAiMessages(portalState.aiChatHistory || []);
+        setSystemHealth(health);
+
+        setAdminStats(dashboard);
+        setDoctors(
+          apiDoctors.map((doctor) => ({
+            id: doctor.id,
+            fullName: doctor.fullName || 'Специалист Takhet+',
+            specialty: doctor.specialty || doctor.specialization || 'Общая практика',
+            experienceYears: doctor.experienceYears || 0,
+            rating: doctor.rating || 0,
+            reviewsCount: doctor.reviewsCount || 0,
+            casesCount: doctor.casesCount || 0,
+            reputationPoints: doctor.reputationPoints || 0,
+            verified: Boolean(doctor.verified ?? doctor.active)
+          }))
+        );
+        setAdminUsers(
+          apiUsers.map((entry) => ({
+            id: entry.id,
+            email: String(entry.email || ''),
+            role: String(entry.role || ''),
+            createdAt: entry.createdAt || new Date().toISOString()
+          }))
+        );
+        setRequests(buildVerificationRequests(apiDoctors, partnerRows));
+        setAdminError(null);
+      } catch (error) {
+        setAdminError(error instanceof Error ? error.message : 'Не удалось загрузить данные админ-портала');
+      }
     };
-    load();
-    window.addEventListener('storage_update', load);
-    return () => window.removeEventListener('storage_update', load);
+    void load();
   }, []);
+
+  useLiveRefresh(
+    async () => {
+      if (activeTab === 'assistant' || activeTab === 'settings' || activeTab === 'medicines' || activeTab === 'reviews' || activeTab === 'qa') {
+        return;
+      }
+
+      await refreshAdminData();
+      const [portalState, health] = await Promise.all([
+        roleApi.adminPortalState(),
+        roleApi.adminSystemHealth()
+      ]);
+      const partnerRows = normalizePartnerRows(portalState.partners || []);
+      setPartners(partnerRows);
+      setRequests((current) => [
+        ...current.filter((request) => request.type === 'DoctorOnboarding'),
+        ...buildVerificationRequests([], partnerRows)
+      ]);
+      setContracts(
+        (portalState.contracts || []).map((item: any) => ({
+          ...item,
+          partnerName: sanitizeAdminText(item.partnerName, 'Партнер Takhet+'),
+          contractNumber: sanitizeAdminText(item.contractNumber, 'Договор')
+        }))
+      );
+      setMedicines(
+        (portalState.medicines || []).map((item: any) => ({
+          ...item,
+          name: sanitizeAdminText(item.name, 'Препарат'),
+          category: sanitizeAdminText(item.category, 'Каталог'),
+          img: looksCorrupted(item.img) ? '💊' : item.img
+        }))
+      );
+      setReviews(
+        (portalState.reviews || []).map((item: any) => ({
+          ...item,
+          author: sanitizeAdminText(item.author, 'Пациент'),
+          text: sanitizeAdminText(item.text, 'Комментарий временно недоступен.')
+        }))
+      );
+      setComplaints(
+        (portalState.complaints || []).map((item: any) => ({
+          ...item,
+          author: sanitizeAdminText(item.author, 'Анонимно'),
+          title: sanitizeAdminText(item.title, 'Вопрос пациента'),
+          category: sanitizeAdminText(item.category, 'Общее'),
+          replies: (item.replies || []).map((reply: any) => ({
+            ...reply,
+            author: sanitizeAdminText(reply.author, 'Врач Takhet+'),
+            text: sanitizeAdminText(reply.text, 'Ответ врача временно недоступен.')
+          }))
+        }))
+      );
+      setRevenueHistory(portalState.revenueHistory || []);
+      setSystemHealth(health);
+    },
+    { intervalMs: 20000 }
+  );
 
   useEffect(() => {
     aiScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -139,63 +360,410 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
     aiUser: 'bg-primary text-white'
   };
 
+  const formatUserEmail = (email: string) => email.replace(/\+(admin|doctor|partner|patient)(?=@)/i, '');
+
+  const formatUserRole = (role: string) => {
+    const normalized = role.toLowerCase();
+    if (normalized === 'admin') return 'Администратор';
+    if (normalized === 'doctor') return 'Врач';
+    if (normalized === 'partner') return 'Партнер';
+    if (normalized === 'patient') return 'Пациент';
+    return role;
+  };
+
+  const formatKztCompact = (amount: number) => {
+    if (!amount) return '₸0';
+    return `₸${new Intl.NumberFormat('ru-RU', {
+      notation: 'compact',
+      maximumFractionDigits: 1
+    }).format(amount)}`;
+  };
+
+  const overviewStats = [
+    {
+      label: 'Пользователи',
+      val: String(adminStats?.usersTotal ?? adminUsers.length ?? 0),
+      change: `${adminStats?.doctors?.active ?? doctors.filter((doc) => doc.verified).length} активных врачей`,
+      icon: Users,
+      color: 'text-blue-500'
+    },
+    {
+      label: 'Открытые кейсы',
+      val: String(adminStats?.cases?.open ?? 0),
+      change: `${adminStats?.cases?.total ?? 0} всего`,
+      icon: Activity,
+      color: 'text-green-500'
+    },
+    {
+      label: 'Платежи',
+      val: formatKztCompact(adminStats?.payments?.paidAmount ?? 0),
+      change: `${adminStats?.payments?.pending ?? 0} ожидают`,
+      icon: TrendingUp,
+      color: 'text-amber-500'
+    },
+    {
+      label: 'Стабильность системы',
+      val: systemHealth?.status === 'attention' ? 'внимание' : 'стабильно',
+      change: adminError ? 'требует внимания' : `uptime ${Math.floor((systemHealth?.uptimeSeconds || 0) / 3600)}ч`,
+      icon: CheckCircle2,
+      color: 'text-emerald-500'
+    }
+  ];
+
+
+  const analyticsSeries = useMemo(
+    () =>
+      revenueHistory.map((entry, index) => ({
+        ...entry,
+        users:
+          typeof entry.users === 'number'
+            ? entry.users
+            : Math.max(1, Math.round((adminStats?.usersTotal || adminUsers.length || 0) / Math.max(revenueHistory.length - index, 1)))
+      })),
+    [revenueHistory, adminStats, adminUsers.length]
+  );
+
+  const getDoctorCasesCount = (doctor: AdminDoctorRow) => doctor.casesCount || 0;
+
+  const getDoctorReputationPoints = (doctor: AdminDoctorRow) => doctor.reputationPoints || 0;
+  const refreshAdminData = async () => {
+    const [dashboard, apiDoctors, apiUsers, portalState, health] = await Promise.all([
+      roleApi.adminDashboard(),
+      roleApi.adminDoctors(),
+      roleApi.adminUsers(),
+      roleApi.adminPortalState(),
+      roleApi.adminSystemHealth()
+    ]);
+    const partnerRows = normalizePartnerRows(portalState.partners || []);
+
+    setAdminStats(dashboard);
+    setPartners(partnerRows);
+    setDoctors(
+      apiDoctors.map((doctor) => ({
+        id: doctor.id,
+        fullName: doctor.fullName || 'Специалист Takhet+',
+        specialty: doctor.specialty || doctor.specialization || 'Общая практика',
+        experienceYears: doctor.experienceYears || 0,
+        rating: doctor.rating || 0,
+        reviewsCount: doctor.reviewsCount || 0,
+        casesCount: doctor.casesCount || 0,
+        reputationPoints: doctor.reputationPoints || 0,
+        verified: Boolean(doctor.verified ?? doctor.active)
+      }))
+    );
+    setAdminUsers(
+      apiUsers.map((entry) => ({
+        id: entry.id,
+        email: String(entry.email || ''),
+        role: String(entry.role || ''),
+        createdAt: entry.createdAt || new Date().toISOString()
+      }))
+    );
+    setRequests(buildVerificationRequests(apiDoctors, partnerRows));
+    setSystemHealth(health);
+  };
+
   const handleSendAi = async () => {
     if (!aiInput.trim()) return;
     const userText = aiInput.trim();
     const newMsg: AIChatMessage = { role: 'user', text: userText, timestamp: new Date().toLocaleTimeString() };
-    
-    MockDB.addAIChatMessage(newMsg);
+    setAiMessages((current) => [...current, newMsg]);
+    await roleApi.adminAssistantMessage(newMsg);
     setAiInput('');
     setIsAiTyping(true);
+    const aiMsg: AIChatMessage = {
+      role: 'model',
+      text: 'AI секретарь отвечает...',
+      timestamp: new Date().toLocaleTimeString()
+    };
+    setAiMessages((current) => [...current, aiMsg]);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
-        contents: userText,
-        config: {
-          systemInstruction: `You are the Executive Personal Secretary for Alan, Master Admin of Takhet+. 
-          Provide strategic summaries, financial audits, and security alerts. 
-          Use bold headings and concise bullet points. 
-          Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
-        },
+      const responseText = await advancedChatStream(userText, {
+        systemInstruction: `You are the Executive Personal Secretary for Alan, Master Admin of Takhet+.
+Provide strategic summaries, financial audits, and security alerts.
+Use bold headings and concise bullet points.
+Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
+        useSearch: false,
+        onDelta: (_delta, fullText) => {
+          setAiMessages((current) =>
+            current.map((message) => (message === aiMsg ? { ...message, text: fullText } : message))
+          );
+        }
       });
-      const aiMsg: AIChatMessage = { 
-        role: 'model', 
-        text: response.text || "Ошибка связи с ядром ИИ.", 
-        timestamp: new Date().toLocaleTimeString() 
+      const finalAiMsg: AIChatMessage = {
+        ...aiMsg,
+        text: responseText || 'Ошибка связи с AI-ядром.',
       };
-      MockDB.addAIChatMessage(aiMsg);
+      setAiMessages((current) => current.map((message) => (message === aiMsg ? finalAiMsg : message)));
+      await roleApi.adminAssistantMessage(finalAiMsg);
     } catch (e) {
       console.error(e);
+      setAiMessages((current) =>
+        current.map((message) => (message === aiMsg ? { ...message, text: 'Ошибка связи с AI-ядром.' } : message))
+      );
     } finally {
       setIsAiTyping(false);
     }
   };
 
-  const handleRequestAction = (id: string, status: 'Approved' | 'Rejected') => {
-    const db = MockDB.get();
-    const req = db.platformRequests.find(r => r.id === id);
-    if (!req) return;
-
-    MockDB.updateRequestStatus(id, status);
-
-    if (status === 'Approved') {
-      if (req.type === 'DoctorOnboarding' && req.senderId) {
-        MockDB.updateDoctor(req.senderId, { isApproved: true });
-      } else if (req.type === 'PartnerVerification' && req.senderId) {
-        MockDB.updateClinic(req.senderId, { status: 'Active' });
+  const handleRequestAction = async (id: string, status: 'Approved' | 'Rejected') => {
+    try {
+      const request = requests.find((item) => item.id === id);
+      if (request?.type === 'PartnerVerification') {
+        if (status === 'Approved') {
+          await roleApi.adminTogglePartner(id);
+        } else {
+          await roleApi.adminDeletePartner(id);
+        }
+      } else if (status === 'Approved') {
+        await roleApi.adminApproveDoctor(id);
+      } else {
+        await roleApi.adminDeactivateDoctor(id);
       }
+      await refreshAdminData();
+      setAdminError(null);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Не удалось обновить статус заявки');
     }
   };
 
   const handleConfigToggle = (key: keyof SystemConfig) => {
     if (!sysConfig) return;
-    MockDB.updateSystemConfig({ [key]: !sysConfig[key] });
+    const next = { ...sysConfig, [key]: !sysConfig[key] };
+    setSysConfig(next);
+    void roleApi.adminUpdatePortalConfig({ [key]: !sysConfig[key] });
   };
 
   const handleThemeSwitch = (theme: 'dark' | 'light') => {
-    MockDB.updateSystemConfig({ theme });
+    setSysConfig((current) => (current ? { ...current, theme } : current));
+    void roleApi.adminUpdatePortalConfig({ theme });
+  };
+
+  const handleServiceFeeChange = (value: string) => {
+    const serviceFeePercent = Math.max(0, Math.min(100, Number(value) || 0));
+    setSysConfig((current) => (current ? { ...current, serviceFeePercent } : current));
+    void roleApi.adminUpdatePortalConfig({ serviceFeePercent });
+  };
+
+  const handleAddMedicine = async () => {
+    await roleApi.adminAddMedicine();
+    const portalState = await roleApi.adminPortalState();
+    setMedicines(portalState.medicines || []);
+  };
+
+  const handleAddDoctorDraft = async () => {
+    try {
+      const nextIndex = doctors.length + 1;
+      const fullName = window.prompt('ФИО врача', `Новый врач ${nextIndex}`);
+      if (fullName === null) return;
+      const specialty = window.prompt('Специализация', 'Общая практика');
+      if (specialty === null) return;
+      const catalogAudience = normalizeCatalogAudience(
+        window.prompt('Каталог: doctor = врачи, mental = Mental, both = оба', 'doctor')
+      );
+      const temporaryLogin = window.prompt('Временный логин врача (оставьте пустым для автогенерации)', '');
+      const created = await roleApi.adminCreateDoctor(
+        fullName.trim() || `Новый врач ${nextIndex}`,
+        specialty.trim() || 'Общая практика',
+        {
+          catalogAudience,
+          temporaryLogin: temporaryLogin?.trim() || undefined
+        }
+      );
+      await refreshAdminData();
+      if (created?.temporaryLogin && created?.temporaryPassword) {
+        window.alert(`Врач добавлен.\nВременный логин: ${created.temporaryLogin}\nВременный пароль: ${created.temporaryPassword}`);
+      }
+      setAdminError(null);
+      return;
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Не удалось создать карточку врача');
+      return;
+    }
+  };
+
+  const handleAddPartnerDraft = async () => {
+    try {
+      await roleApi.adminAddPartner();
+      const portalState = await roleApi.adminPortalState();
+      const partnerRows = normalizePartnerRows(portalState.partners || []);
+      setPartners(partnerRows);
+      setRequests((current) => [
+        ...current.filter((request) => request.type === 'DoctorOnboarding'),
+        ...buildVerificationRequests([], partnerRows)
+      ]);
+      setAdminError(null);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Не удалось добавить партнера');
+    }
+  };
+
+  const handleAddContract = async () => {
+    try {
+      await roleApi.adminAddContract();
+      const portalState = await roleApi.adminPortalState();
+      setContracts(portalState.contracts || []);
+      setAdminError(null);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Не удалось добавить договор');
+    }
+  };
+
+  const handleRequestDocuments = (request: PlatformRequest) => {
+    setActiveTab(request.type === 'DoctorOnboarding' ? 'doctors' : 'partners');
+  };
+
+  const handleRequestContact = (request: PlatformRequest) => {
+    window.location.href = `mailto:${sysConfig?.supportEmail || 'support@takhet.com'}?subject=${encodeURIComponent(`Takhet request ${request.id}`)}&body=${encodeURIComponent(`Заявка: ${request.sender}\nТип: ${request.type}\nСтатус: ${request.status}`)}`;
+  };
+
+  const handleDoctorSettings = async (doctor: AdminDoctorRow) => {
+    try {
+      await roleApi.adminApproveDoctor(doctor.id);
+      await refreshAdminData();
+      setAdminError(null);
+      return;
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Не удалось активировать врача');
+      return;
+    }
+  };
+
+  const handleDoctorArchive = async (doctor: AdminDoctorRow) => {
+    try {
+      await roleApi.adminDeactivateDoctor(doctor.id);
+      await refreshAdminData();
+      setAdminError(null);
+      return;
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Не удалось изменить статус врача');
+      return;
+    }
+  };
+
+  const handleDoctorDelete = async (doctor: AdminDoctorRow) => {
+    try {
+      await roleApi.adminDeleteDoctor(doctor.id);
+      await refreshAdminData();
+      setAdminError(null);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Не удалось удалить врача');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      await roleApi.adminDeleteUser(userId);
+      await refreshAdminData();
+      setAdminError(null);
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'Не удалось отключить пользователя');
+    }
+  };
+
+  const handleClearAssistantHistory = async () => {
+    await roleApi.adminClearAssistantHistory();
+    setAiMessages([]);
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    await roleApi.adminDeleteReview(reviewId);
+    setReviews((current) => current.filter((item) => item.id !== reviewId));
+  };
+
+  const reloadPortalState = async () => {
+    const portalState = await roleApi.adminPortalState();
+    const partnerRows = normalizePartnerRows(portalState.partners || []);
+    setPartners(partnerRows);
+    setRequests((current) => [
+      ...current.filter((request) => request.type === 'DoctorOnboarding'),
+      ...buildVerificationRequests([], partnerRows)
+    ]);
+    setContracts(portalState.contracts || []);
+    setMedicines(portalState.medicines || []);
+    setReviews(portalState.reviews || []);
+    setComplaints(portalState.complaints || []);
+  };
+
+  const handleDeleteComplaint = async (complaintId: string) => {
+    await roleApi.adminDeleteComplaint(complaintId);
+    setComplaints((current) => current.filter((item) => item.id !== complaintId));
+  };
+
+  const handlePartnerManage = async (partnerId: string) => {
+    await roleApi.adminTogglePartner(partnerId);
+    await reloadPortalState();
+  };
+
+  const handleContractManage = async (contractId: string) => {
+    await roleApi.adminToggleContract(contractId);
+    await reloadPortalState();
+  };
+
+  const handleMedicineEdit = async (medicine: PharmacyProduct) => {
+    const name = window.prompt('Название препарата', medicine.name);
+    if (name === null) return;
+    const price = window.prompt('Цена в тенге', String(medicine.price));
+    if (price === null) return;
+    const stock = window.prompt('Количество на складе', String(medicine.stock));
+    if (stock === null) return;
+    await roleApi.adminUpdateMedicine(medicine.id, {
+      name,
+      price: Number(price),
+      stock: Number(stock),
+      category: medicine.category,
+      img: medicine.img
+    });
+    await reloadPortalState();
+  };
+
+  const handleMedicineDelete = async (medicineId: string) => {
+    await roleApi.adminDeleteMedicine(medicineId);
+    await reloadPortalState();
+  };
+
+  const handlePartnerEdit = async (partner: PartnerClinic) => {
+    const name = window.prompt('Название партнера', partner.name);
+    if (name === null) return;
+    const bin = window.prompt('БИН', partner.bin);
+    if (bin === null) return;
+    const commission = window.prompt('Комиссия (%)', String(partner.commission));
+    if (commission === null) return;
+    await roleApi.adminUpdatePartner(partner.id, {
+      name,
+      bin,
+      commission: Number(commission)
+    });
+    await reloadPortalState();
+  };
+
+  const handlePartnerDelete = async (partnerId: string) => {
+    await roleApi.adminDeletePartner(partnerId);
+    await reloadPortalState();
+  };
+
+  const handleContractEdit = async (contract: PartnerContract) => {
+    const contractNumber = window.prompt('Номер договора', contract.contractNumber);
+    if (contractNumber === null) return;
+    const partnerName = window.prompt('Партнер', contract.partnerName);
+    if (partnerName === null) return;
+    const expiresAt = window.prompt('Действует до', contract.expiresAt);
+    if (expiresAt === null) return;
+    const commission = window.prompt('Комиссия (%)', String(contract.commission));
+    if (commission === null) return;
+    await roleApi.adminUpdateContract(contract.id, {
+      contractNumber,
+      partnerName,
+      expiresAt,
+      commission: Number(commission)
+    });
+    await reloadPortalState();
+  };
+
+  const handleContractDelete = async (contractId: string) => {
+    await roleApi.adminDeleteContract(contractId);
+    await reloadPortalState();
   };
 
   const renderSection = () => {
@@ -204,18 +772,13 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
         return (
           <div className="space-y-6 lg:space-y-10 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
-               {[
-                 { label: 'Пользователи', val: '14,204', change: '+12%', icon: Users, color: 'text-blue-500' },
-                 { label: 'Активные сессии', val: '842', change: '+5%', icon: Activity, color: 'text-green-500' },
-                 { label: 'Транзакции MTD', val: '₸42.5M', change: '+22%', icon: TrendingUp, color: 'text-amber-500' },
-                 { label: 'Uptime системы', val: '99.9%', change: 'Stable', icon: CheckCircle2, color: 'text-emerald-500' },
-               ].map((s, i) => (
+               {overviewStats.map((s, i) => (
                  <div key={i} className={`${styles.card} p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] border hover:border-primary/20 transition-all group`}>
                     <div className="flex items-center justify-between mb-4 lg:mb-6">
                        <div className={`p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-primary/10 ${s.color} group-hover:scale-110 transition-transform`}>
                           <s.icon className="w-5 h-5 lg:w-6 lg:h-6" />
                        </div>
-                       <span className="text-[10px] font-black text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full">{s.change}</span>
+                       <span className={`text-[10px] font-black px-3 py-1 rounded-full ${s.label === 'Стабильность системы' && adminError ? 'text-red-500 bg-red-500/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{s.change}</span>
                     </div>
                     <p className={`${styles.textSub} text-[10px] font-black uppercase tracking-widest`}>{s.label}</p>
                     <p className={`text-2xl lg:text-4xl font-black ${styles.textMain} mt-2`}>{s.val}</p>
@@ -225,32 +788,20 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
                <div className={`lg:col-span-8 ${styles.card} p-6 lg:p-10 rounded-[2.5rem] lg:rounded-[3.5rem] border space-y-6 lg:space-y-10 overflow-hidden`}>
-                  <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight`}>Load Telemetry</h3>
+                  <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight`}>Нагрузка системы</h3>
                   <div className="h-60 lg:h-80 w-full">
-                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={SYSTEM_HEALTH}>
-                           <defs>
-                              <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                                 <stop offset="5%" stopColor="#0D47A1" stopOpacity={0.3}/>
-                                 <stop offset="95%" stopColor="#0D47A1" stopOpacity={0}/>
-                              </linearGradient>
-                           </defs>
-                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
-                           <XAxis dataKey="time" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
-                           <YAxis hide />
-                           <Tooltip contentStyle={{backgroundColor: isDark ? '#0f172a' : '#fff', borderRadius: '1.5rem', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)'}} />
-                           <Area type="monotone" dataKey="cpu" stroke="#0D47A1" fillOpacity={1} fill="url(#colorCpu)" strokeWidth={4} />
-                        </AreaChart>
-                     </ResponsiveContainer>
+                     <Suspense fallback={null}>
+                       <AdminSystemLoadChart data={systemHealth?.history || []} isDark={isDark} />
+                     </Suspense>
                   </div>
                </div>
 
                <div className={`lg:col-span-4 ${styles.card} p-6 lg:p-10 rounded-[2.5rem] lg:rounded-[3.5rem] border space-y-6 lg:space-y-8`}>
-                  <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight`}>Quick Security</h3>
+                  <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight`}>Быстрый контроль</h3>
                   <div className="space-y-4">
                      {sysConfig && [
-                       { label: 'Maintenance Mode', key: 'maintenanceMode' as const, icon: ShieldAlert, danger: true },
-                       { label: 'AI Core Analysis', key: 'aiDiagnosticEnabled' as const, icon: Zap, danger: false }
+                       { label: 'Режим обслуживания', key: 'maintenanceMode' as const, icon: ShieldAlert, danger: true },
+                       { label: 'Анализ AI-ядра', key: 'aiDiagnosticEnabled' as const, icon: Zap, danger: false }
                      ].map(item => (
                         <div key={item.key} className={`p-4 lg:p-6 bg-slate-400/5 rounded-2xl lg:rounded-3xl flex items-center justify-between`}>
                            <div className="flex items-center gap-4">
@@ -278,7 +829,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                          <div className="w-24 h-24 lg:w-32 lg:h-32 bg-primary rounded-[2rem] flex items-center justify-center text-white mb-6">
                             <Sparkles className="w-12 h-12 lg:w-16 lg:h-16" />
                          </div>
-                         <p className="text-xl lg:text-3xl font-black uppercase tracking-[0.3em]">Центр ИИ Ассистента</p>
+                         <p className="text-xl lg:text-3xl font-black uppercase tracking-[0.3em]">Центр AI-ассистента</p>
                          <p className="text-xs lg:text-sm font-bold uppercase tracking-widest">Готов к приему команд управления</p>
                       </div>
                    )}
@@ -290,7 +841,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                             </div>
                             <div className="mt-8 flex items-center justify-between opacity-30 border-t border-current/10 pt-4">
                                <span className="text-[9px] font-black uppercase tracking-widest">{m.timestamp}</span>
-                               <span className="text-[8px] font-bold uppercase tracking-[0.2em]">Verified Strategic Output</span>
+                  <span className="text-[8px] font-bold uppercase tracking-[0.2em]">Проверенный стратегический ответ</span>
                             </div>
                          </div>
                       </div>
@@ -316,7 +867,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                       />
                       <div className="flex items-center gap-1 lg:gap-3">
                         <button 
-                          onClick={() => MockDB.clearAIChatHistory()}
+                          onClick={() => void handleClearAssistantHistory()}
                           className="w-10 h-10 lg:w-16 lg:h-16 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
                           title="Очистить историю"
                         >
@@ -347,13 +898,13 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                      { label: 'Эффективность врачей', icon: Stethoscope, color: 'text-blue-500', desc: 'Конверсия в повторный прием', prompt: 'Дай отчет по эффективности врачей' },
                      { label: 'Аудит безопасности', icon: ShieldEllipsis, color: 'text-red-500', desc: 'Аномалии доступа и логи', prompt: 'Покажи отчет по инцидентам безопасности' },
                      { label: 'Телеметрия API', icon: Cpu, color: 'text-amber-500', desc: 'Нагрузка и задержки серверов', prompt: 'Проанализируй телеметрию системы' },
-                     { label: 'Retention Анализ', icon: History, color: 'text-purple-500', desc: 'Удержание пациентов LTV', prompt: 'Покажи статистику удержания пациентов' },
+                     { label: 'Retention анализ', icon: History, color: 'text-purple-500', desc: 'Удержание пациентов и LTV', prompt: 'Покажи статистику удержания пациентов' },
                      { label: 'Прогноз выручки', icon: BarChartHorizontal, color: 'text-emerald-400', desc: 'AI-прогнозирование роста', prompt: 'Сделай прогноз выручки на следующий квартал' },
-                     { label: 'Точность ИИ-диагностики', icon: Zap, color: 'text-orange-500', desc: 'Подтверждаемость анализов', prompt: 'Каков процент точности ИИ за неделю?' },
+                     { label: 'Точность AI-диагностики', icon: Zap, color: 'text-orange-500', desc: 'Подтверждаемость анализов', prompt: 'Каков процент точности AI за неделю?' },
                      { label: 'География запросов', icon: Globe, color: 'text-cyan-500', desc: 'Тепловая карта обращений', prompt: 'Покажи географическое распределение вызовов' },
                      { label: 'Анализ онбординга', icon: UserCheck, color: 'text-indigo-500', desc: 'Скорость проверки дипломов', prompt: 'Дай отчет по скорости онбординга новых врачей' },
                      { label: 'Маркетинговый ROI', icon: LineChartIcon, color: 'text-rose-500', desc: 'Стоимость привлечения CAC', prompt: 'Рассчитай ROI маркетинговых кампаний' },
-                     { label: 'Compliance Статус', icon: CheckCircle2, color: 'text-teal-500', desc: 'Соответствие закону о ПД', prompt: 'Проверь статус комплаенса данных' },
+                     { label: 'Compliance статус', icon: CheckCircle2, color: 'text-teal-500', desc: 'Соответствие закону о ПД', prompt: 'Проверь статус комплаенса данных' },
                      { label: 'Целостность БД', icon: Database, color: 'text-slate-500', desc: 'Здоровье репликаций и индексов', prompt: 'Проведи диагностику базы данных' }
                    ].map((btn, i) => (
                      <button 
@@ -409,7 +960,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                             <td className={`p-6 text-sm ${styles.textSub} max-w-xs break-words`}>{rev.text}</td>
                             <td className={`p-6 text-xs ${styles.textSub}`}>{rev.date}</td>
                             <td className="p-6">
-                                <button onClick={() => MockDB.deleteReview(rev.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 className="w-4 h-4"/></button>
+                                <button onClick={() => void handleDeleteReview(rev.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 className="w-4 h-4"/></button>
                             </td>
                           </tr>
                         ))}
@@ -424,7 +975,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
           <div className="space-y-6 lg:space-y-8 animate-in slide-in-from-right-4 duration-500">
              <div className="flex justify-between items-center">
                 <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Аптека</h2>
-                <button className="px-4 lg:px-8 py-2 lg:py-4 bg-primary text-white rounded-xl lg:rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Добавить</button>
+               <button onClick={handleAddMedicine} className="px-4 lg:px-8 py-2 lg:py-4 bg-primary text-white rounded-xl lg:rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Добавить</button>
              </div>
              <div className={`${styles.card} rounded-[2rem] lg:rounded-[3rem] border overflow-hidden`}>
                 <div className="overflow-x-auto">
@@ -435,6 +986,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                           <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Цена</th>
                           <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Склад</th>
                           <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Статус</th>
+                          <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Действия</th>
                         </tr>
                     </thead>
                     <tbody className={`divide-y ${styles.border}`}>
@@ -452,6 +1004,16 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                                 <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${med.stock > 10 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                                   {med.stock > 10 ? 'В наличии' : 'Мало'}
                                 </span>
+                            </td>
+                            <td className="p-6">
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => void handleMedicineEdit(med)} className={`p-2 rounded-xl ${styles.card} border ${styles.border} ${styles.textSub} hover:text-primary hover:border-primary/50 transition-all shadow-sm`}>
+                                    <Settings className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => void handleMedicineDelete(med.id)} className={`p-2 rounded-xl ${styles.card} border ${styles.border} ${styles.textSub} hover:text-red-500 hover:border-red-500/50 transition-all shadow-sm`}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                             </td>
                           </tr>
                         ))}
@@ -482,7 +1044,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                            <p className={`text-[9px] font-black uppercase ${styles.textSub}`}>Ответы</p>
                            <p className={`text-lg lg:text-xl font-black ${styles.textMain}`}>{comp.replies?.length || 0}</p>
                         </div>
-                        <button onClick={() => MockDB.deleteComplaint(comp.id)} className="p-3 lg:p-4 bg-red-500/10 text-red-500 rounded-xl lg:rounded-2xl hover:bg-red-500 hover:text-white transition-all">
+                        <button onClick={() => void handleDeleteComplaint(comp.id)} className="p-3 lg:p-4 bg-red-500/10 text-red-500 rounded-xl lg:rounded-2xl hover:bg-red-500 hover:text-white transition-all">
                            <Trash2 className="w-5 h-5" />
                         </button>
                      </div>
@@ -495,10 +1057,10 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
         return (
           <div className="space-y-6 lg:space-y-8 animate-in slide-in-from-right-4 duration-500">
              <div className="flex items-center justify-between">
-                <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Заявки на верификацию</h2>
+                 <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Заявки на верификацию</h2>
                 <div className="flex gap-2">
                    <span className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
-                      {requests.filter(r => r.status === 'Pending').length} Новых
+                      {requests.filter(r => r.status === 'Pending').length} новых
                    </span>
                 </div>
              </div>
@@ -512,14 +1074,14 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                         <div className="min-w-0 flex-1">
                            <div className="flex items-center gap-3">
                               <p className={`${styles.textMain} font-black text-base lg:text-xl break-words`}>{req.sender}</p>
-                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${req.type === 'DoctorOnboarding' ? 'bg-blue-500/10 text-blue-500' : 'bg-purple-500/10 text-purple-500'}`}>
-                                 {req.type === 'DoctorOnboarding' ? 'Врач' : 'Партнер'}
-                              </span>
+                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${req.type === 'DoctorOnboarding' ? 'bg-blue-500/10 text-blue-500' : 'bg-purple-500/10 text-purple-500'}`}>
+                                  {formatRequestType(req.type)}
+                                </span>
                            </div>
                            <p className={`${styles.textSub} text-[10px] font-bold uppercase tracking-widest mt-1`}>Подано: {req.date}</p>
                            <div className="mt-3 flex gap-2">
-                              <button className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-1 hover:underline"><FileSearch className="w-3 h-3" /> Проверить документы</button>
-                              <button className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 hover:underline"><Mail className="w-3 h-3" /> Связаться</button>
+                              <button onClick={() => handleRequestDocuments(req)} className="text-[9px] font-black text-primary uppercase tracking-widest flex items-center gap-1 hover:underline"><FileSearch className="w-3 h-3" /> Проверить документы</button>
+                              <button onClick={() => handleRequestContact(req)} className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 hover:underline"><Mail className="w-3 h-3" /> Связаться</button>
                            </div>
                         </div>
                      </div>
@@ -527,21 +1089,53 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                         {req.status === 'Pending' ? (
                           <>
                              <button onClick={() => handleRequestAction(req.id, 'Approved')} className="flex-1 md:flex-none px-8 py-3 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                <Check className="w-4 h-4" /> Одобрить
+                                 <Check className="w-4 h-4" /> Одобрить
                              </button>
                              <button onClick={() => handleRequestAction(req.id, 'Rejected')} className="flex-1 md:flex-none px-8 py-3 bg-red-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                <X className="w-4 h-4" /> Отклонить
+                                 <X className="w-4 h-4" /> Отклонить
                              </button>
                           </>
                         ) : (
                           <div className={`w-full md:w-40 px-4 py-3 rounded-xl text-center text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 ${req.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                             {req.status === 'Approved' ? <UserCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
-                             {req.status === 'Approved' ? 'Верифицирован' : 'Отклонен'}
-                          </div>
-                        )}
+                              {req.status === 'Approved' ? <UserCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
+                              {formatRequestStatus(req.status)}
+                            </div>
+                          )}
                      </div>
                   </div>
                 ))}
+             </div>
+             <div className={`${styles.card} rounded-[2rem] lg:rounded-[3rem] border overflow-hidden`}>
+                <div className="flex items-center justify-between p-6 border-b border-white/5">
+                   <h3 className={`text-lg font-black ${styles.textMain} uppercase tracking-tight`}>Пользователи платформы</h3>
+                   <span className={`text-[10px] font-black uppercase tracking-widest ${styles.textSub}`}>{adminUsers.length} записей</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left min-w-[760px]">
+                    <thead className="bg-slate-400/5 border-b border-white/5">
+                      <tr>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Почта</th>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Роль</th>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Создан</th>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub} text-right`}>Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${styles.border}`}>
+                      {adminUsers.map((entry) => (
+                        <tr key={entry.id} className="hover:bg-primary/5 transition-colors">
+                          <td className={`p-6 font-bold ${styles.textMain}`}>{formatUserEmail(entry.email)}</td>
+                          <td className={`p-6 text-sm ${styles.textSub}`}>{formatUserRole(entry.role)}</td>
+                          <td className={`p-6 text-sm ${styles.textSub}`}>{new Date(entry.createdAt).toLocaleDateString('ru-RU')}</td>
+                          <td className="p-6 text-right">
+                            <button onClick={() => void handleDeleteUser(entry.id)} className="p-2 text-red-500 hover:text-red-600 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
              </div>
           </div>
         );
@@ -549,13 +1143,13 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
         return (
           <div className="space-y-6 lg:space-y-8 animate-in slide-in-from-right-4 duration-500">
              <div className="flex justify-between items-center">
-                <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Реестр врачей</h2>
+                 <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Реестр врачей</h2>
                 <div className="flex gap-4">
                    <div className={`hidden md:flex items-center gap-3 ${styles.input} px-6 py-3 rounded-2xl border ${styles.border}`}>
                       <Search className="w-4 h-4 text-slate-400" />
                       <input type="text" placeholder="Поиск по реестру..." className="bg-transparent border-none outline-none text-xs font-bold w-48" />
                    </div>
-                   <button className="px-8 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">Добавить врача</button>
+                  <button onClick={handleAddDoctorDraft} className="px-8 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all">Добавить врача</button>
                 </div>
              </div>
              <div className={`${styles.card} rounded-[2rem] lg:rounded-[3rem] border overflow-hidden`}>
@@ -576,55 +1170,55 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                             <td className="p-8">
                                 <div className="flex items-center gap-5">
                                   <div className="relative">
-                                    <img src={doc.avatar} className="w-14 h-14 rounded-2xl object-cover shadow-lg group-hover:scale-105 transition-transform" />
-                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white dark:border-slate-900 flex items-center justify-center">
+                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(doc.fullName)}&background=0D47A1&color=fff`} className="w-14 h-14 rounded-2xl object-cover shadow-lg group-hover:scale-105 transition-transform" />
+                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white flex items-center justify-center">
                                       <Check className="w-2 h-2 text-white" />
                                     </div>
                                   </div>
                                   <div>
-                                      <p className={`${styles.textMain} font-black text-sm tracking-tight`}>{doc.name}</p>
+                                      <p className={`${styles.textMain} font-black text-sm tracking-tight`}>{doc.fullName}</p>
                                       <div className="flex items-center gap-2 mt-1">
                                         <span className={`text-[9px] ${styles.textSub} font-black uppercase tracking-wider bg-slate-400/10 px-2 py-0.5 rounded-md`}>{doc.specialty}</span>
-                                        <span className={`text-[9px] ${styles.textSub} font-bold opacity-50`}>{doc.experience} лет опыта</span>
+                                        <span className={`text-[9px] ${styles.textSub} font-bold opacity-50`}>{doc.experienceYears} лет опыта</span>
                                       </div>
                                   </div>
                                 </div>
                             </td>
                             <td className="p-8">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                  <span className={`${styles.textMain} text-[10px] font-black uppercase tracking-widest`}>Активен</span>
+                                  <div className={`w-2 h-2 rounded-full ${doc.verified ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                                  <span className={`${styles.textMain} text-[10px] font-black uppercase tracking-widest`}>{doc.verified ? 'Активен' : 'Ожидает активации'}</span>
                                 </div>
                             </td>
                             <td className="p-8">
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2">
-                                    <p className={`${styles.textMain} font-black text-xs`}>1,240</p>
+                                    <p className={`${styles.textMain} font-black text-xs`}>{getDoctorCasesCount(doc).toLocaleString('ru-RU')}</p>
                                     <span className="text-[9px] text-slate-400 font-bold uppercase">приемов</span>
                                   </div>
                                   <div className="flex items-center gap-1 text-amber-500">
                                     <Star className="w-3 h-3 fill-current" />
-                                    <span className={`text-xs font-black ${styles.textMain}`}>{doc.rating}</span>
-                                  </div>
+                                  <span className={`text-xs font-black ${styles.textMain}`}>{doc.rating.toFixed ? doc.rating.toFixed(1) : doc.rating}</span>
+                                </div>
                                 </div>
                             </td>
                             <td className="p-8">
                                 <div className="flex items-center gap-2">
                                   <div className="px-3 py-1 bg-primary/10 rounded-lg">
-                                    <span className="text-primary font-black text-xs">+{Math.floor(Math.random() * 500) + 100}</span>
+                                    <span className="text-primary font-black text-xs">+{getDoctorReputationPoints(doc)}</span>
                                   </div>
                                   <span className={`text-[10px] font-bold ${styles.textSub} uppercase tracking-widest`}>RP</span>
                                 </div>
                             </td>
                             <td className="p-8 text-right">
                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
-                                    <button className={`p-2 rounded-xl ${styles.card} border ${styles.border} ${styles.textSub} hover:text-primary hover:border-primary/50 transition-all shadow-sm`}>
+                                    <button onClick={() => void handleDoctorSettings(doc)} className={`p-2 rounded-xl ${styles.card} border ${styles.border} ${styles.textSub} hover:text-primary hover:border-primary/50 transition-all shadow-sm`}>
                                       <Settings className="w-4 h-4" />
                                     </button>
-                                    <button className={`p-2 rounded-xl ${styles.card} border ${styles.border} ${styles.textSub} hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-sm`}>
+                                    <button onClick={() => void handleDoctorArchive(doc)} className={`p-2 rounded-xl ${styles.card} border ${styles.border} ${styles.textSub} hover:text-amber-500 hover:border-amber-500/50 transition-all shadow-sm`}>
                                       <Archive className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => MockDB.deleteDoctor(doc.id)} className={`p-2 rounded-xl ${styles.card} border ${styles.border} ${styles.textSub} hover:text-red-500 hover:border-red-500/50 transition-all shadow-sm`}>
+                                    <button onClick={() => void handleDoctorDelete(doc)} className={`p-2 rounded-xl ${styles.card} border ${styles.border} ${styles.textSub} hover:text-red-500 hover:border-red-500/50 transition-all shadow-sm`}>
                                       <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -641,8 +1235,8 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
         return (
           <div className="space-y-6 lg:space-y-10 animate-in slide-in-from-right-4 duration-500">
              <div className="flex justify-between items-center">
-                <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Партнерская сеть</h2>
-                <button className="px-8 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Новый партнер</button>
+                 <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Партнерская сеть</h2>
+                 <button onClick={handleAddPartnerDraft} className="px-8 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Новый партнер</button>
              </div>
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-10">
                 {partners.map(p => (
@@ -662,17 +1256,80 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                       </div>
                       <div className="relative z-10">
                          <h4 className={`${styles.textMain} font-black text-xl lg:text-3xl tracking-tighter leading-none`}>{p.name}</h4>
-                         <p className={`${styles.textSub} text-[10px] font-black uppercase tracking-[0.2em] mt-3`}>БИН: {p.bin}</p>
+                          <p className={`${styles.textSub} text-[10px] font-black uppercase tracking-[0.2em] mt-3`}>БИН: {p.bin}</p>
                       </div>
                       <div className="pt-6 border-t border-slate-400/10 flex items-center justify-between relative z-10">
                          <div className="flex items-center gap-2">
                             <Users className="w-4 h-4 text-slate-400" />
-                            <span className={`text-[10px] font-black ${styles.textMain}`}>12 Врачей</span>
+                            <span className={`text-[10px] font-black ${styles.textMain}`}>{doctors.length} врачей</span>
+                          </div>
+                         <div className="flex items-center gap-3">
+                           <button onClick={() => void handlePartnerEdit(p)} className="text-primary font-black text-[10px] uppercase tracking-widest flex items-center gap-1 hover:underline">Управление <ArrowRight className="w-3 h-3" /></button>
+                           <button onClick={() => void handlePartnerManage(p.id)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary">Статус</button>
+                           <button onClick={() => void handlePartnerDelete(p.id)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                          </div>
-                         <button className="text-primary font-black text-[10px] uppercase tracking-widest flex items-center gap-1 hover:underline">Управление <ArrowRight className="w-3 h-3" /></button>
                       </div>
                    </div>
                 ))}
+             </div>
+          </div>
+        );
+      case 'contracts':
+        return (
+          <div className="space-y-6 lg:space-y-10 animate-in slide-in-from-right-4 duration-500">
+             <div className="flex justify-between items-center">
+                 <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Договоры партнеров</h2>
+                 <button onClick={handleAddContract} className="px-8 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Новый договор</button>
+             </div>
+             <div className={`${styles.card} rounded-[2rem] lg:rounded-[3rem] border overflow-hidden`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px]">
+                    <thead className={`${isDark ? 'bg-white/5' : 'bg-slate-50'} text-left`}>
+                      <tr className={`text-[10px] font-black uppercase tracking-widest ${styles.textSub}`}>
+                        <th className="p-6">Партнер</th>
+                        <th className="p-6">Договор</th>
+                        <th className="p-6">Подписан</th>
+                        <th className="p-6">Действует до</th>
+                        <th className="p-6">Комиссия</th>
+                        <th className="p-6">Статус</th>
+                        <th className="p-6 text-right">Действие</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contracts.map((contract) => (
+                        <tr key={contract.id} className="border-t border-slate-400/10">
+                          <td className={`p-6 font-bold ${styles.textMain}`}>{contract.partnerName}</td>
+                          <td className={`p-6 font-black ${styles.textMain}`}>{contract.contractNumber}</td>
+                          <td className={`p-6 ${styles.textSub}`}>{contract.signedAt}</td>
+                          <td className={`p-6 ${styles.textSub}`}>{contract.expiresAt}</td>
+                          <td className={`p-6 font-black ${styles.textMain}`}>{contract.commission}%</td>
+                          <td className="p-6">
+                            <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                              contract.status === 'Active'
+                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                : contract.status === 'Expired'
+                                  ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                  : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                            }`}>
+                              {contract.status === 'Active' ? 'Активен' : contract.status === 'Expired' ? 'Истек' : 'Черновик'}
+                            </span>
+                          </td>
+                          <td className="p-6 text-right">
+                            <button onClick={() => void handleContractEdit(contract)} className="mr-4 text-primary font-black text-[10px] uppercase tracking-widest hover:underline">
+                              Править
+                            </button>
+                            <button onClick={() => void handleContractManage(contract.id)} className="mr-4 text-primary font-black text-[10px] uppercase tracking-widest hover:underline">
+                              {contract.status === 'Active' ? 'Завершить' : 'Активировать'}
+                            </button>
+                            <button onClick={() => void handleContractDelete(contract.id)} className="text-red-400 hover:text-red-600">
+                              <Trash2 className="w-4 h-4 inline" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
              </div>
           </div>
         );
@@ -684,29 +1341,17 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                 <div className={`${styles.card} p-6 lg:p-10 rounded-[2rem] lg:rounded-[3.5rem] border space-y-8`}>
                    <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight flex items-center gap-3`}><DollarSign className="text-emerald-500" /> Выручка (7 дней)</h3>
                    <div className="h-64 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                         <BarChart data={revenueHistory}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
-                            <XAxis dataKey="name" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
-                            <YAxis hide />
-                            <Tooltip contentStyle={{backgroundColor: isDark ? '#0f172a' : '#fff', borderRadius: '1rem', border: 'none'}} />
-                            <Bar dataKey="amount" fill="#0D47A1" radius={[10, 10, 10, 10]} barSize={25} />
-                         </BarChart>
-                      </ResponsiveContainer>
+                      <Suspense fallback={null}>
+                        <AdminRevenueChart data={analyticsSeries} isDark={isDark} />
+                      </Suspense>
                    </div>
                 </div>
                 <div className={`${styles.card} p-6 lg:p-10 rounded-[2rem] lg:rounded-[3.5rem] border space-y-8`}>
-                   <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight flex items-center gap-3`}><Users className="text-blue-500" /> Рост Аудитории</h3>
+                   <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight flex items-center gap-3`}><Users className="text-blue-500" /> Рост аудитории</h3>
                    <div className="h-64 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                         <LineChart data={revenueHistory}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
-                            <XAxis dataKey="name" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
-                            <YAxis hide />
-                            <Tooltip contentStyle={{backgroundColor: isDark ? '#0f172a' : '#fff', borderRadius: '1rem', border: 'none'}} />
-                            <Line type="monotone" dataKey="users" stroke="#00BFA5" strokeWidth={4} dot={{fill: '#00BFA5', r: 6}} />
-                         </LineChart>
-                      </ResponsiveContainer>
+                      <Suspense fallback={null}>
+                        <AdminAudienceChart data={analyticsSeries} isDark={isDark} />
+                      </Suspense>
                    </div>
                 </div>
              </div>
@@ -725,14 +1370,14 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                         className={`flex flex-col items-center gap-4 p-6 lg:p-8 rounded-2xl lg:rounded-[2rem] border-2 transition-all ${!isDark ? 'border-primary bg-primary/5' : 'border-slate-400/10 hover:border-slate-400/30'}`}
                       >
                          <Sun className={`w-8 h-8 lg:w-10 lg:h-10 ${!isDark ? 'text-primary' : 'text-slate-400'}`} />
-                         <span className={`text-[9px] lg:text-[10px] font-black uppercase ${!isDark ? 'text-primary' : 'text-slate-400'}`}>Light</span>
+                  <span className={`text-[9px] lg:text-[10px] font-black uppercase ${!isDark ? 'text-primary' : 'text-slate-400'}`}>Светлая</span>
                       </button>
                       <button 
                         onClick={() => handleThemeSwitch('dark')}
                         className={`flex flex-col items-center gap-4 p-6 lg:p-8 rounded-2xl lg:rounded-[2rem] border-2 transition-all ${isDark ? 'border-primary bg-primary/5' : 'border-slate-400/10 hover:border-slate-400/30'}`}
                       >
                          <Moon className={`w-8 h-8 lg:w-10 lg:h-10 ${isDark ? 'text-primary' : 'text-slate-400'}`} />
-                         <span className={`text-[9px] lg:text-[10px] font-black uppercase ${isDark ? 'text-primary' : 'text-slate-400'}`}>Dark</span>
+                  <span className={`text-[9px] lg:text-[10px] font-black uppercase ${isDark ? 'text-primary' : 'text-slate-400'}`}>Темная</span>
                       </button>
                    </div>
                 </div>
@@ -742,7 +1387,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                       <div className="space-y-2">
                          <label className={`text-[10px] font-black uppercase ${styles.textSub} tracking-widest ml-4`}>Комиссия (%)</label>
                          <div className={`flex items-center gap-4 ${styles.input} p-4 lg:p-6 rounded-2xl lg:rounded-3xl`}>
-                            <input type="number" defaultValue={sysConfig?.serviceFeePercent} className="bg-transparent border-none outline-none font-black text-xl lg:text-2xl flex-1" />
+                            <input type="number" value={sysConfig?.serviceFeePercent ?? 0} onChange={(event) => handleServiceFeeChange(event.target.value)} className="bg-transparent border-none outline-none font-black text-xl lg:text-2xl flex-1" />
                             <span className="text-slate-400 font-black">%</span>
                          </div>
                       </div>
@@ -769,7 +1414,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[200] lg:hidden">
            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsMobileMenuOpen(false)} />
-           <div className={`absolute top-0 left-0 w-72 h-full ${styles.sidebar} animate-in slide-in-from-left duration-500 shadow-2xl flex flex-col`}>
+           <div className={`absolute top-0 left-0 h-full w-[min(18rem,calc(100vw-1rem))] ${styles.sidebar} animate-in slide-in-from-left duration-500 shadow-2xl flex flex-col`}>
               <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-8 right-6 p-2 text-slate-400 hover:text-primary transition-colors"><X className="w-6 h-6" /></button>
               <SidebarContent activeTab={activeTab} setActiveTab={setActiveTab} setIsMobileMenuOpen={setIsMobileMenuOpen} onLogout={onLogout} isDark={isDark} />
            </div>
@@ -778,8 +1423,8 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
 
       {/* Main Content Area */}
       <div className={`flex-1 ml-0 lg:ml-24 lg:lg:ml-28 flex flex-col h-screen overflow-hidden ${styles.mainBg} transition-colors duration-700`}>
-         <header className={`h-20 lg:h-24 ${styles.header} backdrop-blur-xl border-b flex items-center justify-between px-6 lg:px-10 sticky top-0 z-[90] transition-all duration-700 shrink-0`}>
-            <div className="flex items-center gap-4">
+         <header className={`min-h-20 lg:min-h-24 ${styles.header} backdrop-blur-xl border-b flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-10 py-4 sticky top-0 z-[90] transition-all duration-700 shrink-0`}>
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                {/* Burger Button for Mobile */}
                <button 
                  onClick={() => setIsMobileMenuOpen(true)}
@@ -787,28 +1432,28 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                >
                  <Menu className="w-6 h-6" />
                </button>
-               <h1 className={`text-lg lg:text-2xl font-black ${styles.textMain} uppercase tracking-tighter`}>Root Control</h1>
-               <span className="hidden sm:inline-block px-3 py-1 bg-emerald-500/20 text-emerald-500 text-[8px] lg:text-[10px] font-black uppercase rounded-full border border-emerald-500/20">System Online</span>
+                  <h1 className={`text-base sm:text-lg lg:text-2xl font-black ${styles.textMain} uppercase tracking-tighter`}>Контроль платформы</h1>
+                  <span className="hidden sm:inline-block px-3 py-1 bg-emerald-500/20 text-emerald-500 text-[8px] lg:text-[10px] font-black uppercase rounded-full border border-emerald-500/20">Система онлайн</span>
             </div>
 
-            <div className="flex items-center gap-3 lg:gap-8">
+            <div className="flex items-center gap-2 sm:gap-3 lg:gap-8 shrink-0">
                <div className={`hidden sm:flex items-center gap-3 ${styles.input} rounded-2xl px-4 py-2 border ${styles.border}`}>
                   <Cpu className="w-4 h-4 text-emerald-400" />
-                  <span className={`text-[10px] font-black ${styles.textSub} uppercase`}>14% Load</span>
+                  <span className={`text-[10px] font-black ${styles.textSub} uppercase`}>{systemHealth?.current?.cpu ?? 0}% нагрузки</span>
                </div>
                <div className={`flex items-center gap-3 lg:gap-4 sm:pl-8 sm:border-l ${styles.border}`}>
                   <div className="text-right hidden sm:block">
-                     <p className={`text-xs font-black ${styles.textMain} leading-tight`}>Master Admin</p>
+                  <p className={`text-xs font-black ${styles.textMain} leading-tight`}>Главный админ</p>
                      <p className={`text-[10px] font-bold ${styles.textSub} uppercase tracking-widest`}>Alan</p>
                   </div>
-                  <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl ${styles.input} p-0.5 border border-white/10 overflow-hidden shadow-sm`}>
+                  <button onClick={() => setActiveTab('settings')} className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl ${styles.input} p-0.5 border border-white/10 overflow-hidden shadow-sm`}>
                      <img src={user.avatar} className="w-full h-full rounded-xl lg:rounded-2xl object-cover" />
-                  </div>
+                  </button>
                </div>
             </div>
          </header>
 
-         <main className={`flex-1 overflow-y-auto p-4 lg:p-10 scrollbar-hide flex flex-col ${styles.mainBg}`}>
+         <main className={`flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 lg:p-10 scrollbar-hide flex flex-col ${styles.mainBg}`}>
             {renderSection()}
          </main>
       </div>
@@ -817,3 +1462,8 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
 };
 
 export default AdminDashboard;
+
+
+
+
+

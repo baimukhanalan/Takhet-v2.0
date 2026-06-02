@@ -8,9 +8,10 @@ import { AuditModule } from '../audit/audit.module';
 import { Payment } from './payment.entity';
 import { CasesModule } from '../cases/cases.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CaseEntity } from '../cases/case.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment]), AuthModule, AuditModule, CasesModule, NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Payment, CaseEntity]), AuthModule, AuditModule, CasesModule, NotificationsModule],
   controllers: [PaymentsController],
   providers: [PaymentsService, KaspiService],
   exports: [PaymentsService]

@@ -18,6 +18,13 @@ import { PartnerModule } from './partner/partner.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PatientModule } from './patient/patient.module';
+import { ProfilesModule } from './profiles/profiles.module';
+import { CommunityModule } from './community/community.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { TelemetryModule } from './telemetry/telemetry.module';
+import { EnterpriseModule } from './enterprise/enterprise.module';
+import { LabsModule } from './labs/labs.module';
+import { GuestModule } from './guest/guest.module';
 
 @Module({
   imports: [
@@ -39,6 +46,13 @@ import { PatientModule } from './patient/patient.module';
     AuditModule,
     SignatureModule,
     NotificationsModule,
+    ProfilesModule,
+    CommunityModule,
+    RealtimeModule,
+    TelemetryModule,
+    EnterpriseModule,
+    LabsModule,
+    GuestModule,
     DoctorModule,
     PartnerModule,
     AdminModule,

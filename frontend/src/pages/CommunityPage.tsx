@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { 
   MessageSquare, ThumbsUp, Send, CheckCircle, 
   UserCircle2, Award, TrendingUp, CheckCircle2
 } from 'lucide-react';
 import PublicHeader from '../components/PublicHeader';
-import { MockDB, Complaint } from '../services/db';
+import type { Complaint } from '../services/db';
 import { useLanguage } from '../services/useLanguage';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { FadeIn, FadeInStagger } from '../components/FadeIn';
+import { roleApi } from '../../services/roleApi';
+
+const looksCorrupted = (value?: string) =>
+  typeof value === 'string' &&
+  (value.includes('Р') || value.includes('�') || value.includes('вЂ') || value.includes('???'));
+
+const sanitizeCommunityText = (value: string, fallback: string) => {
+  const normalized = value?.trim() || '';
+  if (!normalized || looksCorrupted(normalized)) return fallback;
+  return normalized;
+};
 
 const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isPortal }) => {
   const navigate = useNavigate();
@@ -19,25 +30,48 @@ const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isP
   const [newBody, setNewBody] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | 'Unanswered'>('All');
   const [replyText, setReplyText] = useState<{ [id: string]: string }>({});
+  const [topDoctors, setTopDoctors] = useState<any[]>([]);
   
   const isDoctor = user?.role === UserRole.DOCTOR;
 
   useEffect(() => {
-    const load = () => {
-      setComplaints(MockDB.getComplaints());
+    const load = async () => {
+      const [posts, doctors] = await Promise.all([
+        roleApi.communityPosts(),
+        roleApi.communityTopDoctors()
+      ]);
+      setComplaints(
+        posts.map((item) => ({
+          ...item,
+          author: sanitizeCommunityText(item.author, 'Анонимно'),
+          title: sanitizeCommunityText(item.title, 'Вопрос пациента'),
+          body: sanitizeCommunityText(item.body, 'Описание обращения временно недоступно.'),
+          category: sanitizeCommunityText(item.category, 'Общее'),
+          replies: (item.replies || []).map((reply) => ({
+            ...reply,
+            author: sanitizeCommunityText(reply.author, 'Врач Takhet+'),
+            text: sanitizeCommunityText(reply.text, 'Ответ врача временно недоступен.')
+          }))
+        }))
+      );
+      setTopDoctors(
+        doctors.map((doctor) => ({
+          ...doctor,
+          name: sanitizeCommunityText(doctor.name, 'Специалист Takhet+'),
+          specialty: sanitizeCommunityText(doctor.specialty, 'Общая практика')
+        }))
+      );
     };
-    load();
-    window.addEventListener('storage_update', load);
-    return () => window.removeEventListener('storage_update', load);
+    void load();
   }, []);
 
   useEffect(() => {
     if (isDoctor && isPortal) setActiveFilter('Unanswered');
   }, [isDoctor, isPortal]);
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!newTitle.trim() || !newBody.trim()) return;
-    MockDB.addComplaint({
+    await roleApi.communityCreatePost({
       author: lang === 'ru' ? 'Анонимно' : lang === 'kz' ? 'Анонимді' : 'Anonymous',
       title: newTitle,
       body: newBody,
@@ -45,24 +79,48 @@ const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isP
     });
     setNewTitle('');
     setNewBody('');
-    // Using a more modern notification would be better, but keeping it simple for now
-    // alert(lang === 'ru' ? 'Вопрос опубликован!' : 'Сұрақ жарияланды!');
+    const posts = await roleApi.communityPosts();
+    setComplaints(
+      posts.map((item) => ({
+        ...item,
+        author: sanitizeCommunityText(item.author, 'Анонимно'),
+        title: sanitizeCommunityText(item.title, 'Вопрос пациента'),
+        body: sanitizeCommunityText(item.body, 'Описание обращения временно недоступно.'),
+        category: sanitizeCommunityText(item.category, 'Общее'),
+        replies: (item.replies || []).map((reply) => ({
+          ...reply,
+          author: sanitizeCommunityText(reply.author, 'Врач Takhet+'),
+          text: sanitizeCommunityText(reply.text, 'Ответ врача временно недоступен.')
+        }))
+      }))
+    );
   };
 
-  const handleReply = (complaintId: string) => {
+  const handleReply = async (complaintId: string) => {
     if (!isDoctor) {
       navigate('/auth');
       return;
     }
     const text = replyText[complaintId];
     if (!text?.trim() || !user) return;
-    
-    MockDB.addReply(complaintId, {
-      author: user.name,
-      doctorId: user.id,
-      text: text
-    });
+
+    await roleApi.communityReply(complaintId, text);
     setReplyText({ ...replyText, [complaintId]: '' });
+    const posts = await roleApi.communityPosts();
+    setComplaints(
+      posts.map((item) => ({
+        ...item,
+        author: sanitizeCommunityText(item.author, 'Анонимно'),
+        title: sanitizeCommunityText(item.title, 'Вопрос пациента'),
+        body: sanitizeCommunityText(item.body, 'Описание обращения временно недоступно.'),
+        category: sanitizeCommunityText(item.category, 'Общее'),
+        replies: (item.replies || []).map((reply) => ({
+          ...reply,
+          author: sanitizeCommunityText(reply.author, 'Врач Takhet+'),
+          text: sanitizeCommunityText(reply.text, 'Ответ врача временно недоступен.')
+        }))
+      }))
+    );
   };
 
   const filtered = complaints.filter(c => {
@@ -70,13 +128,9 @@ const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isP
     return true;
   });
 
-  const topDoctors = MockDB.getDoctors()
-    .sort((a, b) => b.reputationPoints - a.reputationPoints)
-    .slice(0, 5);
-
   const containerClass = isPortal 
     ? "max-w-6xl mx-auto space-y-10 px-4 md:px-0" 
-    : "max-w-7xl mx-auto px-4 pt-24 md:pt-44 pb-20 md:pb-32 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12";
+    : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 xl:px-12 pt-24 sm:pt-28 md:pt-36 lg:pt-44 pb-20 md:pb-32 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12";
 
   return (
     <div className={!isPortal ? "min-h-screen bg-white" : ""}>
@@ -222,7 +276,7 @@ const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isP
         {!isPortal && (
           <div className="lg:col-span-4 space-y-8 md:space-y-10">
             <FadeIn direction="left" delay={0.4}>
-              <div className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] border border-slate-100 shadow-sm space-y-8 md:space-y-10 sticky top-32">
+              <div className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] border border-slate-100 shadow-sm space-y-8 md:space-y-10 lg:sticky lg:top-32">
                  <div className="flex items-center gap-3 md:gap-4">
                     <Award className="w-6 h-6 md:w-8 md:h-8 text-amber-400" />
                     <h4 className="text-xl md:text-2xl font-black uppercase tracking-tight">{t.community.topDoctors}</h4>
@@ -266,3 +320,5 @@ const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isP
 };
 
 export default CommunityPage;
+
+

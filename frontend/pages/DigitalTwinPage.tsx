@@ -5,7 +5,7 @@ import { User, DigitalTwinState, BodyType, ActivityType } from '../types';
 import { 
   Activity, HeartPulse, ShieldAlert, 
   RotateCw, Ruler, Weight, 
-  Smoking, Clock, Zap, ArrowLeft, 
+  Cigarette, Clock, Zap, ArrowLeft, 
   TrendingUp, Info, X, Plus,
   UserCheck, Move3d, FileText, Sparkles, BrainCircuit,
   Dna, Target, Gauge, ZapOff, CheckCircle2, Moon, AlertTriangle, RefreshCcw,

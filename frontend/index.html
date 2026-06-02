@@ -1,10 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <script>
+      (function () {
+        var applyLightMode = function () {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.colorScheme = 'only light';
+          if (document.body) {
+            document.body.classList.remove('dark');
+            document.body.style.colorScheme = 'only light';
+          }
+        };
+        applyLightMode();
+        window.__TAKHET_FORCE_LIGHT_MODE__ = applyLightMode;
+        try {
+          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyLightMode);
+        } catch (error) {
+          try {
+            window.matchMedia('(prefers-color-scheme: dark)').addListener(applyLightMode);
+          } catch (fallbackError) {}
+        }
+      })();
+    </script>
+    <link rel="dns-prefetch" href="//www.takhet.com" />
+    <link rel="dns-prefetch" href="//api.takhet.com" />
+    <link rel="dns-prefetch" href="//ui-avatars.com" />
+    <link rel="preconnect" href="https://www.takhet.com" crossorigin />
+    <link rel="preconnect" href="https://api.takhet.com" crossorigin />
+    <link rel="preconnect" href="https://ui-avatars.com" crossorigin />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    <link rel="icon" type="image/png" sizes="144x144" href="/favicon-144.png" />
+    <link rel="icon" type="image/png" sizes="500x500" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260415-offline-access" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Takhet+ | Health OS</title>
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <meta name="theme-color" content="#0D47A1" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0D47A1" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0D47A1" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Takhet+" />
+    <meta name="application-name" content="Takhet+" />
+    <meta
+      name="description"
+      content="ТАХЕТ+ — телемедицинская экосистема, которая объединяет AI-диагностику, видеоконсультации с врачами и цифровой медицинский архив."
+    />
+    <meta
+      name="keywords"
+      content="ТАХЕТ+, Takhet, Health OS, телемедицина, AI-диагностика, медицинский архив, онлайн консультация, врачи, клиника, Казахстан"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://www.takhet.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ТАХЕТ+" />
+    <meta property="og:title" content="ТАХЕТ+ | Health OS" />
+    <meta
+      property="og:description"
+      content="Телемедицинская экосистема с AI-диагностикой, видеоконсультациями и цифровым медицинским архивом."
+    />
+    <meta property="og:url" content="https://www.takhet.com/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ТАХЕТ+ | Health OS" />
+    <meta
+      name="twitter:description"
+      content="Телемедицинская экосистема с AI-диагностикой, видеоконсультациями и цифровым медицинским архивом."
+    />
+    <title>ТАХЕТ+ | Health OS</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "MedicalOrganization",
+        "name": "ТАХЕТ+",
+        "url": "https://www.takhet.com/",
+        "sameAs": ["https://www.takhet.com/", "https://api.takhet.com/"],
+        "description": "Телемедицинская экосистема с AI-диагностикой, онлайн-консультациями и цифровым медицинским архивом."
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "url": "https://www.takhet.com/",
+        "name": "ТАХЕТ+",
+        "alternateName": "Takhet+"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

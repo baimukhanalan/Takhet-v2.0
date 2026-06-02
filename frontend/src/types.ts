@@ -1,4 +1,4 @@
-export enum UserRole {
+﻿export enum UserRole {
   PATIENT = 'PATIENT',
   DOCTOR = 'DOCTOR',
   PARTNER = 'PARTNER',
@@ -128,3 +128,4 @@ export interface DecisionRoute {
   reason: string;
   redFlags: string[];
 }
+

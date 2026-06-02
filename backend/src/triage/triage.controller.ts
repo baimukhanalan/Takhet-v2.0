@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { IsOptional, IsString, MinLength } from 'class-validator';
 import { AuthGuard } from '../auth/auth.guard';
 import { TriageService } from './triage.service';
@@ -19,8 +19,7 @@ export class TriageController {
 
   @UseGuards(AuthGuard)
   @Post()
-  create(@Headers('x-patient-id') patientHeader: string | undefined, @Body() dto: TriageDto) {
-    const patientId = dto.patientId || patientHeader || 'master-user-id';
-    return this.triageService.create(patientId, dto.symptoms);
+  create(@Req() req: any, @Body() dto: TriageDto) {
+    return this.triageService.create(req.user.id, dto.symptoms);
   }
 }

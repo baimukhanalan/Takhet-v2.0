@@ -5,13 +5,13 @@ export class Signature {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ type: 'uuid', name: 'user_id' })
   userId!: string;
 
-  @Column({ name: 'document_id' })
+  @Column({ type: 'uuid', name: 'document_id' })
   documentId!: string;
 
-  @Column({ name: 'signature_hash' })
+  @Column({ type: 'text', name: 'signature_hash' })
   signatureHash!: string;
 
   @CreateDateColumn({ name: 'created_at' })

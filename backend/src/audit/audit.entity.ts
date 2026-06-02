@@ -5,13 +5,13 @@ export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'text' })
   event!: string;
 
-  @Column({ name: 'actor_id' })
+  @Column({ type: 'uuid', name: 'actor_id' })
   actorId!: string;
 
-  @Column('jsonb', { default: () => "'{}'::jsonb" })
+  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
   payload!: Record<string, unknown>;
 
   @CreateDateColumn({ name: 'created_at' })

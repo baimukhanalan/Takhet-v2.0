@@ -1,4 +1,4 @@
-import { Appointment, User, UserRole, MedicalRecord, Doctor, TimeSlot, ChatSession, PartnerAdmin, SwarmCase } from '../types';
+﻿import { Appointment, User, UserRole, MedicalRecord, Doctor, TimeSlot, ChatSession, PartnerAdmin, SwarmCase } from '../types';
 import { Language } from './i18n';
 
 const DB_KEY = 'takhet_v15_db';
@@ -39,6 +39,17 @@ export interface PartnerClinic {
   bin: string;
   status: 'Active' | 'Pending';
   adminId: string;
+  commission: number;
+}
+
+export interface PartnerContract {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  contractNumber: string;
+  status: 'Draft' | 'Active' | 'Expired';
+  signedAt: string;
+  expiresAt: string;
   commission: number;
 }
 
@@ -103,7 +114,7 @@ const initialState: DBState = {
       patientId: 'master-user-id',
       patientName: 'Алан Баймухан',
       doctorId: 'doc_test',
-      doctorName: 'Тестовый Врач (WebRTC)',
+      doctorName: 'Тестовый врач (WebRTC)',
       date: new Date().toISOString().split('T')[0],
       time: '14:00',
       status: 'upcoming',
@@ -134,7 +145,7 @@ const initialState: DBState = {
       id: 'c_1',
       author: 'Алан Баймухан',
       title: 'Боли в колене после бега',
-      body: 'После пробежки на 5км чувствую острую боль в левом колене. Что это может быть?',
+      body: 'После пробежки на 5 км чувствую острую боль в левом колене. Что это может быть?',
       category: 'Травматология',
       likes: 5,
       replies: [
@@ -183,7 +194,7 @@ const initialState: DBState = {
     },
     {
       id: 'doc_test',
-      name: 'Тестовый Врач (WebRTC)',
+      name: 'Тестовый врач (WebRTC)',
       specialty: 'Тестировщик систем',
       experience: 10,
       rating: 5.0,
@@ -202,7 +213,7 @@ const initialState: DBState = {
     },
     {
       id: 'doc_mental_test',
-      name: 'Тестовый Психолог',
+      name: 'Тестовый психолог',
       specialty: 'Психолог-консультант',
       experience: 12,
       rating: 5.0,
@@ -210,7 +221,7 @@ const initialState: DBState = {
       reviewsCount: 42,
       pricePrimary: 1,
       priceSecondary: 1,
-      education: ['Академия Психологии'],
+      education: ['Академия психологии'],
       biography: 'Специалист по тестированию ментального здоровья и консультаций.',
       accepts: 'Всех',
       category: 'Высшая',
@@ -257,7 +268,7 @@ const initialState: DBState = {
     { name: 'Thu', amount: 2000, users: 110 },
     { name: 'Fri', amount: 7000, users: 220 },
     { name: 'Sat', amount: 8000, users: 250 },
-    { name: 'Sun', amount: 3490, users: 300 },
+    { name: 'Sun', amount: 3490, users: 300 }
   ],
   aiChatHistory: [],
   sessionFiles: {},
@@ -276,14 +287,13 @@ const initialState: DBState = {
   reviews: [
     { id: 'rev_1', author: 'Алан Баймухан', rating: 5, text: 'Отличный врач, все объяснил доступно.', date: '15.03.2024' }
   ],
-  config: { 
+  config: {
     theme: 'light',
     maintenanceMode: false,
     aiDiagnosticEnabled: true,
     serviceFeePercent: 15
   }
 };
-
 export const MockDB = {
   get: (): DBState => {
     const data = localStorage.getItem(DB_KEY);
@@ -552,3 +562,4 @@ export const MockDB = {
     MockDB.save(db);
   }
 };
+

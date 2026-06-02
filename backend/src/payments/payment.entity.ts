@@ -5,22 +5,28 @@ export class Payment {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ type: 'uuid', name: 'user_id' })
   userId!: string;
 
-  @Column({ name: 'case_id' })
+  @Column({ type: 'uuid', name: 'case_id' })
   caseId!: string;
 
-  @Column('bigint')
+  @Column({ type: 'bigint' })
   amount!: number;
 
-  @Column({ default: 'pending' })
+  @Column({ type: 'text', default: 'KZT' })
+  currency!: string;
+
+  @Column({ type: 'text', default: 'pending' })
   status!: 'pending' | 'paid' | 'failed';
 
-  @Column({ name: 'provider_id', nullable: true })
+  @Column({ type: 'text', default: 'kaspi' })
+  provider!: string;
+
+  @Column({ type: 'text', name: 'provider_id', nullable: true })
   providerId!: string | null;
 
-  @Column({ name: 'provider_payment_id', nullable: true, unique: true })
+  @Column({ type: 'text', name: 'provider_payment_id', nullable: true, unique: true })
   providerPaymentId!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

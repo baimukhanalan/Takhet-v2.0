@@ -1,0 +1,69 @@
+{
+  "info": {
+    "name": "Takhet Auth Email",
+    "description": "Auth email verification and password recovery smoke requests. Uses placeholders only; no real API keys are stored here.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{api_base_url}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{auth_email}}\",\n  \"password\": \"{{auth_password}}\",\n  \"role\": \"{{auth_role}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Request Email Verification",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{api_base_url}}/auth/request-email-verification",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{auth_email}}\",\n  \"role\": \"{{auth_role}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Confirm Email Verification",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{api_base_url}}/auth/confirm-email-verification",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{email_verification_token}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Request Password Reset",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{api_base_url}}/auth/request-password-reset",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{auth_email}}\",\n  \"role\": \"{{auth_role}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Reset Password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{api_base_url}}/auth/reset-password",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{password_reset_token}}\",\n  \"password\": \"{{new_password}}\"\n}"
+        }
+      }
+    }
+  ]
+}

@@ -5,16 +5,16 @@ export class CaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'patient_id' })
+  @Column({ type: 'uuid', name: 'patient_id' })
   patientId!: string;
 
-  @Column({ name: 'doctor_id', nullable: true })
+  @Column({ type: 'uuid', name: 'doctor_id', nullable: true })
   doctorId!: string | null;
 
-  @Column({ default: 'open' })
+  @Column({ type: 'text', default: 'open' })
   status!: 'open' | 'active' | 'in_review' | 'closed';
 
-  @Column('text')
+  @Column({ type: 'text' })
   summary!: string;
 
   @CreateDateColumn({ name: 'created_at' })

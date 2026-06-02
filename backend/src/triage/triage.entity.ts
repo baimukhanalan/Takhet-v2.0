@@ -5,13 +5,13 @@ export class TriageSession {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'patient_id' })
+  @Column({ type: 'uuid', name: 'patient_id' })
   patientId!: string;
 
-  @Column('text')
+  @Column({ type: 'text' })
   symptoms!: string;
 
-  @Column('jsonb', { default: () => "'{}'::jsonb" })
+  @Column({ type: 'jsonb', name: 'ai_result', default: () => "'{}'::jsonb" })
   aiResult!: Record<string, unknown>;
 
   @CreateDateColumn({ name: 'created_at' })

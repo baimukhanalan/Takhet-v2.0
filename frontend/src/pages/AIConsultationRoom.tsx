@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { 
   Video, Mic, MicOff, VideoOff, Send, Paperclip, 
   X, ChevronRight, BrainCircuit, Sparkles, MessageSquare, 
@@ -9,8 +9,38 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI, Modality, ThinkingLevel, LiveServerMessage } from "@google/genai";
 import { useLanguage } from '../services/useLanguage';
+import { advancedChatStream } from '../services/gemini';
+import { roleApi } from '../../services/roleApi';
 import { motion, AnimatePresence } from 'motion/react';
 import { FadeIn, FadeInStagger } from '../components/FadeIn';
+
+const getGeminiBrowserApiKey = () => (process.env.GEMINI_API_KEY || process.env.API_KEY || '').trim();
+
+const cleanAIText = (text: string) =>
+  text
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/[ \t]+\n/g, '\n');
+
+const LIVE_VIDEO_FRAME_WIDTH = 320;
+const LIVE_VIDEO_FRAME_HEIGHT = 240;
+const LIVE_VIDEO_FRAME_QUALITY = 0.32;
+const LIVE_VIDEO_FRAME_INTERVAL_MS = 2500;
+
+const LIVE_AI_BEHAVIOR_INSTRUCTION = [
+  'Default mode: help a patient in Kazakhstan with medical orientation, symptoms, red flags, next steps, and safe recommendations.',
+  'If the user asks a non-medical question, answer directly and usefully instead of refusing only because it is not medical.',
+  'Use incoming camera frames as real visual context: face, skin, posture, movement, documents, medicine packages, lab results, or visible symptoms.',
+  'Do not diagnose from video alone. If visual evidence is insufficient, state what is visible, what cannot be confirmed, and what clarification is needed.',
+  'Continue listening while answering. If the user interrupts, asks a new question, or clarifies a symptom, switch to the new request.',
+  'Reply to the patient in clean Russian text: no Markdown, no asterisks, no internal instructions, no technical wording.',
+  'For urgent red flags in Kazakhstan, orient the patient to 103 or 112.'
+].join('\n');
+type ConsultationTranscriptEntry = {
+  speaker: 'patient' | 'doctor' | 'ai' | 'system';
+  text: string;
+  createdAt: string;
+};
 
 const AIConsultationRoom: React.FC = () => {
   const navigate = useNavigate();
@@ -33,42 +63,89 @@ const AIConsultationRoom: React.FC = () => {
   const [report, setReport] = useState<string | null>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [isReadyToStart, setIsReadyToStart] = useState(false);
+  const [consultationTranscript, setConsultationTranscript] = useState<ConsultationTranscriptEntry[]>([]);
+  const [consultationCaseId, setConsultationCaseId] = useState<string | null>(null);
+  const [canArchiveToPatientPortal, setCanArchiveToPatientPortal] = useState(false);
 
   // Live API & Audio Refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const liveSessionRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioInputProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const videoFrameIntervalRef = useRef<number | null>(null);
   const audioOutputQueueRef = useRef<Int16Array[]>([]);
+  const activeAudioSourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const nextStartTimeRef = useRef<number>(0);
   const isPlayingRef = useRef(false);
   const isConnectingRef = useRef(false);
+  const isCleaningUpRef = useRef(false);
+  const sessionEndedRef = useRef(false);
+  const isLiveConnectedRef = useRef(false);
+  const isMicOnRef = useRef(true);
+  const draftSyncTimerRef = useRef<number | null>(null);
+  const lastDraftSignatureRef = useRef('');
+  const isFinalizingRef = useRef(false);
 
   const sessionRef = useRef<any>(null);
 
   // Gemini AI Instance - Moved inside startConsultation for fresh instance per session
-  // const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+  // const ai = new GoogleGenAI({ apiKey: getGeminiBrowserApiKey() });
 
   useEffect(() => {
-    if (step === 'consultation' && !isConnectingRef.current && !isLiveConnected) {
+    if (step === 'consultation' && !sessionEndedRef.current && !isConnectingRef.current && !isLiveConnected) {
       startConsultation();
     }
-    return () => {
-      if (step !== 'consultation') {
-        cleanupLive();
-      }
-    };
   }, [step, isLiveConnected]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const stopActiveSession = () => cleanupLive();
+    window.addEventListener('pagehide', stopActiveSession);
+    window.addEventListener('beforeunload', stopActiveSession);
+
+    return () => {
+      window.removeEventListener('pagehide', stopActiveSession);
+      window.removeEventListener('beforeunload', stopActiveSession);
+      cleanupLive();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    roleApi
+      .patientProfile()
+      .then(() => {
+        if (isMounted) setCanArchiveToPatientPortal(true);
+      })
+      .catch(() => {
+        if (isMounted) setCanArchiveToPatientPortal(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (window.matchMedia('(min-width: 768px)').matches) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   useEffect(() => {
+    isMicOnRef.current = isMicOn;
     if (streamRef.current) {
       streamRef.current.getAudioTracks().forEach(track => {
         track.enabled = isMicOn;
       });
+    }
+    const currentSession = sessionRef.current || liveSessionRef.current;
+    if (!isMicOn && currentSession && isLiveConnectedRef.current) {
+      try {
+        currentSession.sendRealtimeInput({ audioStreamEnd: true });
+      } catch (err) {
+        console.error('Error ending Gemini audio stream:', err);
+      }
     }
   }, [isMicOn]);
 
@@ -90,36 +167,154 @@ const AIConsultationRoom: React.FC = () => {
   }, []);
 
   const cleanupLive = () => {
+    if (isCleaningUpRef.current) return;
+    isCleaningUpRef.current = true;
     isConnectingRef.current = false;
-    if (liveSessionRef.current) {
+    isLiveConnectedRef.current = false;
+
+    activeAudioSourcesRef.current.forEach((source) => {
       try {
-        liveSessionRef.current.close();
+        source.stop();
       } catch (e) {}
-      liveSessionRef.current = null;
+      try {
+        source.disconnect();
+      } catch (e) {}
+    });
+    activeAudioSourcesRef.current = [];
+
+    if (videoFrameIntervalRef.current) {
+      window.clearInterval(videoFrameIntervalRef.current);
+      videoFrameIntervalRef.current = null;
     }
+
     if (audioInputProcessorRef.current) {
-      audioInputProcessorRef.current.disconnect();
+      try {
+        audioInputProcessorRef.current.disconnect();
+      } catch (e) {}
       audioInputProcessorRef.current = null;
     }
+
+    const activeSessions = [liveSessionRef.current, sessionRef.current].filter(Boolean);
+    for (const activeSession of [...new Set(activeSessions)]) {
+      try {
+        activeSession.close?.();
+      } catch (e) {}
+    }
+    liveSessionRef.current = null;
+    sessionRef.current = null;
+
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.enabled = false;
+        track.stop();
+      });
       streamRef.current = null;
     }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
     if (audioContextRef.current) {
       try {
         audioContextRef.current.close();
       } catch (e) {}
       audioContextRef.current = null;
     }
-    setIsLiveConnected(false);
+
     nextStartTimeRef.current = 0;
     audioOutputQueueRef.current = [];
     isPlayingRef.current = false;
+    setIsLiveConnected(false);
+    setMicLevel(0);
     setIsAISpeaking(false);
+    isCleaningUpRef.current = false;
+  };
+
+  const upsertTranscriptEntry = (
+    speaker: ConsultationTranscriptEntry['speaker'],
+    text: string,
+    mode: 'append' | 'replace-last' = 'append'
+  ) => {
+    const cleaned = cleanAIText(text).trim();
+    if (!cleaned) return;
+
+    setConsultationTranscript((prev) => {
+      if (mode === 'replace-last') {
+        const next = [...prev];
+        for (let i = next.length - 1; i >= 0; i -= 1) {
+          if (next[i].speaker === speaker) {
+            next[i] = { ...next[i], text: cleaned, createdAt: new Date().toISOString() };
+            return next;
+          }
+        }
+      }
+
+      return [...prev, { speaker, text: cleaned, createdAt: new Date().toISOString() }];
+    });
+  };
+
+  const buildArchiveSummary = () => {
+    if (report?.trim()) return report.trim();
+    const latestAiText = [...consultationTranscript].reverse().find((item) => item.speaker === 'ai' && item.text.trim());
+    return latestAiText?.text?.trim() || undefined;
+  };
+
+  const ensureArchiveCase = async () => {
+    if (consultationCaseId) return consultationCaseId;
+
+    const firstPatientMessage =
+      consultationTranscript.find((item) => item.speaker === 'patient' && item.text.trim())?.text ||
+      messages.find((item) => item.role === 'user' && item.text.trim())?.text ||
+      'AI consultation request';
+
+    const created = await roleApi.patientCreateCase(`AI consultation request: ${firstPatientMessage.slice(0, 180)}`);
+    setConsultationCaseId(created.id);
+    return created.id as string;
+  };
+
+  const syncDraftToArchive = async () => {
+    if (!canArchiveToPatientPortal) return null;
+
+    const hasUsefulData =
+      consultationTranscript.some((item) => item.speaker === 'patient' && item.text.trim()) ||
+      consultationTranscript.some((item) => item.speaker === 'ai' && item.text.trim()) ||
+      uploadedDocs.length > 0;
+
+    if (!hasUsefulData) return null;
+
+    const caseId = await ensureArchiveCase();
+    const saved = await roleApi.patientSaveConsultationDraft(caseId, {
+      transcript: consultationTranscript,
+      uploadedDocs,
+      aiSummary: buildArchiveSummary()
+    });
+
+    if (saved?.aiSummary) {
+      setReport(saved.aiSummary);
+    }
+
+    return { caseId, saved };
+  };
+
+  const sendLiveTextTurn = (session: any, text: string) => {
+    const cleaned = cleanAIText(text).trim();
+    if (!cleaned || sessionEndedRef.current) return;
+
+    if (typeof session?.sendClientContent === 'function') {
+      session.sendClientContent({
+        turns: [{ role: 'user', parts: [{ text: cleaned }] }],
+        turnComplete: true
+      });
+      return;
+    }
+
+    session?.sendRealtimeInput?.({ text: cleaned });
   };
 
   const startConsultation = async () => {
     if (isConnectingRef.current) return;
+    sessionEndedRef.current = false;
     
     // Cleanup any existing session before starting a new one
     if (liveSessionRef.current || streamRef.current) {
@@ -131,7 +326,7 @@ const AIConsultationRoom: React.FC = () => {
     
     try {
       // 1. Create fresh Gemini instance
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const ai = new GoogleGenAI({ apiKey: getGeminiBrowserApiKey() });
 
       // 2. Use existing stream or request new one if missing
       let stream = streamRef.current;
@@ -174,6 +369,11 @@ const AIConsultationRoom: React.FC = () => {
       console.log("AudioContext state:", ctx.state, "SampleRate:", ctx.sampleRate);
       nextStartTimeRef.current = ctx.currentTime;
 
+      const liveSystemInstruction = [
+        t.ai_consultation.room.systemInstruction,
+        LIVE_AI_BEHAVIOR_INSTRUCTION
+      ].join('\n');
+
       // 4. Connect Live API
       const sessionPromise = ai.live.connect({
         model: "gemini-2.5-flash-native-audio-preview-12-2025",
@@ -184,21 +384,35 @@ const AIConsultationRoom: React.FC = () => {
           },
           outputAudioTranscription: {}, 
           inputAudioTranscription: {}, 
-          systemInstruction: t.ai_consultation.room.systemInstruction,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          systemInstruction: liveSystemInstruction,
         },
         callbacks: {
           onopen: () => {
+            if (sessionEndedRef.current) {
+              sessionPromise.then((session) => session.close?.()).catch(() => undefined);
+              return;
+            }
             console.log("Gemini Live Session Opened!");
+            isLiveConnectedRef.current = true;
             setIsLiveConnected(true);
             isConnectingRef.current = false;
             sessionPromise.then(session => {
+              if (sessionEndedRef.current) {
+                session.close?.();
+                return;
+              }
               sessionRef.current = session;
               setupAudioInput(session);
-              session.sendRealtimeInput({ text: t.ai_consultation.room.initialMessage });
+              startVideoFrameStreaming(session);
+              sendLiveTextTurn(session, t.ai_consultation.room.initialMessage);
             });
           },
-          onmessage: (message: LiveServerMessage) => handleLiveMessage(message),
+          onmessage: (message: LiveServerMessage) => {
+            if (!sessionEndedRef.current) handleLiveMessage(message);
+          },
           onclose: () => {
+            isLiveConnectedRef.current = false;
             setIsLiveConnected(false);
             isConnectingRef.current = false;
             cleanupLive();
@@ -222,6 +436,42 @@ const AIConsultationRoom: React.FC = () => {
       setConnectionError(t.ai_consultation.room.accessDenied);
       isConnectingRef.current = false;
     }
+  };
+
+  const startVideoFrameStreaming = (session: any) => {
+    if (videoFrameIntervalRef.current) {
+      window.clearInterval(videoFrameIntervalRef.current);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = LIVE_VIDEO_FRAME_WIDTH;
+    canvas.height = LIVE_VIDEO_FRAME_HEIGHT;
+
+    videoFrameIntervalRef.current = window.setInterval(() => {
+      const video = videoRef.current;
+      const currentSession = sessionRef.current || liveSessionRef.current || session;
+      if (sessionEndedRef.current) return;
+      if (!video || !currentSession || !isLiveConnectedRef.current) return;
+      if (video.readyState < 2) return;
+
+      const hasEnabledVideo = streamRef.current?.getVideoTracks().some((track) => track.enabled && track.readyState === 'live');
+      if (!hasEnabledVideo) return;
+
+      const ctx = canvas.getContext('2d', { alpha: false });
+      if (!ctx) return;
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const frame = canvas.toDataURL('image/jpeg', LIVE_VIDEO_FRAME_QUALITY).split(',')[1];
+      if (!frame) return;
+
+      try {
+        currentSession.sendRealtimeInput({
+          video: { data: frame, mimeType: 'image/jpeg' }
+        });
+      } catch (err) {
+        console.error('Error sending video frame to Gemini:', err);
+      }
+    }, LIVE_VIDEO_FRAME_INTERVAL_MS);
   };
 
   const setupAudioInput = (session: any) => {
@@ -257,6 +507,10 @@ const AIConsultationRoom: React.FC = () => {
     silentGain.connect(ctx.destination);
 
     const updateMicLevel = () => {
+      if (sessionEndedRef.current) {
+        setMicLevel(0);
+        return;
+      }
       if (ctx.state === 'suspended') ctx.resume();
       
       if (!isMicOn) {
@@ -292,7 +546,8 @@ const AIConsultationRoom: React.FC = () => {
       outputData.fill(0);
 
       const currentSession = sessionRef.current || liveSessionRef.current;
-      if (!isMicOn || !isLiveConnected || !currentSession) return;
+      if (sessionEndedRef.current) return;
+      if (!isMicOnRef.current || !isLiveConnectedRef.current || !currentSession) return;
 
       let inputData = e.inputBuffer.getChannelData(0);
       
@@ -340,6 +595,7 @@ const AIConsultationRoom: React.FC = () => {
   };
 
   const handleLiveMessage = (message: LiveServerMessage) => {
+    if (sessionEndedRef.current) return;
     // Audio Output - Process ALL audio parts in the message
     const audioParts = message.serverContent?.modelTurn?.parts?.filter(p => p.inlineData);
     if (audioParts && audioParts.length > 0) {
@@ -359,19 +615,21 @@ const AIConsultationRoom: React.FC = () => {
       if (!isPlayingRef.current) processAudioQueue();
     }
 
-    // Audio Transcription (User Input)
+    // Gemini streams interim input transcription. Do not render it in chat:
+    // partial hypotheses make the patient's spoken words look incorrect.
     const serverContent = message.serverContent as any;
-    const userTranscription = serverContent?.userTurn?.parts?.find((p: any) => p.text)?.text;
-    if (userTranscription) {
-      setMessages(prev => {
-        const last = prev[prev.length - 1];
-        if (last && last.role === 'user' && last.text === userTranscription) return prev;
-        return [...prev, { role: 'user', text: userTranscription }];
-      });
+    const inputTranscription =
+      serverContent?.inputTranscription?.text ||
+      serverContent?.inputAudioTranscription?.text ||
+      serverContent?.inputTranscription?.transcript;
+    if (inputTranscription) {
+      upsertTranscriptEntry('patient', inputTranscription, 'replace-last');
     }
 
     // Model Output Transcription
-    const modelTranscription = serverContent?.modelTurn?.parts?.find((p: any) => p.text)?.text;
+    const modelTranscription =
+      serverContent?.outputTranscription?.text ||
+      serverContent?.modelTurn?.parts?.find((p: any) => p.text)?.text;
     if (modelTranscription) {
       updateAIChat(modelTranscription);
     }
@@ -388,16 +646,25 @@ const AIConsultationRoom: React.FC = () => {
   };
 
   const updateAIChat = (text: string) => {
+    const cleanedText = cleanAIText(text);
+    if (!cleanedText.trim()) return;
     setMessages(prev => {
       const last = prev[prev.length - 1];
       if (last && last.role === 'ai') {
-        return [...prev.slice(0, -1), { ...last, text: last.text + text }];
+        return [...prev.slice(0, -1), { ...last, text: cleanAIText(last.text + cleanedText) }];
       }
-      return [...prev, { role: 'ai', text: text }];
+      return [...prev, { role: 'ai', text: cleanedText }];
     });
+    upsertTranscriptEntry('ai', cleanedText, 'replace-last');
   };
 
   const processAudioQueue = async () => {
+    if (sessionEndedRef.current) {
+      audioOutputQueueRef.current = [];
+      isPlayingRef.current = false;
+      setIsAISpeaking(false);
+      return;
+    }
     if (audioOutputQueueRef.current.length === 0 || !audioContextRef.current) {
       isPlayingRef.current = false;
       setIsAISpeaking(false);
@@ -419,6 +686,7 @@ const AIConsultationRoom: React.FC = () => {
     const source = audioContextRef.current.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContextRef.current.destination);
+    activeAudioSourcesRef.current.push(source);
     
     const startTime = Math.max(audioContextRef.current.currentTime, nextStartTimeRef.current);
     source.start(startTime);
@@ -427,7 +695,8 @@ const AIConsultationRoom: React.FC = () => {
     nextStartTimeRef.current = startTime + buffer.duration;
     
     source.onended = () => {
-      processAudioQueue();
+      activeAudioSourcesRef.current = activeAudioSourcesRef.current.filter((item) => item !== source);
+      if (!sessionEndedRef.current) processAudioQueue();
     };
   };
 
@@ -436,22 +705,50 @@ const AIConsultationRoom: React.FC = () => {
     if (!query.trim()) return;
     setIsAIThinking(true);
     setMessages(prev => [...prev, { role: 'user', text: query }]);
+    upsertTranscriptEntry('patient', query, 'append');
     setInputText('');
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
-        contents: [{ role: "user", parts: [{ text: query }] }],
-        config: {
-          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
-          systemInstruction: t.ai_consultation.room.systemInstruction
+      const responsePrefix = `${t.ai_consultation.room.deepAnalysis}: `;
+      setMessages(prev => [...prev, { role: 'ai', text: responsePrefix }]);
+      const conversation = messages.slice(-10).map((m) => `${m.role}: ${m.text}`).join('\n');
+      const result = cleanAIText(await advancedChatStream(
+        `Consultation context:\n${conversation}\n\nPatient question: ${query}`,
+        {
+          systemInstruction: `${t.ai_consultation.room.systemInstruction}\nReturn a deep medical-oriented review in clean Russian text without Markdown or asterisks.`,
+          useSearch: false,
+          onDelta: (_delta, fullText) => {
+            setMessages(prev => {
+              const next = [...prev];
+              const target = (() => {
+                for (let i = next.length - 1; i >= 0; i -= 1) {
+                  if (next[i].role === 'ai') return i;
+                }
+                return -1;
+              })();
+              if (next[target]?.role === 'ai') {
+                next[target] = { ...next[target], text: `${responsePrefix}${cleanAIText(fullText)}` };
+              }
+              return next;
+            });
+          }
         }
+      ));
+      setMessages(prev => {
+        const next = [...prev];
+        const target = (() => {
+          for (let i = next.length - 1; i >= 0; i -= 1) {
+            if (next[i].role === 'ai') return i;
+          }
+          return -1;
+        })();
+        if (next[target]?.role === 'ai') {
+          next[target] = { ...next[target], text: `${responsePrefix}${result}` };
+        }
+        return next;
       });
-      const result = response.text || t.ai_consultation.room.deepAnalysisFail;
-      setMessages(prev => [...prev, { role: 'ai', text: `[${t.ai_consultation.room.deepAnalysis}]: ${result}` }]);
       const currentSession = sessionRef.current || liveSessionRef.current;
       if (currentSession) {
-        currentSession.sendRealtimeInput({ text: t.ai_consultation.room.deepAnalysisResult.replace('{result}', result) });
+        sendLiveTextTurn(currentSession, t.ai_consultation.room.deepAnalysisResult.replace('{result}', result));
       }
     } catch (err) {
       console.error("Thinking mode error:", err);
@@ -466,19 +763,50 @@ const AIConsultationRoom: React.FC = () => {
     if (!query.trim()) return;
     setIsAIThinking(true);
     setMessages(prev => [...prev, { role: 'user', text: `${t.common.search.replace('...', '')}: ${query}` }]);
+    upsertTranscriptEntry('patient', query, 'append');
     setInputText('');
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: "user", parts: [{ text: t.ai_consultation.room.searchPrompt.replace('{query}', query) }] }],
-        config: { tools: [{ googleSearch: {} }] }
+      const responsePrefix = `${t.ai_consultation.room.fastSearch}: `;
+      setMessages(prev => [...prev, { role: 'ai', text: responsePrefix }]);
+      const conversation = messages.slice(-10).map((m) => `${m.role}: ${m.text}`).join('\n');
+      const result = cleanAIText(await advancedChatStream(
+        `Consultation context:\n${conversation}\n\n${t.ai_consultation.room.searchPrompt.replace('{query}', query)}`,
+        {
+          systemInstruction: `${t.ai_consultation.room.systemInstruction}\nReturn clean Russian text without Markdown or asterisks.`,
+          useSearch: true,
+          onDelta: (_delta, fullText) => {
+            setMessages(prev => {
+              const next = [...prev];
+              const target = (() => {
+                for (let i = next.length - 1; i >= 0; i -= 1) {
+                  if (next[i].role === 'ai') return i;
+                }
+                return -1;
+              })();
+              if (next[target]?.role === 'ai') {
+                next[target] = { ...next[target], text: `${responsePrefix}${cleanAIText(fullText)}` };
+              }
+              return next;
+            });
+          }
+        }
+      ));
+      setMessages(prev => {
+        const next = [...prev];
+        const target = (() => {
+          for (let i = next.length - 1; i >= 0; i -= 1) {
+            if (next[i].role === 'ai') return i;
+          }
+          return -1;
+        })();
+        if (next[target]?.role === 'ai') {
+          next[target] = { ...next[target], text: `${responsePrefix}${result}` };
+        }
+        return next;
       });
-      const result = response.text || t.ai_consultation.room.searchFail;
-      setMessages(prev => [...prev, { role: 'ai', text: `[${t.ai_consultation.room.fastSearch}]: ${result}` }]);
       const currentSession = sessionRef.current || liveSessionRef.current;
       if (currentSession) {
-        currentSession.sendRealtimeInput({ text: t.ai_consultation.room.searchResult.replace('{result}', result) });
+        sendLiveTextTurn(currentSession, t.ai_consultation.room.searchResult.replace('{result}', result));
       }
     } catch (err) {
       console.error("Search error:", err);
@@ -492,7 +820,7 @@ const AIConsultationRoom: React.FC = () => {
   const handleImageAnalysis = async (file: File) => {
     setIsAIThinking(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const ai = new GoogleGenAI({ apiKey: getGeminiBrowserApiKey() });
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -501,7 +829,7 @@ const AIConsultationRoom: React.FC = () => {
       });
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-2.5-pro",
         contents: [{
           parts: [
             { inlineData: { data: base64, mimeType: file.type } },
@@ -510,20 +838,21 @@ const AIConsultationRoom: React.FC = () => {
         }]
       });
       
-      const analysis = response.text || t.ai_consultation.room.docAnalysisFail;
+      const analysis = cleanAIText(response.text || t.ai_consultation.room.docAnalysisFail);
       setUploadedDocs(prev => [...prev, { name: file.name, analysis }]);
       
       const currentSession = sessionRef.current || liveSessionRef.current;
       if (currentSession) {
-        currentSession.sendRealtimeInput({ 
-          text: t.ai_consultation.room.docAnalysisResult.replace('{name}', file.name).replace('{analysis}', analysis)
-        });
+        sendLiveTextTurn(currentSession, t.ai_consultation.room.docAnalysisResult.replace('{name}', file.name).replace('{analysis}', analysis));
       }
       
-      setMessages(prev => [...prev, { role: 'ai', text: `[${t.ai_consultation.room.docAnalysis} ${file.name}]: ${analysis}` }]);
+      setMessages(prev => [...prev, { role: 'ai', text: `${t.ai_consultation.room.docAnalysis} ${file.name}: ${analysis}` }]);
+      upsertTranscriptEntry('system', `Document: ${file.name}`, 'append');
+      upsertTranscriptEntry('ai', `${t.ai_consultation.room.docAnalysis} ${file.name}: ${analysis}`, 'append');
     } catch (err) {
       console.error("Image analysis error:", err);
       setMessages(prev => [...prev, { role: 'system', text: t.ai_consultation.room.docAnalysisError }]);
+      upsertTranscriptEntry('system', t.ai_consultation.room.docAnalysisError, 'append');
     } finally {
       setIsAIThinking(false);
     }
@@ -539,10 +868,11 @@ const AIConsultationRoom: React.FC = () => {
       handleSearch(text);
     } else {
       setMessages(prev => [...prev, { role: 'user', text }]);
+      upsertTranscriptEntry('patient', text, 'append');
       setInputText('');
       const currentSession = sessionRef.current || liveSessionRef.current;
       if (currentSession) {
-        currentSession.sendRealtimeInput({ text });
+        sendLiveTextTurn(currentSession, text);
       }
     }
   };
@@ -552,16 +882,105 @@ const AIConsultationRoom: React.FC = () => {
     if (file) handleImageAnalysis(file);
   };
 
+  useEffect(() => {
+    if (draftSyncTimerRef.current) {
+      window.clearTimeout(draftSyncTimerRef.current);
+      draftSyncTimerRef.current = null;
+    }
+
+    if (!canArchiveToPatientPortal || step !== 'consultation' || isFinalizingRef.current) {
+      return;
+    }
+
+    const hasPatientData =
+      consultationTranscript.some((item) => item.speaker === 'patient' && item.text.trim()) ||
+      uploadedDocs.length > 0;
+    if (!hasPatientData) {
+      return;
+    }
+
+    const signature = JSON.stringify({
+      transcript: consultationTranscript.map((item) => [item.speaker, item.text]),
+      docs: uploadedDocs,
+      summary: buildArchiveSummary()
+    });
+
+    if (signature === lastDraftSignatureRef.current) {
+      return;
+    }
+
+    draftSyncTimerRef.current = window.setTimeout(() => {
+      void syncDraftToArchive()
+        .then(() => {
+          lastDraftSignatureRef.current = signature;
+        })
+        .catch((error) => {
+          console.error('AI consultation draft sync failed:', error);
+        });
+    }, 1200);
+
+    return () => {
+      if (draftSyncTimerRef.current) {
+        window.clearTimeout(draftSyncTimerRef.current);
+        draftSyncTimerRef.current = null;
+      }
+    };
+  }, [canArchiveToPatientPortal, step, consultationTranscript, uploadedDocs, report]);
+
+  const finishConsultation = async () => {
+    if (isFinalizingRef.current) return;
+    isFinalizingRef.current = true;
+    sessionEndedRef.current = true;
+    cleanupLive();
+
+    try {
+      if (canArchiveToPatientPortal) {
+        const synced = await syncDraftToArchive();
+        if (synced?.caseId) {
+          const finalized = await roleApi.patientFinalizeAiConsultationReport(synced.caseId, {
+            aiSummary: buildArchiveSummary()
+          });
+          setReport(finalized?.finalReport || finalized?.aiSummary || null);
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification('AI consultation report is ready', {
+              body: 'The final report has been saved to the medical archive.',
+              icon: '/pwa-192.png'
+            });
+          }
+          navigate('/archive', { replace: true });
+          return;
+        }
+      }
+
+      setStep('payment');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('AI consultation finalize error:', error);
+      setMessages(prev => [...prev, { role: 'system', text: 'Could not save the final report to the archive.' }]);
+      setStep('payment');
+      navigate('/dashboard');
+    } finally {
+      isFinalizingRef.current = false;
+    }
+  };
+
   const generateFinalReport = async () => {
-    if (messages.length < 3) return;
+    if ((messages.length < 3 && consultationTranscript.length < 3) || isGeneratingReport) return;
     setIsGeneratingReport(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const conversation = messages.map(m => `${m.role}: ${m.text}`).join('\n');
+      if (canArchiveToPatientPortal) {
+        await syncDraftToArchive();
+        return;
+      }
+
+      const ai = new GoogleGenAI({ apiKey: getGeminiBrowserApiKey() });
+      const conversation = consultationTranscript.length
+        ? consultationTranscript.map((m) => `${m.speaker}: ${m.text}`).join('\n')
+        : messages.map(m => `${m.role}: ${m.text}`).join('\n');
       const docs = uploadedDocs.map(d => `Document ${d.name}: ${d.analysis}`).join('\n');
       
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-2.5-pro",
         contents: [{ 
           role: "user", 
           parts: [{ text: t.ai_consultation.room.reportPrompt.replace('{conversation}', conversation).replace('{docs}', docs) }] 
@@ -571,12 +990,14 @@ const AIConsultationRoom: React.FC = () => {
         }
       });
       
-      const result = response.text || t.ai_consultation.room.reportFail;
+      const result = cleanAIText(response.text || t.ai_consultation.room.reportFail);
       setReport(result);
       setMessages(prev => [...prev, { role: 'ai', text: `${t.ai_consultation.room.reportFormed}: ${result}` }]);
+      upsertTranscriptEntry('ai', `${t.ai_consultation.room.reportFormed}: ${result}`, 'append');
     } catch (err) {
       console.error("Report generation error:", err);
       setMessages(prev => [...prev, { role: 'system', text: t.ai_consultation.room.reportError }]);
+      upsertTranscriptEntry('system', t.ai_consultation.room.reportError, 'append');
     } finally {
       setIsGeneratingReport(false);
     }
@@ -617,7 +1038,7 @@ const AIConsultationRoom: React.FC = () => {
               className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
             >
               {/* Benefits Section */}
-              <div className="space-y-10">
+              <div className="space-y-10 order-2 lg:order-1">
                 <FadeIn direction="left">
                   <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full border border-primary/20">
@@ -714,7 +1135,7 @@ const AIConsultationRoom: React.FC = () => {
               </div>
 
               {/* Payment Card */}
-              <FadeIn direction="right">
+              <FadeIn direction="right" className="order-1 lg:order-2">
                 <motion.div 
                   whileHover={{ scale: 1.01 }}
                   className="bg-white rounded-[3.5rem] p-10 lg:p-14 space-y-10 shadow-[0_0_100px_rgba(13,71,161,0.2)] relative overflow-hidden"
@@ -783,8 +1204,8 @@ const AIConsultationRoom: React.FC = () => {
                 <BrainCircuit className="w-16 h-16 text-primary animate-pulse" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Оплата прошла успешно!</h2>
-                <p className="text-slate-400 font-medium">Нажмите кнопку ниже, чтобы активировать микрофон и начать консультацию.</p>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Payment completed</h2>
+                <p className="text-slate-400 font-medium">Press the button below to activate microphone access and start the consultation.</p>
               </div>
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -808,15 +1229,16 @@ const AIConsultationRoom: React.FC = () => {
                     });
                     streamRef.current = stream;
                     
+                    sessionEndedRef.current = false;
                     setStep('consultation');
                   } catch (err) {
                     console.error("Failed to initialize media on click:", err);
-                    alert("Не удалось получить доступ к микрофону. Пожалуйста, проверьте настройки браузера.");
+                    alert("Could not access the microphone. Please check browser permissions.");
                   }
                 }}
                 className="px-12 py-6 bg-primary text-white rounded-[2rem] font-black uppercase tracking-widest shadow-2xl shadow-primary/30"
               >
-                Войти в комнату
+                Enter room
               </motion.button>
             </motion.div>
           )}
@@ -826,7 +1248,7 @@ const AIConsultationRoom: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-slate-950 flex flex-col overflow-hidden text-white">
+    <div className="h-[100svh] lg:h-screen bg-slate-950 flex flex-col overflow-y-auto lg:overflow-hidden text-white">
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-white/10 flex items-center justify-between bg-slate-900/50 backdrop-blur-xl shrink-0">
         <div className="flex items-center gap-3 md:gap-4">
@@ -858,17 +1280,17 @@ const AIConsultationRoom: React.FC = () => {
         <motion.button 
           whileHover={{ scale: 1.1, rotate: 90 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate('/dashboard')} 
+          onClick={finishConsultation} 
           className="p-3 md:p-4 bg-white/5 rounded-xl md:rounded-2xl hover:bg-white/10 transition-all"
         >
           <X className="w-5 h-5 md:w-6 md:h-6" />
         </motion.button>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-visible lg:overflow-hidden relative">
         {/* Video Area */}
-        <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden min-h-[40vh] lg:min-h-0">
-          <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover transition-opacity duration-1000 ${isCameraOn ? 'opacity-100' : 'opacity-0'}`} />
+        <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden min-h-[calc(100svh-5rem)] lg:min-h-0 shrink-0">
+          <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-1000 ${isCameraOn ? 'opacity-100' : 'opacity-0'}`} />
           {!isCameraOn && <div className="absolute inset-0 flex items-center justify-center bg-slate-900"><VideoOff className="w-12 md:w-20 h-12 md:h-20 text-slate-700" /></div>}
 
           {/* AI Avatar */}
@@ -941,7 +1363,7 @@ const AIConsultationRoom: React.FC = () => {
              <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/dashboard')} 
+              onClick={finishConsultation} 
               className="px-6 md:px-10 py-3 md:py-5 bg-red-500 text-white rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-widest hover:bg-red-600 transition-all shadow-xl shadow-red-500/20"
              >
                {t('ai_consultation.room.finish')}
@@ -950,7 +1372,7 @@ const AIConsultationRoom: React.FC = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="w-full lg:w-[450px] bg-slate-900 border-t lg:border-t-0 lg:border-l border-white/10 flex flex-col overflow-hidden h-[50vh] lg:h-auto">
+        <div className="w-full lg:w-[450px] bg-slate-900 border-t lg:border-t-0 lg:border-l border-white/10 flex flex-col overflow-hidden min-h-[70svh] lg:min-h-0 lg:h-auto">
            <div className="flex border-b border-white/10 shrink-0">
               <button className="flex-1 py-4 md:py-6 text-[8px] md:text-[10px] font-black uppercase tracking-widest border-b-2 border-primary text-primary">{t('ai_consultation.room.chatTab')}</button>
               <button className="flex-1 py-4 md:py-6 text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">{t('ai_consultation.room.docsTab')}</button>

@@ -5,17 +5,14 @@ export class NotificationEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ type: 'uuid', name: 'user_id' })
   userId!: string;
 
-  @Column()
-  title!: string;
+  @Column({ type: 'text', name: 'message' })
+  message!: string;
 
-  @Column()
-  body!: string;
-
-  @Column({ name: 'is_read', default: false })
-  isRead!: boolean;
+  @Column({ type: 'boolean', name: 'read', default: false })
+  read!: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

@@ -1,234 +1,399 @@
-import React, { useState } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { UserRole, User } from './types';
-import LandingPage from './pages/LandingPage';
-import PatientDashboard from './pages/PatientDashboard';
-import DoctorDashboard from './pages/DoctorDashboard';
-import ConsultationRoom from './pages/ConsultationRoom';
-import MedicalArchive from './pages/MedicalArchive';
-import Pharmacy from './pages/Pharmacy';
-import DoctorPatients from './pages/DoctorPatients';
-import DoctorConsultations from './pages/DoctorConsultations';
-import DoctorFinances from './pages/DoctorFinances';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import CommunityPage from './pages/CommunityPage';
-import MentalPage from './pages/MentalPage';
-import HomeVisitPage from './pages/HomeVisitPage';
-import ChatPage from './pages/ChatPage';
-import SettingsPage from './pages/SettingsPage';
-import PartnerDashboard from './pages/PartnerDashboard';
-import PartnerDoctors from './pages/PartnerDoctors';
-import PartnerReports from './pages/PartnerReports';
-import PartnerFinances from './pages/PartnerFinances';
-import DoctorsPage from './pages/DoctorsPage';
-import AIConsultationRoom from './pages/AIConsultationRoom';
-import DoctorsSearchPage from './pages/DoctorsSearchPage';
-import PartnersPage from './pages/PartnersPage';
-import PatientAuthPage from './pages/PatientAuthPage';
-import TakhetAIChat from './pages/TakhetAIChat';
-import AuthPage from './pages/AuthPage';
-import PatientAppointments from './pages/PatientAppointments';
-import ServicesPage from './pages/ServicesPage';
-import AdminAuthPage from './pages/AdminAuthPage';
-import AdminDashboard from './pages/AdminDashboard';
-import SwarmMedicinePage from './pages/SwarmMedicinePage';
-import AIHealthBrowser from './pages/AIHealthBrowser';
-import AIChatOverlay from './components/AIChatOverlay';
-import { MockDB } from './services/db';
-import { AlertTriangle, Hammer, ShieldAlert } from 'lucide-react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import { User, UserRole } from './types';
+import { api } from '../services/api';
+import { roleApi } from '../services/roleApi';
 
-const MaintenanceGuard: React.FC<{ children: React.ReactNode; isAdmin: boolean }> = ({ children, isAdmin }) => {
-  const [isMaintenance, setIsMaintenance] = useState(MockDB.getSystemConfig().maintenanceMode);
+const Sidebar = lazy(() => import('./components/Sidebar'));
+const Header = lazy(() => import('./components/Header'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const DoctorsPage = lazy(() => import('./pages/DoctorsPage'));
+const PartnersPage = lazy(() => import('./pages/PartnersPage'));
+const MentalPage = lazy(() => import('./pages/MentalPage'));
+const CommunityPage = lazy(() => import('./pages/CommunityPage'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const AuthConfirmEmailPage = lazy(() => import('./pages/AuthConfirmEmailPage'));
+const AuthResetPasswordPage = lazy(() => import('./pages/AuthResetPasswordPage'));
+const PatientAuthPage = lazy(() => import('./pages/PatientAuthPage'));
+const AdminAuthPage = lazy(() => import('./pages/AdminAuthPage'));
+const PatientDashboard = lazy(() => import('./pages/PatientDashboard'));
+const DoctorDashboard = lazy(() => import('./pages/DoctorDashboard'));
+const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const TakhetAIChat = lazy(() => import('./pages/TakhetAIChat'));
+const AIHealthBrowser = lazy(() => import('./pages/AIHealthBrowser'));
+const AIAnalysisCenter = lazy(() => import('./pages/AIAnalysisCenter'));
+const AIConsultationRoom = lazy(() => import('./pages/AIConsultationRoom'));
+const TakhetLabsPage = lazy(() => import('./pages/TakhetLabsPage'));
+const TakhetLabsApp = lazy(() => import('./pages/TakhetLabsApp'));
+const GuestConsultationPage = lazy(() => import('./pages/GuestConsultationPage'));
+const DoctorsSearchPage = lazy(() => import('./pages/DoctorsSearchPage'));
+const DoctorProfileBookingPage = lazy(() => import('./pages/DoctorProfileBookingPage'));
+const DoctorBookingConfirmPage = lazy(() => import('./pages/DoctorBookingConfirmPage'));
+const PatientAppointments = lazy(() => import('./pages/PatientAppointments'));
+const MedicalArchive = lazy(() => import('./pages/MedicalArchive'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const HomeVisitPage = lazy(() => import('./pages/HomeVisitPage'));
+const Pharmacy = lazy(() => import('./pages/Pharmacy'));
+const DoctorPatients = lazy(() => import('./pages/DoctorPatients'));
+const DoctorConsultations = lazy(() => import('./pages/DoctorConsultations'));
+const ConsultationRoom = lazy(() => import('./pages/ConsultationRoom'));
+const DoctorFinances = lazy(() => import('./pages/DoctorFinances'));
+const SwarmMedicinePage = lazy(() => import('./pages/SwarmMedicinePage'));
+const PartnerDoctors = lazy(() => import('./pages/PartnerDoctors'));
+const PartnerReports = lazy(() => import('./pages/PartnerReports'));
+const PartnerFinances = lazy(() => import('./pages/PartnerFinances'));
+const AIChatOverlay = lazy(() => import('./components/AIChatOverlay'));
+const EnterpriseApp = lazy(() => import('./pages/EnterpriseApp'));
 
-  React.useEffect(() => {
-    const check = () => setIsMaintenance(MockDB.getSystemConfig().maintenanceMode);
-    window.addEventListener('storage_update', check);
-    return () => window.removeEventListener('storage_update', check);
+type LoginCredentials = {
+  email: string;
+  password: string;
+};
+
+type RegisterCredentials = LoginCredentials;
+
+type AuthSessionResponse = {
+  authenticated: boolean;
+  user: {
+    id: string;
+    email: string;
+    role: 'patient' | 'doctor' | 'partner' | 'admin';
+    verified: boolean;
+  } | null;
+};
+
+const roleMap: Record<UserRole, 'patient' | 'doctor' | 'partner' | 'admin'> = {
+  [UserRole.PATIENT]: 'patient',
+  [UserRole.DOCTOR]: 'doctor',
+  [UserRole.PARTNER]: 'partner',
+  [UserRole.ADMIN]: 'admin'
+};
+
+const fallbackUserName: Record<UserRole, string> = {
+  [UserRole.PATIENT]: 'Пациент Takhet',
+  [UserRole.DOCTOR]: 'Врач Takhet',
+  [UserRole.PARTNER]: 'Партнер Takhet',
+  [UserRole.ADMIN]: 'Администратор Takhet'
+};
+
+const buildAvatar = (name: string, role: UserRole) =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${role === UserRole.ADMIN ? '0f172a' : '0D47A1'}&color=fff`;
+
+const normalizeUser = (role: UserRole, profile: any): User => {
+  const name =
+    profile?.fullName ||
+    profile?.name ||
+    profile?.clinicName ||
+    profile?.organizationName ||
+    profile?.email ||
+    fallbackUserName[role];
+
+  const verified =
+    role === UserRole.DOCTOR || role === UserRole.PARTNER
+      ? Boolean(profile?.verified ?? profile?.active ?? profile?.isVerified)
+      : true;
+
+  return {
+    id: profile?.id || `${role.toLowerCase()}-user`,
+    name,
+    email: profile?.email,
+    role,
+    avatar: profile?.avatar || buildAvatar(name, role),
+    isVerified: verified,
+    isPending: role !== UserRole.ADMIN && !verified
+  };
+};
+
+const loadRoleProfile = async (role: UserRole) => {
+  switch (role) {
+    case UserRole.PATIENT:
+      return roleApi.patientProfile();
+    case UserRole.DOCTOR:
+      return roleApi.doctorProfile();
+    case UserRole.PARTNER:
+      return roleApi.partnerProfile();
+    case UserRole.ADMIN:
+      return null;
+    default:
+      return null;
+  }
+};
+
+const PrivateRoute: React.FC<{ user: User | null; allowed?: UserRole[]; redirectTo?: string; children: React.ReactElement }> = ({
+  user,
+  allowed,
+  redirectTo = '/auth',
+  children
+}) => {
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to={redirectTo} replace state={{ from: location, forcePublicAuth: true }} />;
+  }
+
+  if (allowed && !allowed.includes(user.role)) {
+    if (user.role === UserRole.ADMIN) return <Navigate to="/admin-dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+const AppShell: React.FC<{ user: User | null; onLogout: () => void; children: React.ReactNode }> = ({ user, onLogout, children }) => {
+  const location = useLocation();
+
+  const publicRoutes = useMemo(
+    () => new Set(['/', '/doctors', '/partners', '/mental', '/community', '/services', '/takhet-labs', '/guest-consultation', '/auth', '/patient-auth', '/admin-auth', '/ai-consultation', '/takhet-ai/try']),
+    []
+  );
+  const pathname = location.pathname;
+  const isServicesRoute = pathname === '/services' || pathname.startsWith('/services/');
+  const isPublic = (publicRoutes.has(pathname) || pathname.startsWith('/services/')) && !(user && isServicesRoute);
+  const isAdmin = user?.role === UserRole.ADMIN;
+  const isDoctorCaseRoom = pathname.startsWith('/consultation/');
+  const isTakhetAi = pathname.startsWith('/takhet-ai/');
+  const isAiConsultation = pathname === '/ai-consultation';
+  const isHealthBrowser = pathname === '/health-browser';
+  const isEnterprise = pathname.startsWith('/enterprise');
+  const isTakhetLabsNamespace = pathname.startsWith('/takhet-labs/login') || pathname.startsWith('/takhet-labs/portal');
+  const shouldShowCoordinator = !user && isPublic && !isTakhetAi && !isAiConsultation;
+
+  if (isEnterprise || isTakhetLabsNamespace) {
+    return <>{children}</>;
+  }
+
+  if (!user || isPublic) {
+    return (
+      <>
+        {children}
+        {shouldShowCoordinator ? (
+          <Suspense fallback={null}>
+            <AIChatOverlay />
+          </Suspense>
+        ) : null}
+      </>
+    );
+  }
+
+  if (isAdmin || isDoctorCaseRoom || isTakhetAi || isHealthBrowser) {
+    return (
+      <>
+        {children}
+      </>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background overflow-hidden">
+      <Suspense fallback={null}>
+        <Sidebar role={user.role} onLogout={onLogout} />
+      </Suspense>
+      <div className="flex-1 flex flex-col min-w-0 h-screen">
+        <Suspense fallback={null}>
+          <Header user={user} />
+        </Suspense>
+        <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6 xl:p-10">{children}</main>
+      </div>
+    </div>
+  );
+};
+
+const AppRoutes: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [bootstrapped, setBootstrapped] = useState(false);
+  const enterpriseHost = typeof window !== 'undefined' && window.location.hostname === 'enterprise.takhet.com';
+
+  const clearLegacyAuthStorage = () => {
+    localStorage.removeItem('takhet_user');
+    localStorage.removeItem('takhet_role');
+    localStorage.removeItem('takhet_token');
+  };
+
+  const persistUser = (nextUser: User | null) => {
+    setUser(nextUser);
+    if (!nextUser) {
+      clearLegacyAuthStorage();
+    }
+  };
+
+  const hydrateFromSession = async (authorization?: string) => {
+    const session = await api<AuthSessionResponse>('/auth/session', {
+      headers: authorization ? { Authorization: authorization } : undefined
+    });
+
+    if (!session?.authenticated || !session.user) {
+      persistUser(null);
+      return;
+    }
+
+    const role = session.user.role.toUpperCase() as UserRole;
+
+    try {
+      const profile = await loadRoleProfile(role);
+      persistUser(normalizeUser(role, { ...session.user, ...profile }));
+    } catch {
+      persistUser(normalizeUser(role, session.user));
+    }
+
+    clearLegacyAuthStorage();
+  };
+
+  useEffect(() => {
+    const hydrate = async () => {
+      try {
+        await hydrateFromSession();
+      } catch {
+        persistUser(null);
+      } finally {
+        setBootstrapped(true);
+      }
+    };
+
+    void hydrate();
   }, []);
 
-  if (isMaintenance && !isAdmin) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
-        <div className="max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
-          <div className="w-24 h-24 bg-amber-500/20 rounded-[2rem] flex items-center justify-center mx-auto border border-amber-500/30">
-            <Hammer className="w-12 h-12 text-amber-500" />
-          </div>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Технические работы</h1>
-            <p className="text-slate-400 font-medium leading-relaxed">
-              Мы проводим плановое обновление системы Takhet. Сервис будет доступен в ближайшее время. Приносим извинения за неудобства.
-            </p>
-          </div>
-          <div className="p-6 bg-white/5 rounded-3xl border border-white/10 flex items-center gap-4 text-left">
-            <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0" />
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              Доступ ограничен администратором платформы
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleLogin = async (role: UserRole, credentials: LoginCredentials) => {
+    const response = await api<{ user?: { id: string; email: string; role: string; verified: boolean } }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+        role: roleMap[role]
+      })
+    });
 
-  return <>{children}</>;
-};
+    try {
+      const profile = await loadRoleProfile(role);
+      persistUser(normalizeUser(role, { ...(response.user || {}), ...profile }));
+    } catch {
+      persistUser(normalizeUser(role, response.user || { email: credentials.email, role }));
+    }
+  };
 
-const PendingApproval: React.FC<{ onLogout: () => void }> = ({ onLogout }) => (
-  <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
-    <div className="max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
-      <div className="w-24 h-24 bg-primary/10 rounded-[2rem] flex items-center justify-center mx-auto border border-primary/20">
-        <ShieldAlert className="w-12 h-12 text-primary" />
-      </div>
-      <div className="space-y-4">
-        <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Ожидание проверки</h1>
-        <p className="text-slate-500 font-medium leading-relaxed">
-          Ваш аккаунт находится на стадии модерации. Администратор Takhet+ проверяет ваши документы. Обычно это занимает до 24 часов.
-        </p>
-      </div>
-      <button 
-        onClick={onLogout}
-        className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all"
-      >
-        Выйти из системы
-      </button>
-    </div>
-  </div>
-);
-
-const AppLayout: React.FC<{ user: User | null; onLogout: () => void; children: React.ReactNode }> = ({ user, onLogout, children }) => {
-  const location = useLocation();
-  const isPublicRoute = ['/auth', '/doctors', '/partners', '/', '/admin-auth', '/takhet-ai', '/mental', '/ai-consultation', '/patient-auth', '/health-browser'].includes(location.pathname);
-  const isConsultation = location.pathname.startsWith('/consultation/') || location.pathname === '/ai-consultation' || location.pathname === '/takhet-ai';
-  const isAdmin = user?.role === UserRole.ADMIN;
-  
-  // Check approval for Doctors and Partners
-  const isUnapproved = user && (user.role === UserRole.DOCTOR || user.role === UserRole.PARTNER) && !user.isVerified;
-
-  if (isUnapproved && !isPublicRoute) {
-    return <PendingApproval onLogout={onLogout} />;
-  }
-
-  // Portal view check
-  const isPortalView = location.pathname.startsWith('/portal/');
-  if (user && (isPortalView || (!isPublicRoute && !isAdmin))) {
-    return (
-      <div className={`flex min-h-screen ${isAdmin ? '' : 'bg-background'} overflow-hidden`}>
-        {!isConsultation && !isAdmin && <Sidebar role={user.role} onLogout={onLogout} />}
-        <div className="flex-1 flex flex-col min-w-0 h-screen">
-          {!isConsultation && !isAdmin && <Header user={user} />}
-          <main className={`flex-1 overflow-y-auto ${isConsultation || isAdmin ? 'p-0' : 'p-4 md:p-10'} transition-all duration-500`}>
-            {children}
-          </main>
-        </div>
-      </div>
-    );
-  }
-  return <div className="min-h-screen bg-background">{children}</div>;
-};
-
-const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const loginAs = (role: UserRole) => {
-    const names = {
-      [UserRole.PATIENT]: 'Alan Baimukhan',
-      [UserRole.DOCTOR]: 'Тестовый Врач (WebRTC)',
-      [UserRole.PARTNER]: 'City Medical Center Admin',
-      [UserRole.ADMIN]: 'System Administrator'
-    };
-    const ids = {
-      [UserRole.PATIENT]: 'master-user-id',
-      [UserRole.DOCTOR]: 'doc_test',
-      [UserRole.PARTNER]: 'partner_1',
-      [UserRole.ADMIN]: 'admin_1'
-    };
-    setUser({
-      id: ids[role],
-      name: names[role],
-      role,
-      isVerified: true,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(names[role])}&background=${role === UserRole.ADMIN ? '1e293b' : '0D47A1'}&color=fff`
+  const handleRegister = async (role: UserRole, credentials: RegisterCredentials) => {
+    return api<{ ok: boolean; status: string; verification?: string; message?: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+        role: roleMap[role]
+      })
     });
   };
-  const logout = () => setUser(null);
+
+  const handleLogout = () => {
+    void api('/auth/logout', { method: 'POST' }).catch(() => null);
+    persistUser(null);
+    navigate('/', { replace: true });
+  };
+
+  if (!bootstrapped) {
+    return <div className="min-h-screen bg-background flex items-center justify-center text-slate-400 font-black uppercase tracking-[0.3em]">Загрузка</div>;
+  }
+
+  const showLandingForAuthedUser = new URLSearchParams(location.search).get('landing') === '1';
 
   return (
-    <HashRouter>
-      <AppContent user={user} loginAs={loginAs} logout={logout} />
-    </HashRouter>
+    <AppShell user={user} onLogout={handleLogout}>
+      <Suspense fallback={null}>
+      <Routes>
+        <Route path="/" element={enterpriseHost ? <Navigate to="/enterprise" replace /> : user && !showLandingForAuthedUser ? <Navigate to={user.role === UserRole.ADMIN ? '/admin-dashboard' : '/dashboard'} replace /> : <LandingPage user={user || undefined} />} />
+        <Route path="/login" element={enterpriseHost ? <Navigate to="/enterprise/login" replace /> : <Navigate to="/auth" replace />} />
+        <Route path="/enterprise/login" element={<EnterpriseApp loginOnly />} />
+        <Route path="/enterprise/*" element={<EnterpriseApp />} />
+        <Route path="/doctors" element={<DoctorsPage />} />
+        <Route path="/partners" element={<PartnersPage />} />
+        <Route path="/mental" element={<MentalPage isPortal={false} user={user || undefined} />} />
+        <Route path="/community" element={<CommunityPage isPortal={false} user={user || undefined} />} />
+        <Route path="/takhet-labs" element={<TakhetLabsPage user={user || undefined} />} />
+        <Route path="/takhet-labs/login" element={<TakhetLabsApp />} />
+        <Route path="/takhet-labs/portal/*" element={<TakhetLabsApp />} />
+        <Route path="/guest-consultation" element={<GuestConsultationPage />} />
+        <Route path="/health-browser" element={<AIHealthBrowser user={user || undefined} />} />
+        <Route path="/ai-lab" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT, UserRole.DOCTOR]}><AIAnalysisCenter user={user!} /></PrivateRoute>} />
+        <Route path="/ai-consultation" element={<AIConsultationRoom />} />
+
+        <Route path="/auth" element={!user ? <AuthPage onLogin={handleLogin} onRegister={handleRegister} /> : <Navigate to={user.role === UserRole.ADMIN ? '/admin-dashboard' : '/dashboard'} replace />} />
+        <Route path="/auth/confirm-email" element={<AuthConfirmEmailPage />} />
+        <Route path="/auth/reset-password" element={<AuthResetPasswordPage />} />
+        <Route path="/patient-auth" element={!user ? <PatientAuthPage onLogin={handleLogin} /> : <Navigate to={user.role === UserRole.ADMIN ? '/admin-dashboard' : '/dashboard'} replace />} />
+        <Route path="/admin-auth" element={!user ? <AdminAuthPage onLogin={handleLogin} /> : <Navigate to={user.role === UserRole.ADMIN ? '/admin-dashboard' : '/dashboard'} replace />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute user={user}>
+              {user?.role === UserRole.PATIENT ? (
+                <PatientDashboard user={user} />
+              ) : user?.role === UserRole.DOCTOR ? (
+                <DoctorDashboard user={user} />
+              ) : user?.role === UserRole.PARTNER ? (
+                <PartnerDashboard user={user} />
+              ) : (
+                <Navigate to="/admin-dashboard" replace />
+              )}
+            </PrivateRoute>
+          }
+        />
+
+        <Route path="/takhet-ai" element={<Navigate to={user?.role === UserRole.DOCTOR ? '/takhet-ai/doctor' : user?.role === UserRole.PARTNER ? '/takhet-ai/partner' : user?.role === UserRole.PATIENT ? '/takhet-ai/patient' : '/takhet-ai/try'} replace />} />
+        <Route path="/takhet-ai/try" element={<TakhetAIChat trialMode />} />
+        <Route path="/takhet-ai/patient" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><TakhetAIChat user={user!} /></PrivateRoute>} />
+        <Route path="/takhet-ai/doctor" element={<PrivateRoute user={user} allowed={[UserRole.DOCTOR]}><TakhetAIChat user={user!} /></PrivateRoute>} />
+        <Route path="/takhet-ai/partner" element={<PrivateRoute user={user} allowed={[UserRole.PARTNER]}><TakhetAIChat user={user!} /></PrivateRoute>} />
+
+        <Route path="/portal/mental" element={<PrivateRoute user={user}><MentalPage isPortal={true} user={user!} /></PrivateRoute>} />
+        <Route path="/chat" element={<PrivateRoute user={user}><ChatPage user={user!} /></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute user={user}><SettingsPage user={user!} /></PrivateRoute>} />
+        <Route path="/labs" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><TakhetLabsPage user={user!} portal /></PrivateRoute>} />
+
+        <Route path="/doctors-search" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><DoctorsSearchPage /></PrivateRoute>} />
+        <Route path="/doctors-search/:doctorId" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><DoctorProfileBookingPage /></PrivateRoute>} />
+        <Route path="/doctors-search/:doctorId/confirm" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><DoctorBookingConfirmPage /></PrivateRoute>} />
+        <Route path="/appointments" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><PatientAppointments /></PrivateRoute>} />
+        <Route path="/archive" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><MedicalArchive /></PrivateRoute>} />
+        <Route path="/services" element={<ServicesPage isPortal={Boolean(user)} />} />
+        <Route path="/services/:serviceId" element={<ServiceDetailPage isPortal={Boolean(user)} />} />
+        <Route path="/home-visit" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><HomeVisitPage /></PrivateRoute>} />
+        <Route path="/pharmacy" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><Pharmacy /></PrivateRoute>} />
+
+        <Route path="/patients" element={<PrivateRoute user={user} allowed={[UserRole.DOCTOR]}><DoctorPatients /></PrivateRoute>} />
+        <Route path="/consultations" element={<PrivateRoute user={user} allowed={[UserRole.DOCTOR]}><DoctorConsultations /></PrivateRoute>} />
+        <Route path="/consultation/:id" element={<PrivateRoute user={user}><ConsultationRoom user={user!} /></PrivateRoute>} />
+        <Route
+          path="/finances"
+          element={
+            <PrivateRoute user={user}>
+              {user?.role === UserRole.DOCTOR ? <DoctorFinances /> : user?.role === UserRole.PARTNER ? <PartnerFinances /> : <Navigate to="/dashboard" replace />}
+            </PrivateRoute>
+          }
+        />
+        <Route path="/swarm-medicine" element={<PrivateRoute user={user} allowed={[UserRole.DOCTOR]}><SwarmMedicinePage /></PrivateRoute>} />
+
+        <Route path="/partner-doctors" element={<PrivateRoute user={user} allowed={[UserRole.PARTNER]}><PartnerDoctors /></PrivateRoute>} />
+        <Route path="/reports" element={<PrivateRoute user={user} allowed={[UserRole.PARTNER]}><PartnerReports /></PrivateRoute>} />
+
+        <Route path="/admin-dashboard" element={<PrivateRoute user={user} allowed={[UserRole.ADMIN]} redirectTo="/admin-auth"><AdminDashboard user={user!} onLogout={handleLogout} /></PrivateRoute>} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      </Suspense>
+    </AppShell>
   );
 };
 
-const AppContent: React.FC<{ user: User | null; loginAs: (role: UserRole) => void; logout: () => void }> = ({ user, loginAs, logout }) => {
-  const location = useLocation();
-  const isPublicLanding = ['/', '/doctors', '/partners', '/auth', '/admin-auth', '/patient-auth', '/health-browser'].includes(location.pathname);
-  const isTakhetAI = location.pathname === '/takhet-ai' || location.pathname === '/portal/takhet-ai';
-  const isPortal = location.pathname.startsWith('/portal/') || ['/dashboard', '/chat', '/settings', '/archive', '/pharmacy', '/patients', '/consultations'].includes(location.pathname);
-
-  return (
-    <>
-      {isPublicLanding && <AIChatOverlay />}
-      <MaintenanceGuard isAdmin={user?.role === UserRole.ADMIN}>
-        <AppLayout user={user} onLogout={logout}>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<LandingPage user={user || undefined} />} />
-            <Route path="/health-browser" element={<AIHealthBrowser user={user || undefined} />} />
-            <Route path="/takhet-ai" element={user ? <TakhetAIChat user={user} /> : <Navigate to="/patient-auth" state={{ from: location }} replace />} />
-            <Route path="/patient-auth" element={!user ? <PatientAuthPage onLogin={loginAs} /> : <Navigate to={location.state?.from?.pathname || "/dashboard"} replace />} />
-            <Route path="/mental" element={<MentalPage isPortal={false} />} />
-            <Route path="/doctors" element={<DoctorsPage />} />
-            <Route path="/partners" element={<PartnersPage />} />
-            <Route path="/ai-consultation" element={<AIConsultationRoom />} />
-            
-            <Route path="/auth" element={!user ? <AuthPage onLogin={loginAs} /> : <Navigate to="/dashboard" replace />} />
-            <Route path="/admin-auth" element={!user ? <AdminAuthPage onLogin={loginAs} /> : <Navigate to="/admin-dashboard" replace />} />
-            {/* Portal Routes (Authenticated) */}
-            <Route path="/dashboard" element={
-              user?.role === UserRole.PATIENT 
-                ? <PatientDashboard user={user} /> 
-                : user?.role === UserRole.DOCTOR 
-                  ? <DoctorDashboard user={user} />
-                  : user?.role === UserRole.PARTNER 
-                    ? <PartnerDashboard user={user} />
-                    : user?.role === UserRole.ADMIN
-                      ? <Navigate to="/admin-dashboard" replace />
-                      : <Navigate to="/auth" replace />
-            } />
-            <Route path="/portal/mental" element={user ? <MentalPage user={user} isPortal={true} /> : <Navigate to="/auth" />} />
-            
-            <Route path="/admin-dashboard" element={user?.role === UserRole.ADMIN ? <AdminDashboard user={user} onLogout={logout} /> : <Navigate to="/admin-auth" replace />} />
-            <Route path="/chat" element={user ? <ChatPage user={user} /> : <Navigate to="/auth" />} />
-            <Route path="/settings" element={user ? <SettingsPage user={user} /> : <Navigate to="/auth" />} />
-            <Route path="/appointments" element={user?.role === UserRole.PATIENT ? <PatientAppointments /> : <Navigate to="/dashboard" />} />
-            <Route path="/doctors-search" element={user ? <DoctorsSearchPage /> : <Navigate to="/auth" />} />
-            <Route path="/partner-doctors" element={user?.role === UserRole.PARTNER ? <PartnerDoctors /> : <Navigate to="/dashboard" />} />
-            <Route path="/reports" element={user?.role === UserRole.PARTNER ? <PartnerReports /> : <Navigate to="/dashboard" />} />
-            <Route path="/finances" element={
-              user?.role === UserRole.DOCTOR ? <DoctorFinances /> : user?.role === UserRole.PARTNER ? <PartnerFinances /> : <Navigate to="/dashboard" />
-            } />
-            <Route path="/swarm-medicine" element={user?.role === UserRole.DOCTOR ? <SwarmMedicinePage user={user} /> : <Navigate to="/dashboard" />} />
-            {user?.role === UserRole.PATIENT && (
-              <>
-                <Route path="/archive" element={<MedicalArchive />} />
-                <Route path="/pharmacy" element={<Pharmacy />} />
-                <Route path="/home-visit" element={<HomeVisitPage />} />
-                <Route path="/services" element={<ServicesPage />} />
-              </>
-            )}
-            {user?.role === UserRole.DOCTOR && (
-              <>
-                <Route path="/patients" element={<DoctorPatients />} />
-                <Route path="/consultations" element={<DoctorConsultations />} />
-              </>
-            )}
-            <Route path="/consultation/:id" element={user ? <ConsultationRoom user={user} /> : <Navigate to="/auth" />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AppLayout>
-      </MaintenanceGuard>
-    </>
-  );
-};
+const App: React.FC = () => (
+  <BrowserRouter>
+    <AppRoutes />
+  </BrowserRouter>
+);
 
 export default App;
+

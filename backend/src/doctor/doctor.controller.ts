@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { IsIn, IsString, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { CasesService } from '../cases/cases.service';
 import { DoctorsService } from '../doctors/doctors.service';
 import { PaymentsService } from '../payments/payments.service';
+import { ProfilesService } from '../profiles/profiles.service';
 
 class RespondCaseDto {
   @IsString()
@@ -13,15 +14,85 @@ class RespondCaseDto {
   response!: string;
 }
 
+class CreateDoctorCaseDto {
+  @IsString()
+  @MinLength(5)
+  summary!: string;
+}
+
 class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
+  @IsOptional()
+  @IsString()
+  fullName?: string;
+
+  @IsOptional()
+  @IsString()
+  specialty?: string;
+
   @IsString()
   @MinLength(2)
   bio!: string;
+
+  @IsString()
+  headline!: string;
+
+  @IsString({ each: true })
+  languages!: string[];
+
+  @IsString({ each: true })
+  consultationModes!: string[];
+
+  @IsString({ each: true })
+  focusAreas!: string[];
+
+  @IsString({ each: true })
+  education!: string[];
+
+  @IsString()
+  city!: string;
+
+  @IsString()
+  clinicName!: string;
+
+  @IsOptional()
+  responseTargetHours!: number;
+
+  @IsOptional()
+  pricePrimary!: number;
+
+  @IsOptional()
+  experienceYears?: number;
+
+  @IsString()
+  accepts!: string;
+
+  @IsOptional()
+  availability!: { date: string; slots: string[] }[];
 }
 
 class SetCaseStatusDto {
   @IsIn(['active', 'in_review', 'closed'])
   status!: 'active' | 'in_review' | 'closed';
+}
+
+class ConfirmConsultationReportDto {
+  @IsString()
+  @MinLength(3)
+  doctorRecommendations!: string;
+}
+
+class SaveConsultationReportDraftDto {
+  @IsString()
+  @IsOptional()
+  aiSummary?: string;
+
+  @IsString()
+  @IsOptional()
+  doctorRecommendations?: string;
 }
 
 @Controller('doctor')
@@ -31,15 +102,21 @@ export class DoctorController {
   constructor(
     private readonly casesService: CasesService,
     private readonly doctorsService: DoctorsService,
-    private readonly paymentsService: PaymentsService
+    private readonly paymentsService: PaymentsService,
+    private readonly profilesService: ProfilesService
   ) {}
+
+  private resolveDoctorId(userId: string) {
+    return this.doctorsService.resolvePortalDoctorId(userId);
+  }
 
   @Get('dashboard')
   async dashboard(@Req() req: any) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
     const [profile, earnings, myCases, queue] = await Promise.all([
-      this.doctorsService.getDoctorProfile(req.user.id),
-      this.paymentsService.getDoctorEarnings(req.user.id),
-      this.casesService.findDoctorCases(req.user.id),
+      this.doctorsService.getDoctorProfile(doctorId),
+      this.paymentsService.getDoctorEarnings(doctorId),
+      this.casesService.findDoctorCases(doctorId),
       this.casesService.findDoctorQueue()
     ]);
 
@@ -52,8 +129,15 @@ export class DoctorController {
   }
 
   @Get('cases')
-  cases(@Req() req: any) {
-    return this.casesService.findDoctorCases(req.user.id);
+  async cases(@Req() req: any) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.casesService.findDoctorCases(doctorId);
+  }
+
+  @Post('cases')
+  async createCase(@Req() req: any, @Body() dto: CreateDoctorCaseDto) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.casesService.createDoctorCase(doctorId, dto.summary);
   }
 
   @Get('cases/queue')
@@ -62,37 +146,70 @@ export class DoctorController {
   }
 
   @Get('appointments')
-  appointments(@Req() req: any) {
-    return this.casesService.findDoctorCases(req.user.id);
+  async appointments(@Req() req: any) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.casesService.findDoctorCases(doctorId);
   }
 
   @Get('case/:id')
-  caseById(@Req() req: any, @Param('id') id: string) {
-    return this.casesService.findDoctorCaseById(req.user.id, id);
+  async caseById(@Req() req: any, @Param('id') id: string) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.casesService.findDoctorCaseById(doctorId, id);
+  }
+
+  @Get('case/:id/report')
+  async consultationReport(@Req() req: any, @Param('id') id: string) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.profilesService.getConsultationReportForDoctor(id, doctorId);
   }
 
   @Post('case/:id/respond')
-  respond(@Req() req: any, @Param('id') id: string, @Body() dto: RespondCaseDto) {
-    return this.casesService.addDoctorResponse(id, req.user.id, dto.response);
+  async respond(@Req() req: any, @Param('id') id: string, @Body() dto: RespondCaseDto) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.casesService.addDoctorResponse(id, doctorId, dto.response);
+  }
+
+  @Post('case/:id/consultation-message')
+  async appendConsultationMessage(@Req() req: any, @Param('id') id: string, @Body() dto: RespondCaseDto) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    await this.casesService.addDoctorResponse(id, doctorId, dto.response);
+    return this.profilesService.appendDoctorConsultationMessage(id, doctorId, dto.response);
   }
 
   @Patch('case/:id/status')
-  status(@Req() req: any, @Param('id') id: string, @Body() dto: SetCaseStatusDto) {
-    return this.casesService.setDoctorCaseStatus(id, req.user.id, dto.status);
+  async status(@Req() req: any, @Param('id') id: string, @Body() dto: SetCaseStatusDto) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.casesService.setDoctorCaseStatus(id, doctorId, dto.status);
+  }
+
+  @Patch('case/:id/report/confirm')
+  async confirmConsultationReport(@Req() req: any, @Param('id') id: string, @Body() dto: ConfirmConsultationReportDto) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.profilesService.confirmConsultationReport(id, doctorId, dto.doctorRecommendations);
+  }
+
+  @Patch('case/:id/report/draft')
+  async saveConsultationReportDraft(@Req() req: any, @Param('id') id: string, @Body() dto: SaveConsultationReportDraftDto) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.profilesService.saveDoctorConsultationDraft(id, doctorId, dto);
   }
 
   @Get('profile')
-  profile(@Req() req: any) {
-    return this.doctorsService.getDoctorProfile(req.user.id);
+  async profile(@Req() req: any) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.doctorsService.getDoctorProfile(doctorId);
   }
 
   @Patch('profile')
-  updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
-    return this.doctorsService.updateDoctorProfile(req.user.id, dto.bio);
+  async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    await this.profilesService.updateDoctorProfile(doctorId, dto);
+    return this.doctorsService.getDoctorProfile(doctorId);
   }
 
   @Get('earnings')
-  earnings(@Req() req: any) {
-    return this.paymentsService.getDoctorEarnings(req.user.id);
+  async earnings(@Req() req: any) {
+    const doctorId = await this.resolveDoctorId(req.user.id);
+    return this.paymentsService.getDoctorEarnings(doctorId);
   }
 }
