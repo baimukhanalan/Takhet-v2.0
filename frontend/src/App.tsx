@@ -49,6 +49,7 @@ const PartnerReports = lazy(() => import('./pages/PartnerReports'));
 const PartnerFinances = lazy(() => import('./pages/PartnerFinances'));
 const AIChatOverlay = lazy(() => import('./components/AIChatOverlay'));
 const EnterpriseApp = lazy(() => import('./pages/EnterpriseApp'));
+const LegalPage = lazy(() => import('./pages/LegalPage'));
 
 type LoginCredentials = {
   email: string;
@@ -148,7 +149,7 @@ const AppShell: React.FC<{ user: User | null; onLogout: () => void; children: Re
   const location = useLocation();
 
   const publicRoutes = useMemo(
-    () => new Set(['/', '/doctors', '/partners', '/mental', '/community', '/services', '/takhet-labs', '/guest-consultation', '/auth', '/patient-auth', '/admin-auth', '/ai-consultation', '/takhet-ai/try']),
+    () => new Set(['/', '/doctors', '/partners', '/mental', '/community', '/services', '/takhet-labs', '/guest-consultation', '/offer', '/privacy', '/refund', '/terms', '/contacts', '/auth', '/patient-auth', '/admin-auth', '/ai-consultation', '/takhet-ai/try']),
     []
   );
   const pathname = location.pathname;
@@ -315,6 +316,11 @@ const AppRoutes: React.FC = () => {
         <Route path="/takhet-labs" element={<TakhetLabsPage user={user || undefined} />} />
         <Route path="/takhet-labs/login" element={<TakhetLabsApp />} />
         <Route path="/takhet-labs/portal/*" element={<TakhetLabsApp />} />
+        <Route path="/offer" element={<LegalPage kind="offer" />} />
+        <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+        <Route path="/refund" element={<LegalPage kind="refund" />} />
+        <Route path="/terms" element={<LegalPage kind="terms" />} />
+        <Route path="/contacts" element={<LegalPage kind="contacts" />} />
         <Route path="/guest-consultation" element={<GuestConsultationPage />} />
         <Route path="/health-browser" element={<AIHealthBrowser user={user || undefined} />} />
         <Route path="/ai-lab" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT, UserRole.DOCTOR]}><AIAnalysisCenter user={user!} /></PrivateRoute>} />

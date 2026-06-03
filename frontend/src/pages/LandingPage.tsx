@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
+import ComplianceFooter from '../components/ComplianceFooter';
 import { useLanguage } from '../services/useLanguage';
 import { FadeIn, FadeInStagger } from '../components/FadeIn';
 import { startVoiceInput } from '../services/voiceInput';
@@ -562,28 +563,7 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
       </section>
 
       {/* 9. Footer */}
-      <footer className="py-24 border-t border-slate-100 bg-white text-center px-6">
-        <div className="max-w-7xl mx-auto space-y-12">
-          <FadeIn direction="up">
-            <div className="flex flex-col items-center justify-center gap-4">
-               <span className="text-4xl font-black tracking-tighter text-foreground">Takhet<span className="text-primary">+</span></span>
-            </div>
-          </FadeIn>
-          <FadeIn direction="up" delay={0.2}>
-            <p className="text-slate-400 font-bold uppercase tracking-[0.5em] text-xs">
-              {t.landing.footerRights}
-            </p>
-          </FadeIn>
-          <div className="pt-20 opacity-[0.05] hover:opacity-100 transition-opacity duration-1000">
-             <button
-              onClick={() => navigate('/admin-auth')}
-              className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-primary transition-colors"
-             >
-               admin
-             </button>
-          </div>
-        </div>
-      </footer>
+      <ComplianceFooter />
     </div>
   );
 };
