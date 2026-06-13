@@ -7,7 +7,7 @@ import { serviceCatalogMap } from '../services/serviceCatalog';
 import { getStoredLanguage } from '../services/language';
 import type { Language } from '../services/language';
 
-const pick = (lang: Language, value: { ru: string; kz: string; en: string }) => value[lang] || value.ru;
+const pick = (lang: Language, value: { ru: string; kk: string; en: string }) => value[lang] || value.ru;
 
 const ServiceDetailPage: React.FC<{ isPortal?: boolean }> = ({ isPortal = false }) => {
   const { serviceId } = useParams();
@@ -33,7 +33,7 @@ const ServiceDetailPage: React.FC<{ isPortal?: boolean }> = ({ isPortal = false 
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)] items-start">
             <div className="rounded-[2rem] sm:rounded-[2.75rem] lg:rounded-[3.5rem] bg-slate-950 text-white p-6 sm:p-8 lg:p-12 space-y-5 shadow-2xl shadow-slate-950/10">
               <span className="inline-flex px-4 py-2 rounded-full bg-white/10 border border-white/10 text-[10px] sm:text-xs font-black uppercase tracking-[0.24em] text-white/70">
-                {lang === 'kz' ? 'Takhet сервистері' : lang === 'en' ? 'Takhet Services' : 'Сервисы Takhet'}
+                {t.services.detail.root}
               </span>
               <h1 className="text-3xl sm:text-4xl lg:text-6xl font-black tracking-tight leading-[0.95]">{pick(lang, service.title)}</h1>
               <p className="text-sm sm:text-lg lg:text-xl text-white/75 font-medium leading-relaxed max-w-3xl">{pick(lang, service.short)}</p>
@@ -50,7 +50,7 @@ const ServiceDetailPage: React.FC<{ isPortal?: boolean }> = ({ isPortal = false 
                 </div>
                 <div>
                   <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.24em] text-slate-400 mb-2">
-                    {lang === 'kz' ? 'Мәртебе' : lang === 'en' ? 'Status' : 'Статус'}
+                    {t.services.detail.status}
                   </p>
                   <h2 className="text-lg sm:text-2xl font-black text-slate-900">{pick(lang, service.status)}</h2>
                   <p className="text-sm sm:text-base text-slate-600 leading-relaxed mt-2">{pick(lang, service.note)}</p>
@@ -60,14 +60,14 @@ const ServiceDetailPage: React.FC<{ isPortal?: boolean }> = ({ isPortal = false 
                 <div className="rounded-[1.5rem] bg-white p-5 border border-slate-200">
                   <Clock3 className="w-5 h-5 text-primary mb-3" />
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400 mb-2">
-                    {lang === 'kz' ? 'Неге керек' : lang === 'en' ? 'Why it matters' : 'Зачем нужен'}
+                    {t.services.detail.why}
                   </p>
                   <p className="text-sm sm:text-base text-slate-700 leading-relaxed">{pick(lang, service.why)}</p>
                 </div>
                 <div className="rounded-[1.5rem] bg-white p-5 border border-slate-200">
                   <UserRoundCheck className="w-5 h-5 text-primary mb-3" />
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400 mb-2">
-                    {lang === 'kz' ? 'Бұл не' : lang === 'en' ? 'What it is' : 'Что это'}
+                    {t.services.detail.what}
                   </p>
                   <p className="text-sm sm:text-base text-slate-700 leading-relaxed">{pick(lang, service.what)}</p>
                 </div>
@@ -77,7 +77,7 @@ const ServiceDetailPage: React.FC<{ isPortal?: boolean }> = ({ isPortal = false 
 
           <section className="grid gap-6 lg:grid-cols-2 items-start">
             <article className="rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 bg-white p-6 sm:p-8 lg:p-10 shadow-sm">
-              <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.24em] text-slate-400 mb-4">{lang === 'kz' ? 'Кімге арналған' : lang === 'en' ? 'Who it is for' : 'Для кого'}</p>
+              <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.24em] text-slate-400 mb-4">{t.services.detail.forWhom}</p>
               <ul className="space-y-4">
                 {service.forWho.map((item, index) => (
                   <li key={index} className="rounded-[1.25rem] bg-slate-50 px-4 py-4 text-sm sm:text-base text-slate-700 font-medium leading-relaxed">{pick(lang, item)}</li>
@@ -86,7 +86,7 @@ const ServiceDetailPage: React.FC<{ isPortal?: boolean }> = ({ isPortal = false 
             </article>
 
             <article className="rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 bg-white p-6 sm:p-8 lg:p-10 shadow-sm">
-              <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.24em] text-slate-400 mb-4">{lang === 'kz' ? 'Не кіреді' : lang === 'en' ? 'What it includes' : 'Что входит'}</p>
+              <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.24em] text-slate-400 mb-4">{t.services.detail.includes}</p>
               <ul className="space-y-4">
                 {service.includes.map((item, index) => (
                   <li key={index} className="rounded-[1.25rem] bg-slate-50 px-4 py-4 text-sm sm:text-base text-slate-700 font-medium leading-relaxed">{pick(lang, item)}</li>

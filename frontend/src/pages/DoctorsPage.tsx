@@ -96,18 +96,21 @@ const DoctorsPage: React.FC = () => {
     <div className="min-h-screen bg-white selection:bg-primary selection:text-white overflow-x-hidden">
       <PublicHeader activePath="/doctors" />
 
-      <section className="relative pt-28 sm:pt-32 md:pt-40 lg:pt-48 pb-10 sm:pb-12 md:pb-14 px-4 sm:px-6 lg:px-12 xl:px-20 overflow-hidden">
+      <section data-doctors-hero-shell className="relative pt-28 sm:pt-32 md:pt-40 lg:pt-48 pb-16 sm:pb-20 md:pb-24 px-4 sm:px-6 lg:px-12 xl:px-20 overflow-hidden bg-white">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-10 sm:gap-12 lg:gap-16">
           <div className="flex-1 space-y-10 text-center lg:text-left">
             <FadeIn direction="left">
-              <div className="space-y-6">
-                <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-9xl font-black text-foreground tracking-tighter leading-none">
-                  Takhet<span className="text-primary">+</span>
+              <div className="space-y-6 px-4 lg:px-0">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full text-primary text-xs font-black uppercase tracking-widest border border-primary/10">
+                  <Stethoscope className="w-3 h-3" />
+                  Для врачей
+                </div>
+                <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-foreground tracking-tighter leading-tight">
+                  Цифровой кабинет врача внутри Takhet+
                 </h1>
-                <h2 className="text-lg sm:text-xl md:text-3xl lg:text-4xl font-medium text-slate-800 leading-tight">
-                  Takhet+ — это цифровая медицинская платформа для врачей, которые хотят вести онлайн-консультации без лишней рутины.
-                  <br className="hidden md:block" /> Вы получаете поток пациентов, структурированный контекст кейса и понятную аналитику по своей работе.
-                </h2>
+                <p className="text-base sm:text-lg md:text-2xl text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                  Платформа готовит контекст до консультации: жалобы, анализы, историю и маршрут. Врач меньше тратит время на рутину и быстрее переходит к клиническому решению.
+                </p>
               </div>
             </FadeIn>
 
@@ -195,7 +198,7 @@ const DoctorsPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             <FadeIn direction="up" delay={0.1}>
               <motion.div whileHover={{ y: -10 }} className="bg-slate-50 p-8 md:p-12 h-full rounded-[3rem] md:rounded-[4rem] border border-slate-100 space-y-8 hover:shadow-xl transition-all duration-500 group">
-                <h3 className="text-xl md:text-2xl font-black leading-tight group-hover:text-primary transition-colors">Вы лечите, а система думает вместе с вами</h3>
+                <h3 className="text-xl md:text-2xl font-black leading-tight group-hover:text-primary transition-colors">Вы ведете прием, а Takhet+ готовит контекст</h3>
                 <p className="text-slate-500 font-medium leading-relaxed">Takhet+ помогает:</p>
                 <ul className="space-y-4">
                   {['структурировать жалобы пациента', 'подсветить клинические риски', 'предложить варианты маршрута'].map((item, index) => (

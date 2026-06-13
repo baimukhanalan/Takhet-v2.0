@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { LayoutDashboard, BrainCircuit, Truck, MessageSquare, Settings, CalendarCheck2, Wallet, LogOut, Archive, Users, Stethoscope, BarChart3, Menu, X, Heart, Search, Microscope } from 'lucide-react';
 import { UserRole } from '../types';
@@ -22,25 +22,25 @@ const Sidebar: React.FC<SidebarProps> = ({ role, onLogout }) => {
 
   const patientLinks = [
     { to: '/dashboard', icon: LayoutDashboard, label: t.sidebar.panel },
-    { to: '/ai-lab', icon: BrainCircuit, label: 'Анализ ИИ' },
-    { to: '/ai-consultation', icon: BrainCircuit, label: 'ИИ консультация' },
-    { to: takhetAiRoute, icon: MessageSquare, label: 'Takhet AI' },
-    { to: '/health-browser', icon: Search, label: 'ИИ браузер' },
+    { to: '/ai-lab', icon: BrainCircuit, label: t.sidebar.aiAnalysis },
+    { to: '/ai-consultation', icon: BrainCircuit, label: t.sidebar.aiConsultation },
+    { to: takhetAiRoute, icon: MessageSquare, label: t.sidebar.takhetAI },
+    { to: '/health-browser', icon: Search, label: t.sidebar.healthBrowser },
     { to: '/portal/mental', icon: Heart, label: t.sidebar.mental },
     { to: '/doctors-search', icon: Stethoscope, label: t.sidebar.booking },
     { to: '/appointments', icon: CalendarCheck2, label: t.sidebar.appointments },
     { to: '/chat', icon: MessageSquare, label: t.sidebar.chat },
     { to: '/archive', icon: Archive, label: t.sidebar.archive },
-    { to: '/labs', icon: Microscope, label: 'Takhet Labs' },
+    { to: '/labs', icon: Microscope, label: t.sidebar.labs },
     { to: '/services', icon: Truck, label: t.sidebar.services },
     { to: '/settings', icon: Settings, label: t.sidebar.settings }
   ];
 
   const doctorLinks = [
     { to: '/dashboard', icon: LayoutDashboard, label: t.sidebar.panel },
-    { to: takhetAiRoute, icon: MessageSquare, label: 'Takhet AI' },
-    { to: '/health-browser', icon: Search, label: 'ИИ браузер' },
-    { to: '/ai-lab', icon: BrainCircuit, label: 'Анализ ИИ' },
+    { to: takhetAiRoute, icon: MessageSquare, label: t.sidebar.takhetAI },
+    { to: '/health-browser', icon: Search, label: t.sidebar.healthBrowser },
+    { to: '/ai-lab', icon: BrainCircuit, label: t.sidebar.aiAnalysis },
     { to: '/patients', icon: Users, label: t.sidebar.patients },
     { to: '/consultations', icon: CalendarCheck2, label: t.sidebar.appointments },
     { to: '/swarm-medicine', icon: BrainCircuit, label: t.sidebar.swarm },
@@ -51,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, onLogout }) => {
 
   const partnerLinks = [
     { to: '/dashboard', icon: LayoutDashboard, label: t.sidebar.panel },
-    { to: takhetAiRoute, icon: MessageSquare, label: 'Takhet AI' },
+    { to: takhetAiRoute, icon: MessageSquare, label: t.sidebar.takhetAI },
     { to: '/partner-doctors', icon: Users, label: t.sidebar.doctors },
     { to: '/finances', icon: Wallet, label: t.sidebar.billing },
     { to: '/reports', icon: BarChart3, label: t.sidebar.reports },
@@ -118,4 +118,3 @@ const Sidebar: React.FC<SidebarProps> = ({ role, onLogout }) => {
 };
 
 export default Sidebar;
-

@@ -19,7 +19,7 @@ const enterpriseApp = read('src/pages/EnterpriseApp.tsx');
 
 const patientLinksBlock = sidebar.match(/const patientLinks = \[[\s\S]*?\];/)?.[0] || '';
 assert(patientLinksBlock.includes("to: '/health-browser'"), 'Patient sidebar must keep AI Browser route');
-assert(patientLinksBlock.includes("label: 'ИИ браузер'"), 'Patient sidebar must keep AI Browser label');
+assert(patientLinksBlock.includes('label: t.sidebar.healthBrowser'), 'Patient sidebar must keep AI Browser i18n label');
 assert(app.includes("navigate('/', { replace: true })"), 'Main portal logout must route to landing page');
 assert(labsApp.includes("navigate('/', { replace: true })"), 'Takhet Labs logout must route to landing page');
 assert(enterpriseApp.includes("navigate('/', { replace: true })"), 'Enterprise logout must route to landing page');

@@ -1,4 +1,4 @@
-﻿import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { User } from '../types';
 import { Building2, Users, Briefcase, TrendingUp, Shield, Plus, Trash2, Percent, Star, X, Search } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -40,9 +40,9 @@ type PartnerDoctor = {
 const looksCorrupted = (value?: string) =>
   typeof value === 'string' &&
   (!value.trim() ||
-    value.includes('Р') ||
-    value.includes('�') ||
-    value.includes('вЂ') ||
+    value.includes('\u0420\u00a0') ||
+    value.includes('\u043f\u0457\u0405') ||
+    value.includes('\u0420\u0406\u0420\u201a') ||
     value.includes('???') ||
     /^\?{3,}/.test(value.trim()));
 
@@ -162,7 +162,7 @@ const PartnerDashboard: React.FC<{ user: User }> = ({ user }) => {
   return (
     <div className="max-w-7xl mx-auto space-y-8 md:space-y-10 pb-20">
       {notice && (
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-emerald-700 font-bold">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-blue-700 font-bold">
           {notice}
         </div>
       )}
@@ -358,5 +358,3 @@ const PartnerDashboard: React.FC<{ user: User }> = ({ user }) => {
 };
 
 export default PartnerDashboard;
-
-

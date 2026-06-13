@@ -2,10 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, DigitalTwinState, BodyType, ActivityType } from '../types';
 // Added ToggleLeft and ToggleRight to the imports to fix the errors on lines 375, 381, 387
-import { 
-  Activity, HeartPulse, ShieldAlert, 
-  RotateCw, Ruler, Weight, 
-  Cigarette, Clock, Zap, ArrowLeft, 
+import {
+  Activity, HeartPulse, ShieldAlert,
+  RotateCw, Ruler, Weight,
+  Cigarette, Clock, Zap, ArrowLeft,
   TrendingUp, Info, X, Plus,
   UserCheck, Move3d, FileText, Sparkles, BrainCircuit,
   Dna, Target, Gauge, ZapOff, CheckCircle2, Moon, AlertTriangle, RefreshCcw,
@@ -22,7 +22,7 @@ const DigitalTwin3DModel: React.FC<{ twin: DigitalTwinState }> = ({ twin }) => {
 
   const bmi = twin.weight / ((twin.height / 100) ** 2);
   const isMale = twin.gender === 'male';
-  
+
   const bodyTypeScale = twin.bodyType === 'Ectomorph' ? 0.85 : twin.bodyType === 'Endomorph' ? 1.35 : 1.1;
   const bmiFactor = Math.max(0.7, Math.min(1.7, bmi / 22));
   const finalVolume = bodyTypeScale * bmiFactor;
@@ -47,7 +47,7 @@ const DigitalTwin3DModel: React.FC<{ twin: DigitalTwinState }> = ({ twin }) => {
   const handleEnd = () => setIsDragging(false);
 
   return (
-    <div 
+    <div
       className="relative w-full h-[600px] flex items-center justify-center perspective-[2500px] select-none cursor-grab active:cursor-grabbing overflow-hidden rounded-[4rem] bg-gradient-to-b from-slate-50/50 to-blue-50/30"
       onMouseDown={handleStart}
       onMouseMove={handleMove}
@@ -57,28 +57,28 @@ const DigitalTwin3DModel: React.FC<{ twin: DigitalTwinState }> = ({ twin }) => {
       onTouchMove={handleMove}
       onTouchEnd={handleEnd}
     >
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-        style={{ backgroundImage: 'radial-gradient(#0D47A1 1px, transparent 0)', backgroundSize: '40px 40px' }} 
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{ backgroundImage: 'radial-gradient(#0D47A1 1px, transparent 0)', backgroundSize: '40px 40px' }}
       />
 
-      <div 
+      <div
         className="relative transition-transform duration-200 ease-out preserve-3d"
         style={{ transform: `rotateY(${rotation}deg)` }}
       >
         <div className="relative flex flex-col items-center">
-           <div 
+           <div
              className="bg-white border border-slate-200 rounded-full mb-3 shadow-sm transition-all duration-500"
              style={{ width: '52px', height: '68px', transform: `translateZ(${thickness * 0.15}px)` }}
            />
 
            <div className="preserve-3d relative">
-              <div 
+              <div
                 className="bg-white border border-slate-200/80 rounded-[3rem] transition-all duration-700 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] backdrop-blur-[2px]"
-                style={{ 
-                  width: `${shouldersWidth}px`, 
+                style={{
+                  width: `${shouldersWidth}px`,
                   height: '185px',
-                  clipPath: isMale 
-                    ? 'polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)' 
+                  clipPath: isMale
+                    ? 'polygon(0% 0%, 100% 0%, 85% 100%, 15% 100%)'
                     : 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)',
                   transform: `translateZ(${thickness / 2}px)`
                 }}
@@ -86,13 +86,13 @@ const DigitalTwin3DModel: React.FC<{ twin: DigitalTwinState }> = ({ twin }) => {
                  <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full blur-2xl ${twin.systemStatus.cardio < 75 ? 'bg-red-500/20' : 'bg-primary/5'}`} />
                  {twin.bloodPressure.sys > 140 && <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-16 h-16 bg-red-400/10 rounded-full animate-pulse blur-xl" />}
               </div>
-              <div 
+              <div
                 className="absolute top-0 left-1/2 bg-slate-100 border-x border-slate-200 opacity-20"
                 style={{ width: `${thickness}px`, height: '185px', transform: 'translateX(-50%) rotateY(90deg)', borderRadius: '2rem' }}
               />
            </div>
 
-           <div 
+           <div
              className="bg-white border border-slate-200/80 -mt-2 transition-all duration-700 rounded-[2.2rem] shadow-sm"
              style={{ width: `${hipsWidth}px`, height: '70px', transform: `translateZ(${thickness * 0.1}px)` }}
            />
@@ -138,7 +138,7 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
 
   useEffect(() => {
     const data = MockDB.getActiveMemberData();
-    if (data) setTwin(data.digitalTwin);
+    if (data) setTwin(data.digitalTwin as DigitalTwinState);
   }, []);
 
   const handleUpdate = (params: Partial<DigitalTwinState>) => {
@@ -170,11 +170,11 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
            <div>
               <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase">Digital <span className="text-primary italic">Twin</span></h1>
               <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.4em] mt-1.5 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> Динамическая модель состояния
+                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" /> Динамическая модель состояния
               </p>
            </div>
         </div>
-        
+
         <div className="flex items-center gap-10 bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 relative overflow-hidden group">
            <div className={`absolute inset-0 bg-primary/5 transition-opacity duration-1000 ${isSimulating ? 'opacity-100' : 'opacity-0'}`} />
            <div className="flex items-center gap-5 relative z-10">
@@ -188,10 +188,10 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
            </div>
            <div className="w-px h-10 bg-slate-100 relative z-10" />
            <div className="flex items-center gap-5 relative z-10">
-              <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600"><Dna className="w-6 h-6" /></div>
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600"><Dna className="w-6 h-6" /></div>
               <div className="text-right">
                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Био-возраст</p>
-                 <p className={`text-3xl font-black transition-all ${isSimulating ? 'text-emerald-500 scale-110' : 'text-emerald-600'}`}>
+                 <p className={`text-3xl font-black transition-all ${isSimulating ? 'text-blue-500 scale-110' : 'text-blue-600'}`}>
                     {isSimulating ? simulationResult?.bioAge : twin.bioAge}
                  </p>
               </div>
@@ -200,7 +200,7 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 px-4 lg:px-0">
-        
+
         {/* LEFT CONTROL PANEL */}
         <div className="lg:col-span-4 space-y-6">
            <div className="bg-slate-100 p-1.5 rounded-[2rem] border border-slate-200 flex">
@@ -216,8 +216,8 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
                 <div className="space-y-10 animate-in fade-in duration-500">
                   <div className="grid grid-cols-2 gap-3">
                      {['male', 'female'].map(g => (
-                       <button 
-                        key={g} 
+                       <button
+                        key={g}
                         onClick={() => handleUpdate({gender: g as any})}
                         className={`py-5 rounded-2xl font-bold uppercase text-[10px] tracking-widest border transition-all ${twin.gender === g ? 'bg-primary text-white border-primary shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
                        >
@@ -286,7 +286,7 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
                             <span className="text-xs font-bold text-slate-400">mmol/L</span>
                          </div>
                          <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                            <div className={`h-full ${twin.glucose > 6 ? 'bg-orange-500' : 'bg-emerald-500'}`} style={{ width: `${(twin.glucose / 15) * 100}%` }} />
+                            <div className={`h-full ${twin.glucose > 6 ? 'bg-orange-500' : 'bg-blue-500'}`} style={{ width: `${(twin.glucose / 15) * 100}%` }} />
                          </div>
                       </div>
                    </div>
@@ -332,11 +332,11 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Biometric simulation</h2>
                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.4em]">Rendering Live</p>
               </div>
-              <div className={`px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest border transition-all duration-700 ${bmi > 25 ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}>
+              <div className={`px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest border transition-all duration-700 ${bmi > 25 ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
                  ИМТ: {bmi}
               </div>
            </div>
-           
+
            <DigitalTwin3DModel twin={twin} />
 
            <div className="p-10 grid grid-cols-3 gap-8 relative z-10 bg-slate-50/50 backdrop-blur-md border-t border-slate-100">
@@ -366,35 +366,35 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-primary backdrop-blur-md"><RefreshCcw className="w-5 h-5" /></div>
                  <h3 className="text-xl font-black uppercase tracking-tight">What-if симулятор</h3>
               </div>
-              
+
               <div className="relative z-10 space-y-6">
                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Симуляция изменений образа жизни на прогноз здоровья:</p>
-                 
+
                  <div className="space-y-5">
                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">
                        <span className="text-xs font-bold">Бросить курить</span>
                        <button onClick={() => handleSimulate({ smoking: whatIfChanges.smoking === 0 ? twin.smoking : 0 })}>
-                          {whatIfChanges.smoking === 0 ? <ToggleRight className="text-emerald-400 w-8 h-8" /> : <ToggleLeft className="text-slate-600 w-8 h-8" />}
+                          {whatIfChanges.smoking === 0 ? <ToggleRight className="text-blue-400 w-8 h-8" /> : <ToggleLeft className="text-slate-600 w-8 h-8" />}
                        </button>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">
                        <span className="text-xs font-bold">Снизить вес (-5кг)</span>
                        <button onClick={() => handleSimulate({ weight: whatIfChanges.weight ? undefined : twin.weight - 5 })}>
-                          {whatIfChanges.weight ? <ToggleRight className="text-emerald-400 w-8 h-8" /> : <ToggleLeft className="text-slate-600 w-8 h-8" />}
+                          {whatIfChanges.weight ? <ToggleRight className="text-blue-400 w-8 h-8" /> : <ToggleLeft className="text-slate-600 w-8 h-8" />}
                        </button>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">
                        <span className="text-xs font-bold">Сон 8+ часов</span>
                        <button onClick={() => handleSimulate({ sleepHours: whatIfChanges.sleepHours ? undefined : 8.5 })}>
-                          {whatIfChanges.sleepHours ? <ToggleRight className="text-emerald-400 w-8 h-8" /> : <ToggleLeft className="text-slate-600 w-8 h-8" />}
+                          {whatIfChanges.sleepHours ? <ToggleRight className="text-blue-400 w-8 h-8" /> : <ToggleLeft className="text-slate-600 w-8 h-8" />}
                        </button>
                     </div>
                  </div>
 
                  {isSimulating && (
-                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 animate-in zoom-in duration-300">
-                       <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
-                       <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Прогноз пересчитан</span>
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3 animate-in zoom-in duration-300">
+                       <Sparkles className="w-4 h-4 text-blue-400 animate-pulse" />
+                       <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Прогноз пересчитан</span>
                     </div>
                  )}
               </div>

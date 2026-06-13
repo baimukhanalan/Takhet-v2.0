@@ -1,8 +1,8 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, CheckCircle2, CreditCard, Globe, Save, Shield, Star, Stethoscope, Users } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { useLanguage } from '../services/useLanguage';
-import type { Language } from '../services/language';
+import { LANGUAGE_OPTIONS, type Language } from '../services/language';
 import { roleApi } from '../../services/roleApi';
 
 type NotificationItem = {
@@ -116,7 +116,7 @@ const formatAvailabilityDate = (date: string) => {
 };
 
 const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
-  const { lang, setLanguage } = useLanguage();
+  const { lang, setLanguage, formatDateTime } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(lang);
   const [doctorProfile, setDoctorProfile] = useState<DoctorProfile | null>(null);
   const [doctorForm, setDoctorForm] = useState({
@@ -358,7 +358,7 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
       </div>
 
       {message && (
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700 px-5 py-4 font-bold flex items-center gap-3">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 text-blue-700 px-5 py-4 font-bold flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5" />
           {message}
         </div>
@@ -372,15 +372,15 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
           <h2 className="text-xl font-black uppercase tracking-tight">Язык и общие предпочтения</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {(['ru', 'kz', 'en'] as Language[]).map((option) => (
+          {LANGUAGE_OPTIONS.map((option) => (
             <button
-              key={option}
-              onClick={() => setSelectedLanguage(option)}
+              key={option.value}
+              onClick={() => setSelectedLanguage(option.value)}
               className={`px-5 py-4 rounded-2xl border text-sm font-black uppercase tracking-widest transition-all ${
-                selectedLanguage === option ? 'border-primary bg-primary text-white' : 'border-border bg-slate-50 text-slate-600'
+                selectedLanguage === option.value ? 'border-primary bg-primary text-white' : 'border-border bg-slate-50 text-slate-600'
               }`}
             >
-              {option}
+              {option.flag} {option.label}
             </button>
           ))}
         </div>
@@ -734,7 +734,7 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
                   <div key={payment.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 flex items-center justify-between gap-4">
                     <div>
                       <p className="font-black text-slate-900">Обращение #{payment.caseId?.slice(0, 8) || '—'}</p>
-                      <p className="text-sm text-slate-500 font-medium mt-1">{payment.createdAt ? new Date(payment.createdAt).toLocaleString('ru-RU') : 'Недавно'}</p>
+                      <p className="text-sm text-slate-500 font-medium mt-1">{payment.createdAt ? formatDateTime(payment.createdAt) : 'Недавно'}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-black text-slate-900">{payment.amount} {payment.currency || '₸'}</p>
@@ -834,19 +834,3 @@ const SettingsPage: React.FC<{ user: User }> = ({ user }) => {
 };
 
 export default SettingsPage;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

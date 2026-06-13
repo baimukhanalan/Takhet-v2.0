@@ -60,7 +60,7 @@ for (const copy of [
   assert(guestPage.includes(copy), `Guest consultation page must include: ${copy}`);
 }
 
-for (const marker of ['Р’', 'Рџ', 'СЃ', 'вЂ', 'в‚ё', '����']) {
+for (const marker of ['\u0420\u2019', '\u0420\u045f', '\u0421\u0403', '\u0432\u0402', '\u0432\u201a\u0451', '\ufffd\ufffd\ufffd\ufffd']) {
   assert(!guestPage.includes(marker), `Guest consultation source must not contain mojibake marker: ${marker}`);
 }
 

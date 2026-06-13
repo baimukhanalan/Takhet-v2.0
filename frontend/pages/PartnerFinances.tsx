@@ -73,7 +73,7 @@ const PartnerFinances: React.FC = () => {
                   <td className="p-6 text-sm font-medium text-slate-600">{t.service}</td>
                   <td className="p-6 text-sm font-black text-primary">{t.amount}</td>
                   <td className="p-6">
-                    <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${t.status === 'Success' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                    <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${t.status === 'Success' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
                       {t.status}
                     </span>
                   </td>

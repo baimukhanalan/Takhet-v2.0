@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Video, Clock, CheckCircle2, ChevronRight, User, Calendar, Settings, Key, Download, Activity } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { roleApi } from '../../services/roleApi';
@@ -149,7 +149,7 @@ const DoctorConsultations: React.FC = () => {
             return (
               <div key={app.id} className="bg-slate-50 p-6 md:p-8 rounded-[2.5rem] md:rounded-[3.5rem] border border-border flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8 group hover:bg-white transition-all">
                 <div className="flex items-center gap-4 md:gap-8 min-w-0">
-                  <div className="w-16 h-16 rounded-[1.5rem] bg-white text-emerald-500 flex items-center justify-center shadow-sm">
+                  <div className="w-16 h-16 rounded-[1.5rem] bg-white text-blue-500 flex items-center justify-center shadow-sm">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div className="min-w-0">
@@ -166,9 +166,9 @@ const DoctorConsultations: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-                  <div className="px-5 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
-                    <Key className="w-4 h-4 text-emerald-600" />
-                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Закрыто</span>
+                  <div className="px-5 py-3 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3">
+                    <Key className="w-4 h-4 text-blue-600" />
+                    <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">Закрыто</span>
                   </div>
                   <button onClick={() => {
                     const content = [`Кейс: ${app.id}`, `Пациент: ${formatPatientName(app.patientId)}`, `Статус: ${app.status}`, `Запись: ${bookingDetails.appointmentDate || formatDate(app.createdAt)} ${bookingDetails.appointmentSlot || formatTime(app.createdAt)}`].join('\n');
@@ -198,4 +198,3 @@ const DoctorConsultations: React.FC = () => {
 };
 
 export default DoctorConsultations;
-

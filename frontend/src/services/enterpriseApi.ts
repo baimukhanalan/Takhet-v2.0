@@ -73,7 +73,7 @@ const enterpriseDemoIdentifiers: Record<EnterpriseRole, string> = {
 };
 
 const resolveEnterpriseDemoIdentifier = (identifier: string, role: EnterpriseRole) =>
-  identifier.trim().toLowerCase() === 'admin' ? enterpriseDemoIdentifiers[role] : identifier;
+  ['admin', 'baimukhanalan1@gmail.com'].includes(identifier.trim().toLowerCase()) ? enterpriseDemoIdentifiers[role] : identifier;
 
 export const enterpriseApi = {
   createLead: (payload: EnterpriseLeadInput) =>

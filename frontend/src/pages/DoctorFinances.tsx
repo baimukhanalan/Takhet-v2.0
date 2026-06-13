@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DollarSign, TrendingUp, Wallet } from 'lucide-react';
 import { roleApi } from '../../services/roleApi';
 
@@ -40,7 +40,7 @@ const DoctorFinances: React.FC = () => {
         <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-3xl border border-slate-200 shadow-sm">
           <p className="text-slate-500 text-sm font-medium">Всего оплачено</p>
           <p className="text-4xl font-bold text-slate-900 mt-2">{earnings.currency} {Number(earnings.totalPaid).toLocaleString()}</p>
-          <div className="mt-4 flex items-center gap-2 text-green-600 font-bold text-sm">
+          <div className="mt-4 flex items-center gap-2 text-blue-600 font-bold text-sm">
             <TrendingUp className="w-4 h-4" /> {earnings.count} оплаченных консультаций
           </div>
         </div>
@@ -62,4 +62,3 @@ const DoctorFinances: React.FC = () => {
 };
 
 export default DoctorFinances;
-

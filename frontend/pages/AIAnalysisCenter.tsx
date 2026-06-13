@@ -241,7 +241,7 @@ const AIAnalysisCenter: React.FC = () => {
               <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <div className="flex flex-col md:flex-row items-center justify-between border-b border-slate-100 pb-10 gap-6">
                    <div className="flex items-center gap-6">
-                      <div className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center shadow-xl ${mode === 'symptoms' ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                      <div className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center shadow-xl ${mode === 'symptoms' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
                         <CheckCircle2 className="w-8 h-8" />
                       </div>
                       <div>
@@ -250,7 +250,7 @@ const AIAnalysisCenter: React.FC = () => {
                       </div>
                    </div>
                    <div className="flex flex-col items-end gap-2">
-                      <div className={`px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest border-2 ${result.riskLevel === 'High' ? 'bg-red-50 border-red-200 text-red-500' : result.riskLevel === 'Medium' ? 'bg-orange-50 border-orange-200 text-orange-500' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}>
+                      <div className={`px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest border-2 ${result.riskLevel === 'High' ? 'bg-red-50 border-red-200 text-red-500' : result.riskLevel === 'Medium' ? 'bg-orange-50 border-orange-200 text-orange-500' : 'bg-blue-50 border-blue-200 text-blue-600'}`}>
                         Clinical Score: {route ? (route.riskScore * 100).toFixed(0) : 0}%
                       </div>
                    </div>
@@ -315,7 +315,7 @@ const AIAnalysisCenter: React.FC = () => {
                              <p className="text-xs text-slate-300 font-medium leading-relaxed">Показатели приводятся к единой системе единиц (СИ) и сопоставляются с вашим профилем здоровья.</p>
                           </div>
                           <div className="p-6 bg-white/5 border border-white/10 rounded-3xl space-y-3">
-                             <div className="flex items-center gap-2 text-emerald-400">
+                             <div className="flex items-center gap-2 text-blue-400">
                                 <DatabaseZap className="w-4 h-4" />
                                 <span className="text-[9px] font-black uppercase tracking-widest">Поиск корреляций</span>
                              </div>
@@ -339,7 +339,7 @@ const AIAnalysisCenter: React.FC = () => {
                              <p className="text-xs text-slate-300 font-medium leading-relaxed">Анализируются цвет, симметричность, текстура краев и наличие сосудистых паттернов.</p>
                           </div>
                           <div className="p-6 bg-white/5 border border-white/10 rounded-3xl space-y-3">
-                             <div className="flex items-center gap-2 text-emerald-400">
+                             <div className="flex items-center gap-2 text-blue-400">
                                 <Search className="w-4 h-4" />
                                 <span className="text-[9px] font-black uppercase tracking-widest">Библиотечное сравнение</span>
                              </div>
@@ -380,7 +380,7 @@ const AIAnalysisCenter: React.FC = () => {
                              {isSwarmLoading ? <Loader2 className="animate-spin" /> : <Radar className="w-5 h-5" />} Запросить консенсус
                            </button>
                          ) : (
-                           <div className="flex items-center gap-4 bg-emerald-500 px-8 py-4 rounded-full border border-emerald-400 shadow-xl animate-in zoom-in">
+                           <div className="flex items-center gap-4 bg-blue-500 px-8 py-4 rounded-full border border-blue-400 shadow-xl animate-in zoom-in">
                               <CheckCircle2 className="w-6 h-6" />
                               <span className="font-black uppercase tracking-widest text-[10px]">Консенсус получен</span>
                            </div>
@@ -400,7 +400,7 @@ const AIAnalysisCenter: React.FC = () => {
                                  <div key={i} className="p-6 bg-white/5 border border-white/5 rounded-2xl space-y-3">
                                     <div className="flex justify-between items-center">
                                        <span className="text-[8px] font-black uppercase tracking-[0.3em] text-indigo-200">Экспертная гипотеза #{i+1}</span>
-                                       <span className="text-[10px] font-bold text-emerald-400">Достоверность: {Math.round(op.confidence*100)}%</span>
+                                       <span className="text-[10px] font-bold text-blue-400">Достоверность: {Math.round(op.confidence*100)}%</span>
                                     </div>
                                     <p className="font-black text-lg text-white">«{op.hypothesis}»</p>
                                     <p className="text-sm text-indigo-100/60 font-medium">{op.argument}</p>
@@ -427,7 +427,7 @@ const AIAnalysisCenter: React.FC = () => {
               <h4 className="text-2xl font-black tracking-tight leading-tight uppercase mb-6">Decision Engine Log</h4>
               <div className="space-y-4 font-mono text-[10px] text-slate-400 bg-black/40 p-5 rounded-2xl border border-white/5">
                  <p className="flex justify-between"><span>Audit:</span> <span className="text-white">Active</span></p>
-                 <p className="flex justify-between"><span>Red Flags:</span> <span className={route?.redFlags?.length ? 'text-red-500' : 'text-emerald-500'}>{route?.redFlags?.length || 0}</span></p>
+                 <p className="flex justify-between"><span>Red Flags:</span> <span className={route?.redFlags?.length ? 'text-red-500' : 'text-blue-500'}>{route?.redFlags?.length || 0}</span></p>
                  <p className="flex justify-between"><span>Swarm Priority:</span> <span className="text-indigo-400">{route ? (checkSwarmEligibility(route) ? 'HIGH' : 'NORMAL') : 'NONE'}</span></p>
                  <p className="flex justify-between"><span>Data_Health:</span> <span className="text-white">Verified</span></p>
               </div>
@@ -446,7 +446,7 @@ const AIAnalysisCenter: React.FC = () => {
               <div className="space-y-4">
                  <p className="text-xs text-slate-500 font-medium leading-relaxed">Результат анализа ИИ не является окончательным диагнозом и используется врачом как вспомогательная информация для ускорения обработки данных.</p>
                  <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    <CheckCircle2 className="w-5 h-5 text-blue-500" />
                     <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Безопасность данных: AES-256</span>
                  </div>
               </div>

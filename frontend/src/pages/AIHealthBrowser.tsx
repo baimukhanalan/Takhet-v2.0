@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search, Shield, AlertTriangle, ExternalLink, Bookmark,
@@ -8,7 +8,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { User, UserRole } from '../types';
 import PublicHeader from '../components/PublicHeader';
-import { getHealthInsights, AISearchResult } from '../services/gemini';
+import { getHealthInsightsFast, AISearchResult } from '../services/gemini';
+import { useLanguage } from '../services/useLanguage';
 import { startVoiceInput } from '../services/voiceInput';
 import { roleApi } from '../../services/roleApi';
 
@@ -43,6 +44,7 @@ const medicalBrowserPrompt = [
 const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const query = searchParams.get('q') || '';
   const [mode, setMode] = useState<'search' | 'chat'>('search');
   const [inputValue, setInputValue] = useState(query);
@@ -55,6 +57,8 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
   const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
   const [typedLoadingPhrase, setTypedLoadingPhrase] = useState(browserLoadingPhrases[0]);
+  const [streamingPreview, setStreamingPreview] = useState('');
+  const searchRequestRef = useRef(0);
 
   useEffect(() => {
     if (!query) return;
@@ -129,8 +133,11 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
   const handleSearch = async (rawValue: string, updateParams = true) => {
     const value = rawValue.trim();
     if (!value) return;
+    const requestId = searchRequestRef.current + 1;
+    searchRequestRef.current = requestId;
     setIsSearching(true);
     setError(null);
+    setStreamingPreview('');
     setLoadingPhraseIndex(0);
     setInputValue(value);
     if (updateParams) setSearchParams({ q: value });
@@ -143,7 +150,14 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
         return;
       }
 
-      const insights = await getHealthInsights(value);
+      const insights = await getHealthInsightsFast(value, {
+        onDelta: (_delta, fullText) => {
+          if (searchRequestRef.current === requestId) {
+            setStreamingPreview(fullText);
+          }
+        }
+      });
+      if (searchRequestRef.current !== requestId) return;
       setResult(insights);
       setCache((current) => {
         const next = { ...current, [cacheKey]: insights };
@@ -153,10 +167,13 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
         return next;
       });
     } catch (searchError) {
+      if (searchRequestRef.current !== requestId) return;
       console.error('Search failed:', searchError);
       setError('Не удалось получить ответ AI-браузера. Попробуйте повторить запрос через несколько секунд.');
     } finally {
-      setIsSearching(false);
+      if (searchRequestRef.current === requestId) {
+        setIsSearching(false);
+      }
     }
   };
 
@@ -329,7 +346,7 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && void handleSearch(inputValue)}
-                  placeholder="Что вас беспокоит? Например: болит горло, температура, кашель..."
+                  placeholder={t.aiBrowser.inputPlaceholder}
                   className="w-full pl-14 pr-14 py-4 bg-slate-50 border-2 border-slate-50 rounded-[2rem] font-bold text-slate-900 focus:bg-white focus:border-primary/20 transition-all shadow-sm group-focus-within:shadow-md outline-none"
                 />
                 {isSearching && (
@@ -375,7 +392,7 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">AI формирует ответ</span>
                         </div>
                         <p className="text-sm md:text-base font-bold text-slate-700 leading-relaxed whitespace-pre-wrap">
-                          {typedLoadingPhrase}
+                          {streamingPreview || typedLoadingPhrase}
                           <span className="ml-0.5 inline-block animate-pulse text-primary">|</span>
                         </p>
                       </div>
@@ -404,7 +421,7 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
                             <Sparkles className="w-5 h-5" />
                           </div>
                           <h2 className="text-lg md:text-xl font-black tracking-tight">Краткий разбор</h2>
-                          <div className="ml-auto hidden sm:flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                          <div className="ml-auto hidden sm:flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100">
                             <Shield className="w-3 h-3" /> Проверено AI
                           </div>
                         </div>
@@ -421,7 +438,7 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
                                 result.summary.urgency === 'Critical' ? 'bg-red-50 text-red-600 border border-red-100' :
                                 result.summary.urgency === 'High' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
                                 result.summary.urgency === 'Medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                                'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                'bg-blue-50 text-blue-600 border border-blue-100'
                               }`}>
                                 <AlertTriangle className="w-3 h-3" />
                                 {result.summary.urgency === 'Critical' ? 'Критический' :
@@ -544,7 +561,7 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
                             <div className="flex items-center gap-1.5">
                               <div className="flex gap-0.5">
                                 {[...Array(3)].map((_, i) => (
-                                  <div key={i} className={`w-1 h-3 rounded-full ${i === 2 && source.trustLevel !== 'High' ? 'bg-slate-200' : 'bg-emerald-400'}`}></div>
+                                  <div key={i} className={`w-1 h-3 rounded-full ${i === 2 && source.trustLevel !== 'High' ? 'bg-slate-200' : 'bg-blue-400'}`}></div>
                                 ))}
                               </div>
                               <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Доверие: {source.trustLevel === 'High' ? 'Высокое' : 'Среднее'}</span>
@@ -575,6 +592,3 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
 };
 
 export default AIHealthBrowser;
-
-
-

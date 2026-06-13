@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { KaspiService } from './kaspi.service';
@@ -38,33 +38,20 @@ export class PaymentsService {
       this.realtimeService.publishToUser(userId, 'patient', 'payment.intent.created');
       this.realtimeService.publishToRoles(['admin', 'partner'], 'admin', 'payment.intent.created');
       return { ...kaspiIntent, paymentId: payment.id, stub: false };
-    } catch {
-      payment.status = 'paid';
-      payment.provider = 'kaspi_stub';
-      payment.providerId = `stub-${payment.id}`;
-      payment.providerPaymentId = `stub-${payment.id}`;
+    } catch (error) {
+      payment.status = 'failed';
       await this.paymentsRepo.save(payment);
 
-      await this.notificationsService.create(
-        userId,
-        'Оплата подтверждена',
-        'Тестовая оплата подтверждена. Можно переходить в комнату консультации и ждать врача.'
-      );
-      await this.auditService.log('payment.stub.success', userId, {
+      await this.auditService.log('payment.intent.failed', userId, {
         paymentId: payment.id,
         caseId,
-        amount
+        amount,
+        reason: error instanceof Error ? error.message : String(error || 'unknown')
       });
-      this.realtimeService.publishToUser(userId, 'patient', 'payment.stub.success');
-      this.realtimeService.publishToRoles(['doctor', 'admin', 'partner'], 'doctor', 'payment.stub.success');
+      this.realtimeService.publishToUser(userId, 'patient', 'payment.intent.failed');
+      this.realtimeService.publishToRoles(['admin', 'partner'], 'admin', 'payment.intent.failed');
 
-      return {
-        paymentId: payment.id,
-        paymentUrl: null,
-        provider: 'kaspi_stub',
-        status: 'paid',
-        stub: true
-      };
+      throw new ServiceUnavailableException('Payment provider is unavailable or not configured. Payment was not captured.');
     }
   }
 

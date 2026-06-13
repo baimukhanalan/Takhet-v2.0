@@ -111,8 +111,8 @@ const fallbackDashboard = (role: LabsRole): LabsPortalDashboard => ({
 const LabsLogin: React.FC<{ onSession: (session: LabsSession) => void }> = ({ onSession }) => {
   const navigate = useNavigate();
   const [role, setRole] = useState<LabsRole>('member');
-  const [identifier, setIdentifier] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const config = roleConfigs[role];
 
@@ -167,8 +167,8 @@ const LabsLogin: React.FC<{ onSession: (session: LabsSession) => void }> = ({ on
             </div>
             <p className="mt-4 rounded-2xl bg-primary/5 px-4 py-3 text-xs font-bold leading-5 text-slate-500">{config.description}</p>
             <div className="mt-6 space-y-3">
-              <input value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="Email или Labs ID" className="w-full rounded-2xl bg-blue-50 px-5 py-5 text-base font-bold text-slate-950 outline-none focus:ring-2 focus:ring-primary" />
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Пароль" className="w-full rounded-2xl bg-blue-50 px-5 py-5 text-base font-bold text-slate-950 outline-none focus:ring-2 focus:ring-primary" />
+              <input name="labs-identifier" type="text" autoComplete="username" value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="Email или Labs ID" className="w-full rounded-2xl bg-blue-50 px-5 py-5 text-base font-bold text-slate-950 outline-none focus:ring-2 focus:ring-primary" />
+              <input name="labs-password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Пароль" className="w-full rounded-2xl bg-blue-50 px-5 py-5 text-base font-bold text-slate-950 outline-none focus:ring-2 focus:ring-primary" />
             </div>
             <button className="mt-6 flex w-full items-center justify-center gap-3 rounded-[2rem] bg-primary px-8 py-5 text-lg font-black text-white shadow-xl shadow-primary/20">
               Войти

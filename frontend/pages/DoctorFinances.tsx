@@ -10,7 +10,7 @@ const DoctorFinances: React.FC = () => {
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
           <p className="text-slate-500 text-sm font-medium">Total Balance</p>
           <p className="text-4xl font-bold text-slate-900 mt-2">$12,450.00</p>
-          <div className="mt-4 flex items-center gap-2 text-green-600 font-bold text-sm">
+          <div className="mt-4 flex items-center gap-2 text-blue-600 font-bold text-sm">
             <TrendingUp className="w-4 h-4" /> +12% this month
           </div>
         </div>

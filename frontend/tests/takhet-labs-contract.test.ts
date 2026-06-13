@@ -27,9 +27,9 @@ for (const value of [
   assert(app.includes(value), `App must include Takhet Labs route wiring: ${value}`);
 }
 
-assert(publicHeader.includes("Takhet Labs"), 'Public desktop header and mobile burger menu must include Takhet Labs');
+assert(publicHeader.includes('t.nav.labs'), 'Public desktop header and mobile burger menu must include translated Takhet Labs label');
 assert(publicHeader.includes("path: '/takhet-labs'"), 'Public Takhet Labs link must point to /takhet-labs');
-assert(sidebar.includes("Takhet Labs"), 'Patient dashboard sidebar must include Takhet Labs');
+assert(sidebar.includes('t.sidebar.labs'), 'Patient dashboard sidebar must include translated Takhet Labs label');
 assert(sidebar.includes("to: '/labs'"), 'Patient dashboard Takhet Labs link must point to authenticated /labs module');
 
 for (const copy of [
@@ -145,7 +145,7 @@ for (const value of forbidden) {
   assert(!labsPage.includes(value), `Takhet Labs UI must not expose forbidden positioning: ${value}`);
 }
 
-for (const marker of ['Р’', 'Рџ', 'СЃ', 'вЂ', 'в‚ё', '����']) {
+for (const marker of ['\u0420\u2019', '\u0420\u045f', '\u0421\u0403', '\u0432\u0402', '\u0432\u201a\u0451', '\ufffd\ufffd\ufffd\ufffd']) {
   assert(!labsPage.includes(marker), `Takhet Labs source must not contain mojibake marker: ${marker}`);
 }
 

@@ -24,7 +24,7 @@ const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onLogin }) => {
     setError(null);
 
     try {
-      await onLogin(UserRole.ADMIN, { email, password });
+      await onLogin(UserRole.ADMIN, { email: email.trim().toLowerCase(), password });
       navigate('/admin-dashboard');
     } catch {
       setError(t.admin.error);
@@ -69,7 +69,10 @@ const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onLogin }) => {
                   <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-primary transition-colors" />
                   <input
                     required
-                    type="text"
+                    name="admin-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="username"
                     placeholder={t.admin.emailPlaceholder}
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -80,7 +83,9 @@ const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onLogin }) => {
                   <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-primary transition-colors" />
                   <input
                     required
+                    name="admin-password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder={t.admin.passwordPlaceholder}
                     value={password}
                     onChange={e => setPassword(e.target.value)}

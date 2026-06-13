@@ -76,7 +76,7 @@ const AuthConfirmEmailPage: React.FC = () => {
           <FadeIn direction="up">
             <div className="space-y-4">
               <div className="w-16 h-16 rounded-3xl bg-blue-50 flex items-center justify-center">
-                {state === 'loading' ? <Icon className="w-8 h-8 text-primary animate-spin" /> : <Icon className={`w-8 h-8 ${state === 'emailConfirmed' ? 'text-emerald-500' : 'text-red-500'}`} />}
+                {state === 'loading' ? <Icon className="w-8 h-8 text-primary animate-spin" /> : <Icon className={`w-8 h-8 ${state === 'emailConfirmed' ? 'text-blue-500' : 'text-red-500'}`} />}
               </div>
               <div className="space-y-2">
                 <h2 className="text-5xl font-black text-foreground tracking-tighter">Подтверждение почты</h2>

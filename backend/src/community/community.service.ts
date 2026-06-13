@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { DoctorsService } from '../doctors/doctors.service';
+import { env } from '../config/env.config';
 
 type CommunityReply = {
   author: string;
@@ -24,6 +25,13 @@ const COMMUNITY_KEY = 'community_posts';
 const ALLOWED_CATEGORIES = new Set(['Общее', 'General', 'Жалпы']);
 
 const normalizeText = (value: string, maxLength: number) => value.trim().replace(/\s+/g, ' ').slice(0, maxLength);
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 @Injectable()
 export class CommunityService {
@@ -106,31 +114,61 @@ export class CommunityService {
     posts.unshift(nextItem);
     await this.savePosts(posts);
     await this.saveAdminReview(nextItem);
+    await this.notifyPublicFeedback(nextItem);
     await this.auditService.log('public.feedback.created', COMMUNITY_OWNER_ID, { feedbackId: nextItem.id });
     return { submitted: true };
   }
 
   private async notifyPublicFeedback(item: CommunityPost) {
-    void item;
-    return;
-
     try {
-      const response = await fetch('', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: '',
-          subject: 'Новый отзыв Takhet+',
-          name: item.author,
-          review: item.body,
-          feedbackId: item.id
-        })
-      });
+      let response: Response | null = null;
+      if (env.feedbackEmailWebhookUrl) {
+        response = await fetch(env.feedbackEmailWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: env.feedbackEmailRecipient,
+            subject: 'Новый отзыв Takhet+',
+            name: item.author,
+            review: item.body,
+            feedbackId: item.id
+          })
+        });
+      } else if (env.resendApiKey) {
+        response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${env.resendApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: env.authEmailFrom,
+            to: [env.feedbackEmailRecipient],
+            subject: 'Новый отзыв Takhet+',
+            html: [
+              '<h2>Новый отзыв Takhet+</h2>',
+              `<p><strong>Имя:</strong> ${escapeHtml(item.author)}</p>`,
+              `<p><strong>ID:</strong> ${escapeHtml(item.id)}</p>`,
+              `<p>${escapeHtml(item.body).replace(/\n/g, '<br />')}</p>`
+            ].join('')
+          })
+        });
+      }
+
+      if (!response) {
+        await this.auditService.log('public.feedback.email.pending', COMMUNITY_OWNER_ID, {
+          feedbackId: item.id,
+          recipient: env.feedbackEmailRecipient,
+          reason: 'email_provider_not_configured'
+        });
+        return;
+      }
 
       await this.auditService.log('public.feedback.email.sent', COMMUNITY_OWNER_ID, {
         feedbackId: item.id,
         ok: response.ok,
-        status: response.status
+        status: response.status,
+        recipient: env.feedbackEmailRecipient
       });
     } catch {
       await this.auditService.log('public.feedback.email.failed', COMMUNITY_OWNER_ID, {

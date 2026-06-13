@@ -67,7 +67,7 @@ const SoulAssistant: React.FC<{ t: any; isPortal: boolean }> = ({ t, isPortal })
   return (
     <div className={containerStyle}>
       <div className={cardStyle}>
-        <div className="p-6 md:p-8 bg-gradient-to-r from-emerald-500 to-indigo-600 text-white flex items-center justify-between shrink-0">
+        <div className="p-6 md:p-8 bg-gradient-to-r from-blue-500 to-indigo-600 text-white flex items-center justify-between shrink-0">
            <div className="flex items-center gap-4">
               <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center">
                  <BrainCircuit className="w-5 h-5 md:w-6 md:h-6 text-white" />
@@ -95,7 +95,7 @@ const SoulAssistant: React.FC<{ t: any; isPortal: boolean }> = ({ t, isPortal })
         <div className="flex-1 overflow-y-auto p-6 md:p-14 space-y-8 bg-slate-50/20 no-scrollbar">
           {messages.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-8 opacity-40 py-20">
-               <Sparkles className="w-12 h-12 md:w-20 md:h-20 text-emerald-500" />
+               <Sparkles className="w-12 h-12 md:w-20 md:h-20 text-blue-500" />
                <p className="text-sm md:text-2xl font-bold max-w-xl leading-relaxed" dangerouslySetInnerHTML={{ __html: t.mental.assistant.placeholder }}></p>
             </div>
           )}
@@ -108,7 +108,7 @@ const SoulAssistant: React.FC<{ t: any; isPortal: boolean }> = ({ t, isPortal })
           ))}
           {isTyping && (
             <div className="flex items-center gap-4 p-4">
-              <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ассистент подбирает слова...</span>
             </div>
           )}
@@ -116,7 +116,7 @@ const SoulAssistant: React.FC<{ t: any; isPortal: boolean }> = ({ t, isPortal })
         </div>
 
         <div className="p-6 md:p-14 border-t border-slate-100 bg-white shrink-0">
-          <div className={`flex items-center gap-4 bg-slate-50 border border-slate-100 rounded-[2.5rem] md:rounded-[6rem] p-2 pl-8 md:pl-14 transition-all focus-within:ring-8 focus-within:ring-emerald-500/5 ${isExpanded ? 'max-w-5xl mx-auto w-full' : ''}`}>
+          <div className={`flex items-center gap-4 bg-slate-50 border border-slate-100 rounded-[2.5rem] md:rounded-[6rem] p-2 pl-8 md:pl-14 transition-all focus-within:ring-8 focus-within:ring-blue-500/5 ${isExpanded ? 'max-w-5xl mx-auto w-full' : ''}`}>
             <input 
               value={input} 
               onChange={(e) => setInput(e.target.value)} 
@@ -127,7 +127,7 @@ const SoulAssistant: React.FC<{ t: any; isPortal: boolean }> = ({ t, isPortal })
             <button 
               onClick={handleSend} 
               disabled={!input.trim() || isTyping} 
-              className="w-12 h-12 md:w-24 md:h-24 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl hover:bg-emerald-600 hover:scale-105 active:scale-90 transition-all disabled:opacity-30"
+              className="w-12 h-12 md:w-24 md:h-24 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl hover:bg-blue-600 hover:scale-105 active:scale-90 transition-all disabled:opacity-30"
             >
               <Send className="w-6 h-6 md:w-10 md:h-10" />
             </button>
@@ -313,10 +313,10 @@ const MentalPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isPort
           <>
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
               <div className="space-y-10 text-center lg:text-left">
-                <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em] border border-emerald-100">
+                <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em] border border-blue-100">
                   <Sparkles className="w-4 h-4" /> {t.mental.heroTag}
                 </div>
-                <h1 className="text-6xl md:text-8xl font-black text-slate-950 leading-[0.85] tracking-tighter uppercase">{t.mental.heroTitle} <br/><span className="text-emerald-500 italic lowercase font-normal">{t.mental.heroSubtitle}</span></h1>
+                <h1 className="text-6xl md:text-8xl font-black text-slate-950 leading-[0.85] tracking-tighter uppercase">{t.mental.heroTitle} <br/><span className="text-blue-500 italic lowercase font-normal">{t.mental.heroSubtitle}</span></h1>
                 <p className="text-xl text-slate-500 max-w-xl mx-auto lg:mx-0 font-medium leading-relaxed">{t.mental.heroDesc}</p>
                 <button 
                   onClick={() => navigate('/auth', { state: { role: UserRole.PATIENT, mode: 'register' } })}
@@ -332,8 +332,8 @@ const MentalPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isPort
               <div className="space-y-12">
                 <h2 className="text-5xl font-black uppercase tracking-tighter text-slate-900 leading-none">Психолог или <br/>Психотерапевт?</h2>
                 <div className="space-y-10">
-                  <div className="p-10 bg-white rounded-[3.5rem] border border-slate-100 shadow-sm space-y-4 group hover:border-emerald-200 transition-all">
-                    <h4 className="text-2xl font-black text-emerald-600 uppercase tracking-tight">Психолог</h4>
+                  <div className="p-10 bg-white rounded-[3.5rem] border border-slate-100 shadow-sm space-y-4 group hover:border-blue-200 transition-all">
+                    <h4 className="text-2xl font-black text-blue-600 uppercase tracking-tight">Психолог</h4>
                     <p className="text-slate-500 text-base leading-relaxed font-medium">Работает с качеством жизни, отношениями и самооценкой. Не назначает препараты.</p>
                   </div>
                   <div className="p-10 bg-white rounded-[3.5rem] border border-slate-100 shadow-sm space-y-4 group hover:border-indigo-200 transition-all">

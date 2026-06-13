@@ -384,7 +384,8 @@ export class EnterpriseService implements OnModuleInit {
   async inviteEmployee(user: EnterpriseSessionUser, payload: Record<string, any>) {
     this.assertRole(user, ['employer_admin']);
     const employeeId = `EMP-${Date.now()}`;
-    const passwordHash = this.hashPassword('temporary-admin');
+    const invitePassword = randomBytes(18).toString('base64url');
+    const passwordHash = this.hashPassword(invitePassword);
     const rows = await this.dataSource.query(
       `
         INSERT INTO enterprise_users (enterprise_id, employee_id, email, password_hash, role, full_name)
@@ -956,7 +957,7 @@ export class EnterpriseService implements OnModuleInit {
 
   private resolveEnterpriseDemoIdentifier(identifier: string, role?: EnterpriseRole) {
     const normalized = identifier.trim().toLowerCase();
-    if (normalized !== 'admin' || !role) return normalized;
+    if (!env.enableDemoPortalLogin || !['admin', 'baimukhanalan1@gmail.com'].includes(normalized) || !role) return normalized;
     const demoByRole: Record<EnterpriseRole, string> = {
       employee: 'emp-1001',
       employer_admin: 'hr-admin',
@@ -1349,7 +1350,8 @@ export class EnterpriseService implements OnModuleInit {
   }
 
   private async ensureSeedData() {
-    const password = this.hashPassword(process.env.ENTERPRISE_BOOTSTRAP_PASSWORD || 'admin');
+    const bootstrapPassword = process.env.ENTERPRISE_BOOTSTRAP_PASSWORD || (env.enableDemoPortalLogin ? 'baimukhanalan1@gmail.com' : randomBytes(24).toString('base64url'));
+    const password = this.hashPassword(bootstrapPassword);
     const existing = await this.dataSource.query(`SELECT id FROM enterprises ORDER BY created_at ASC LIMIT 1`);
     const enterpriseId = existing[0]?.id || (await this.createSeedEnterprise());
     await this.ensureSeedPlan(enterpriseId);

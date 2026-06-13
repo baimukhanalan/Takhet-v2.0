@@ -82,7 +82,7 @@ export const AdminAudienceChart: React.FC<{ data: AnalyticsPoint[]; isDark: bool
       <XAxis dataKey="name" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
       <YAxis hide />
       <Tooltip contentStyle={{ backgroundColor: isDark ? '#0f172a' : '#fff', borderRadius: '1rem', border: 'none' }} />
-      <Line type="monotone" dataKey="users" stroke="#00BFA5" strokeWidth={4} dot={{ fill: '#00BFA5', r: 6 }} />
+      <Line type="monotone" dataKey="users" stroke="#64B5F6" strokeWidth={4} dot={{ fill: '#64B5F6', r: 6 }} />
     </LineChart>
   </ResponsiveContainer>
 );

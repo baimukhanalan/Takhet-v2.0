@@ -121,7 +121,7 @@ const DigitalTwinPage: React.FC<{ user: User }> = ({ user }) => {
   const [isSimulating, setIsSimulating] = useState(false);
   useEffect(() => {
     const data = MockDB.getActiveMemberData();
-    if (data) setTwin(data.digitalTwin);
+    if (data) setTwin(data.digitalTwin as DigitalTwinState);
   }, []);
   const handleUpdate = (params: Partial<DigitalTwinState>) => {
     if (!twin) return;

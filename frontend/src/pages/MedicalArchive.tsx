@@ -271,7 +271,7 @@ const MedicalArchive: React.FC = () => {
                 <div className="flex items-center justify-between sm:justify-end gap-3 md:gap-6 shrink-0">
                   <span
                     className={`text-[8px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] px-2.5 md:px-4 py-1 md:py-1.5 rounded-lg border ${
-                      record.status === 'closed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-primary border-primary/10'
+                      record.status === 'closed' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-blue-50 text-primary border-primary/10'
                     }`}
                   >
                     {formatStatus(record.status)}
@@ -334,9 +334,9 @@ const MedicalArchive: React.FC = () => {
               </section>
 
               <section className="space-y-4 md:space-y-6">
-                <h4 className="text-[9px] md:text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Статус</h4>
+                <h4 className="text-[9px] md:text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Статус</h4>
                 <div className="p-5 md:p-6 bg-slate-50 border border-slate-100 rounded-xl md:rounded-[2rem] flex items-start gap-3 md:gap-4">
-                  <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-emerald-500 mt-0.5 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-blue-500 mt-0.5 shrink-0" />
                   <span className="font-medium text-sm md:text-base text-slate-600 leading-relaxed">{formatStatus(selectedRecord.status)}</span>
                 </div>
               </section>
@@ -348,10 +348,10 @@ const MedicalArchive: React.FC = () => {
                   {selectedReport.pdfBase64 ? (
                     <section className="space-y-4">
                       <h4 className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Итоговый PDF</h4>
-                      <div className="rounded-[2rem] border border-emerald-100 bg-emerald-50 p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="rounded-[2rem] border border-blue-100 bg-blue-50 p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex items-start gap-3">
-                          <ShieldAlert className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                          <p className="text-sm md:text-base font-medium text-emerald-800">Финальный PDF сформирован и доступен для скачивания из архива.</p>
+                          <ShieldAlert className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                          <p className="text-sm md:text-base font-medium text-blue-800">Финальный PDF сформирован и доступен для скачивания из архива.</p>
                         </div>
                         <button
                           onClick={() => downloadBase64Pdf(selectedReport.pdfBase64 as string, `takhet-consultation-${selectedRecord.id.slice(0, 8)}.pdf`)}

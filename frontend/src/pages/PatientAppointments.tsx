@@ -1,7 +1,8 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Clock, ChevronRight, CheckCircle2, Download, Plus, CreditCard, Star } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { roleApi } from '../../services/roleApi';
+import { useLanguage } from '../services/useLanguage';
 import { useLiveRefresh } from '../services/useLiveRefresh';
 
 type PatientCase = {
@@ -76,6 +77,7 @@ const formatSummary = (value: string | null) => {
 
 const PatientAppointments: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [cases, setCases] = useState<PatientCase[]>([]);
   const [payments, setPayments] = useState<PatientPayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,7 +177,7 @@ const PatientAppointments: React.FC = () => {
               onChange={(event) => setRatingReview(event.target.value)}
               rows={4}
               className="w-full rounded-2xl border border-border bg-slate-50 px-5 py-4 outline-none font-medium"
-              placeholder="Что вам понравилось в этой консультации?"
+              placeholder={t.appointments.reviewPlaceholder}
             />
             <div className="flex flex-col sm:flex-row gap-3">
               <button
@@ -332,5 +334,3 @@ const PatientAppointments: React.FC = () => {
 };
 
 export default PatientAppointments;
-
-

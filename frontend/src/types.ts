@@ -83,7 +83,7 @@ export interface MedicalRecord {
   date: string;
   type: 'Photo' | 'Symptoms' | 'Analysis' | 'Voice' | 'Wearable' | 'Behavior' | 'Prescription' | 'EEG' | 'Visit';
   summary?: string;
-  fullData?: any; 
+  fullData?: any;
   status: 'New' | 'Analyzed' | 'Archived';
   swarmCaseId?: string;
 }
@@ -121,7 +121,7 @@ export interface ChatSession {
   messages: any[];
 }
 export interface DecisionRoute {
-  riskScore: number; 
+  riskScore: number;
   urgency: 'Critical' | 'High' | 'Medium' | 'Low';
   timeframe: string;
   specialist: string;

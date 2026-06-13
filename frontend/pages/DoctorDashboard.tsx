@@ -84,7 +84,7 @@ const DoctorDashboard: React.FC<{ user: User }> = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 lg:gap-8">
         {[
           { icon: Video, color: 'bg-blue-50 text-primary', label: 'Сессии', val: stats.sessions },
-          { icon: Users, color: 'bg-emerald-50 text-emerald-600', label: 'Пациенты', val: stats.patients },
+          { icon: Users, color: 'bg-blue-50 text-blue-600', label: 'Пациенты', val: stats.patients },
           { icon: DollarSign, color: 'bg-orange-50 text-orange-600', label: 'Доход', val: `₸${stats.revenue.toLocaleString()}` },
           { icon: Radar, color: 'bg-indigo-50 text-indigo-600', label: 'Swarm Tasks', val: swarmCases.length },
         ].map((stat, i) => (
@@ -118,7 +118,7 @@ const DoctorDashboard: React.FC<{ user: User }> = ({ user }) => {
                          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
                             <Radar className="w-6 h-6" />
                          </div>
-                         <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white px-3 py-1 rounded-full">New Case</span>
+                         <span className="text-[10px] font-black uppercase tracking-widest bg-blue-500 text-white px-3 py-1 rounded-full">New Case</span>
                       </div>
                       <div className="relative z-10">
                          <h4 className="text-xl font-black tracking-tight">{sc.specialtyRequired}</h4>

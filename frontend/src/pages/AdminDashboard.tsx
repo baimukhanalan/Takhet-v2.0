@@ -1,14 +1,14 @@
-﻿import React, { Suspense, lazy, useState, useEffect, useRef, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { User, UserRole, Doctor } from '../types';
-import { 
-  Users, Activity, Database, CheckCircle2, 
-  Settings, LogOut, Bell, Search, TrendingUp, 
-  ArrowUpRight, Server, Globe, Cpu, BarChart3, 
-  Lock, MessageSquare, AlertCircle, FileText, Info, 
+import {
+  Users, Activity, Database, CheckCircle2,
+  Settings, LogOut, Bell, Search, TrendingUp,
+  ArrowUpRight, Server, Globe, Cpu, BarChart3,
+  Lock, MessageSquare, AlertCircle, FileText, Info,
   ClipboardList, Stethoscope, Building2, Pill, Star, Trash2, Check, X,
-  ShieldAlert, ToggleLeft, ToggleRight, DollarSign, Percent, Zap, Sun, Moon,
-  Send, Sparkles, Briefcase, FileSearch, Mail, Archive, ShoppingBag, Eye, Menu, 
+  ShieldAlert, ToggleLeft, ToggleRight, DollarSign, Percent, Zap, Sun,
+  Send, Sparkles, Briefcase, FileSearch, Mail, Archive, ShoppingBag, Eye, Menu,
   ShieldEllipsis, History, BarChartHorizontal, LineChart as LineChartIcon, Radar, Layers,
   UserCheck, ArrowRight
 } from 'lucide-react';
@@ -71,14 +71,14 @@ const formatRequestStatus = (status: string) =>
 
 const normalizeCatalogAudience = (value: string | null): 'doctor' | 'mental' | 'both' => {
   const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === 'mental' || normalized === 'душевный' || normalized === 'специалист') return 'mental';
-  if (normalized === 'both' || normalized === 'оба' || normalized === 'везде') return 'both';
+  if (normalized === 'mental' || normalized === '\u0434\u0443\u0448\u0435\u0432\u043d\u044b\u0439' || normalized === '\u0441\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442') return 'mental';
+  if (normalized === 'both' || normalized === '\u043e\u0431\u0430' || normalized === '\u0432\u0435\u0437\u0434\u0435') return 'both';
   return 'doctor';
 };
 
 const looksCorrupted = (value?: string) =>
   typeof value === 'string' &&
-  (value.includes('Р') || value.includes('�') || value.includes('вЂ') || value.includes('???'));
+  (value.includes('\u0420\u00a0') || value.includes('\u043f\u0457\u0405') || value.includes('\u0420\u0406\u0420\u201a') || value.includes('???'));
 
 const sanitizeAdminText = (value: string, fallback: string) => {
   const normalized = value?.trim() || '';
@@ -145,10 +145,10 @@ const SidebarContent: React.FC<{
      <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-xl mb-10 shrink-0">
         <TakhetLogo className="w-10 h-10" />
      </Link>
-     
+
      <nav className="flex-1 flex flex-col gap-2 overflow-y-auto no-scrollbar w-full items-center px-4 md:px-2 py-4">
         {NAV_ITEMS.map(item => (
-          <button 
+          <button
             key={item.id}
             onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
             className={`w-full flex items-center lg:justify-center gap-4 p-4 lg:p-5 rounded-2xl transition-all relative group shrink-0 ${activeTab === item.id ? (isDark ? 'bg-white/10 text-white shadow-xl' : 'bg-primary text-white shadow-lg') : 'text-slate-400 hover:text-primary hover:bg-primary/5'}`}
@@ -161,7 +161,7 @@ const SidebarContent: React.FC<{
           </button>
         ))}
      </nav>
-     
+
      <button onClick={onLogout} className="w-full flex items-center lg:justify-center gap-4 p-5 rounded-2xl text-red-500/50 hover:text-red-500 transition-colors shrink-0 mt-4 px-8 lg:px-5">
         <LogOut className="w-6 h-6" />
         <span className="lg:hidden font-black text-xs uppercase tracking-widest">Выйти</span>
@@ -187,11 +187,12 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const [sysConfig, setSysConfig] = useState<SystemConfig>({
     theme: 'light',
     maintenanceMode: false,
+    aiDiagnosticEnabled: true,
     serviceFeePercent: 15,
     aiModel: 'Gemini 2.0 Flash',
     supportEmail: 'support@takhet.com'
   });
-  
+
   // Assistant States
   const [aiMessages, setAiMessages] = useState<AIChatMessage[]>([]);
   const [aiInput, setAiInput] = useState('');
@@ -344,7 +345,14 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
     aiScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages]);
 
-  const isDark = sysConfig?.theme === 'dark';
+  useEffect(() => {
+    if (sysConfig?.theme && sysConfig.theme !== 'light') {
+      setSysConfig((current) => (current ? { ...current, theme: 'light' } : current));
+      void roleApi.adminUpdatePortalConfig({ theme: 'light' });
+    }
+  }, [sysConfig?.theme]);
+
+  const isDark = false;
 
   const styles = {
     bg: isDark ? 'bg-slate-950' : 'bg-white',
@@ -392,7 +400,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
       val: String(adminStats?.cases?.open ?? 0),
       change: `${adminStats?.cases?.total ?? 0} всего`,
       icon: Activity,
-      color: 'text-green-500'
+      color: 'text-blue-500'
     },
     {
       label: 'Платежи',
@@ -406,7 +414,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
       val: systemHealth?.status === 'attention' ? 'внимание' : 'стабильно',
       change: adminError ? 'требует внимания' : `uptime ${Math.floor((systemHealth?.uptimeSeconds || 0) / 3600)}ч`,
       icon: CheckCircle2,
-      color: 'text-emerald-500'
+      color: 'text-blue-500'
     }
   ];
 
@@ -535,9 +543,9 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
     void roleApi.adminUpdatePortalConfig({ [key]: !sysConfig[key] });
   };
 
-  const handleThemeSwitch = (theme: 'dark' | 'light') => {
-    setSysConfig((current) => (current ? { ...current, theme } : current));
-    void roleApi.adminUpdatePortalConfig({ theme });
+  const handleThemeSwitch = () => {
+    setSysConfig((current) => (current ? { ...current, theme: 'light' } : current));
+    void roleApi.adminUpdatePortalConfig({ theme: 'light' });
   };
 
   const handleServiceFeeChange = (value: string) => {
@@ -778,7 +786,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                        <div className={`p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-primary/10 ${s.color} group-hover:scale-110 transition-transform`}>
                           <s.icon className="w-5 h-5 lg:w-6 lg:h-6" />
                        </div>
-                       <span className={`text-[10px] font-black px-3 py-1 rounded-full ${s.label === 'Стабильность системы' && adminError ? 'text-red-500 bg-red-500/10' : 'text-emerald-400 bg-emerald-400/10'}`}>{s.change}</span>
+                       <span className={`text-[10px] font-black px-3 py-1 rounded-full ${s.label === 'Стабильность системы' && adminError ? 'text-red-500 bg-red-500/10' : 'text-blue-400 bg-blue-400/10'}`}>{s.change}</span>
                     </div>
                     <p className={`${styles.textSub} text-[10px] font-black uppercase tracking-widest`}>{s.label}</p>
                     <p className={`text-2xl lg:text-4xl font-black ${styles.textMain} mt-2`}>{s.val}</p>
@@ -809,7 +817,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                               <span className={`text-xs lg:text-sm font-black ${styles.textMain}`}>{item.label}</span>
                            </div>
                            <button onClick={() => handleConfigToggle(item.key)}>
-                              {sysConfig[item.key] ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8 text-slate-400" />}
+                              {sysConfig[item.key] ? <ToggleRight className="w-8 h-8 text-blue-500" /> : <ToggleLeft className="w-8 h-8 text-slate-400" />}
                            </button>
                         </div>
                      ))}
@@ -858,22 +866,22 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                 </div>
                 <div className={`p-4 lg:p-12 border-t shrink-0 ${isDark ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-100'}`}>
                    <div className={`flex items-center gap-2 lg:gap-6 ${styles.input} border ${styles.border} rounded-[2.5rem] lg:rounded-[6rem] p-1.5 lg:p-4 pl-8 lg:pl-16 focus-within:ring-[12px] focus-within:ring-primary/5 transition-all shadow-inner`}>
-                      <input 
+                      <input
                         value={aiInput}
                         onChange={e => setAiInput(e.target.value)}
                         onKeyPress={e => e.key === 'Enter' && handleSendAi()}
-                        placeholder="Запросите аудит, отчет или прогноз..." 
-                        className="flex-1 bg-transparent border-none outline-none font-bold text-base lg:text-2xl placeholder:opacity-30 min-w-0" 
+                        placeholder="Запросите аудит, отчет или прогноз..."
+                        className="flex-1 bg-transparent border-none outline-none font-bold text-base lg:text-2xl placeholder:opacity-30 min-w-0"
                       />
                       <div className="flex items-center gap-1 lg:gap-3">
-                        <button 
+                        <button
                           onClick={() => void handleClearAssistantHistory()}
                           className="w-10 h-10 lg:w-16 lg:h-16 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
                           title="Очистить историю"
                         >
                            <Trash2 className="w-5 h-5 lg:w-7 lg:h-7" />
                         </button>
-                        <button 
+                        <button
                           onClick={handleSendAi}
                           disabled={!aiInput.trim() || isAiTyping}
                           className="w-12 h-12 lg:w-24 lg:h-24 bg-primary text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
@@ -894,20 +902,20 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-10">
                    {[
-                     { label: 'Финансовый аудит', icon: DollarSign, color: 'text-emerald-500', desc: 'Маржинальность и P&L', prompt: 'Проведи финансовый аудит за текущий месяц' },
+                     { label: 'Финансовый аудит', icon: DollarSign, color: 'text-blue-500', desc: 'Маржинальность и P&L', prompt: 'Проведи финансовый аудит за текущий месяц' },
                      { label: 'Эффективность врачей', icon: Stethoscope, color: 'text-blue-500', desc: 'Конверсия в повторный прием', prompt: 'Дай отчет по эффективности врачей' },
                      { label: 'Аудит безопасности', icon: ShieldEllipsis, color: 'text-red-500', desc: 'Аномалии доступа и логи', prompt: 'Покажи отчет по инцидентам безопасности' },
                      { label: 'Телеметрия API', icon: Cpu, color: 'text-amber-500', desc: 'Нагрузка и задержки серверов', prompt: 'Проанализируй телеметрию системы' },
                      { label: 'Retention анализ', icon: History, color: 'text-purple-500', desc: 'Удержание пациентов и LTV', prompt: 'Покажи статистику удержания пациентов' },
-                     { label: 'Прогноз выручки', icon: BarChartHorizontal, color: 'text-emerald-400', desc: 'AI-прогнозирование роста', prompt: 'Сделай прогноз выручки на следующий квартал' },
+                     { label: 'Прогноз выручки', icon: BarChartHorizontal, color: 'text-blue-400', desc: 'AI-прогнозирование роста', prompt: 'Сделай прогноз выручки на следующий квартал' },
                      { label: 'Точность AI-диагностики', icon: Zap, color: 'text-orange-500', desc: 'Подтверждаемость анализов', prompt: 'Каков процент точности AI за неделю?' },
                      { label: 'География запросов', icon: Globe, color: 'text-cyan-500', desc: 'Тепловая карта обращений', prompt: 'Покажи географическое распределение вызовов' },
                      { label: 'Анализ онбординга', icon: UserCheck, color: 'text-indigo-500', desc: 'Скорость проверки дипломов', prompt: 'Дай отчет по скорости онбординга новых врачей' },
                      { label: 'Маркетинговый ROI', icon: LineChartIcon, color: 'text-rose-500', desc: 'Стоимость привлечения CAC', prompt: 'Рассчитай ROI маркетинговых кампаний' },
-                     { label: 'Compliance статус', icon: CheckCircle2, color: 'text-teal-500', desc: 'Соответствие закону о ПД', prompt: 'Проверь статус комплаенса данных' },
+                     { label: 'Compliance статус', icon: CheckCircle2, color: 'text-blue-500', desc: 'Соответствие закону о ПД', prompt: 'Проверь статус комплаенса данных' },
                      { label: 'Целостность БД', icon: Database, color: 'text-slate-500', desc: 'Здоровье репликаций и индексов', prompt: 'Проведи диагностику базы данных' }
                    ].map((btn, i) => (
-                     <button 
+                     <button
                        key={i}
                        onClick={() => setAiInput(btn.prompt)}
                        className={`${styles.card} p-6 lg:p-12 rounded-[2rem] lg:rounded-[4rem] border ${styles.border} text-left group hover:border-primary/50 transition-all hover:shadow-2xl hover:-translate-y-3 relative overflow-hidden`}
@@ -1001,7 +1009,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                             <td className={`p-6 font-black ${styles.textMain}`}>{med.price} ₸</td>
                             <td className={`p-6 font-bold ${styles.textSub}`}>{med.stock} шт</td>
                             <td className="p-6">
-                                <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${med.stock > 10 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${med.stock > 10 ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
                                   {med.stock > 10 ? 'В наличии' : 'Мало'}
                                 </span>
                             </td>
@@ -1088,7 +1096,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                      <div className="flex gap-2 w-full md:w-auto">
                         {req.status === 'Pending' ? (
                           <>
-                             <button onClick={() => handleRequestAction(req.id, 'Approved')} className="flex-1 md:flex-none px-8 py-3 bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                             <button onClick={() => handleRequestAction(req.id, 'Approved')} className="flex-1 md:flex-none px-8 py-3 bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
                                  <Check className="w-4 h-4" /> Одобрить
                              </button>
                              <button onClick={() => handleRequestAction(req.id, 'Rejected')} className="flex-1 md:flex-none px-8 py-3 bg-red-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
@@ -1096,7 +1104,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                              </button>
                           </>
                         ) : (
-                          <div className={`w-full md:w-40 px-4 py-3 rounded-xl text-center text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 ${req.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                          <div className={`w-full md:w-40 px-4 py-3 rounded-xl text-center text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 ${req.status === 'Approved' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
                               {req.status === 'Approved' ? <UserCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
                               {formatRequestStatus(req.status)}
                             </div>
@@ -1171,7 +1179,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                                 <div className="flex items-center gap-5">
                                   <div className="relative">
                                     <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(doc.fullName)}&background=0D47A1&color=fff`} className="w-14 h-14 rounded-2xl object-cover shadow-lg group-hover:scale-105 transition-transform" />
-                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white flex items-center justify-center">
+                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full border-4 border-white flex items-center justify-center">
                                       <Check className="w-2 h-2 text-white" />
                                     </div>
                                   </div>
@@ -1186,7 +1194,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                             </td>
                             <td className="p-8">
                                 <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${doc.verified ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                                  <div className={`w-2 h-2 rounded-full ${doc.verified ? 'bg-blue-500 animate-pulse' : 'bg-amber-500'}`} />
                                   <span className={`${styles.textMain} text-[10px] font-black uppercase tracking-widest`}>{doc.verified ? 'Активен' : 'Ожидает активации'}</span>
                                 </div>
                             </td>
@@ -1249,7 +1257,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                             <Building2 className="w-8 h-8 lg:w-10 lg:h-10" />
                          </div>
                          <div className="flex flex-col items-end gap-2">
-                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${p.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
+                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${p.status === 'Active' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
                                {p.status === 'Active' ? 'Активен' : 'Верификация'}
                             </span>
                          </div>
@@ -1306,7 +1314,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                           <td className="p-6">
                             <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                               contract.status === 'Active'
-                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
                                 : contract.status === 'Expired'
                                   ? 'bg-red-500/10 text-red-500 border-red-500/20'
                                   : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
@@ -1339,7 +1347,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
              <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Аналитика</h2>
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                 <div className={`${styles.card} p-6 lg:p-10 rounded-[2rem] lg:rounded-[3.5rem] border space-y-8`}>
-                   <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight flex items-center gap-3`}><DollarSign className="text-emerald-500" /> Выручка (7 дней)</h3>
+                   <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight flex items-center gap-3`}><DollarSign className="text-blue-500" /> Выручка (7 дней)</h3>
                    <div className="h-64 w-full">
                       <Suspense fallback={null}>
                         <AdminRevenueChart data={analyticsSeries} isDark={isDark} />
@@ -1364,20 +1372,13 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
                 <div className={`${styles.card} p-6 lg:p-10 rounded-[2rem] lg:rounded-[3.5rem] border space-y-6 lg:space-y-8`}>
                    <h3 className={`text-lg font-black ${styles.textMain} uppercase tracking-tight flex items-center gap-3`}><Sun className="text-primary" /> Внешний вид</h3>
-                   <div className="grid grid-cols-2 gap-4">
-                      <button 
-                        onClick={() => handleThemeSwitch('light')}
-                        className={`flex flex-col items-center gap-4 p-6 lg:p-8 rounded-2xl lg:rounded-[2rem] border-2 transition-all ${!isDark ? 'border-primary bg-primary/5' : 'border-slate-400/10 hover:border-slate-400/30'}`}
+                   <div className="grid grid-cols-1 gap-4">
+                      <button
+                        onClick={handleThemeSwitch}
+                        className="flex flex-col items-center gap-4 p-6 lg:p-8 rounded-2xl lg:rounded-[2rem] border-2 transition-all border-primary bg-primary/5"
                       >
-                         <Sun className={`w-8 h-8 lg:w-10 lg:h-10 ${!isDark ? 'text-primary' : 'text-slate-400'}`} />
-                  <span className={`text-[9px] lg:text-[10px] font-black uppercase ${!isDark ? 'text-primary' : 'text-slate-400'}`}>Светлая</span>
-                      </button>
-                      <button 
-                        onClick={() => handleThemeSwitch('dark')}
-                        className={`flex flex-col items-center gap-4 p-6 lg:p-8 rounded-2xl lg:rounded-[2rem] border-2 transition-all ${isDark ? 'border-primary bg-primary/5' : 'border-slate-400/10 hover:border-slate-400/30'}`}
-                      >
-                         <Moon className={`w-8 h-8 lg:w-10 lg:h-10 ${isDark ? 'text-primary' : 'text-slate-400'}`} />
-                  <span className={`text-[9px] lg:text-[10px] font-black uppercase ${isDark ? 'text-primary' : 'text-slate-400'}`}>Темная</span>
+                         <Sun className="w-8 h-8 lg:w-10 lg:h-10 text-primary" />
+                  <span className="text-[9px] lg:text-[10px] font-black uppercase text-primary">Светлая тема</span>
                       </button>
                    </div>
                 </div>
@@ -1404,7 +1405,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
 
   return (
     <div className={`min-h-screen ${styles.bg} flex flex-col lg:flex-row transition-all duration-700 ease-in-out overflow-hidden`}>
-      
+
       {/* Desktop Sidebar (Fixed, strictly unchanged) */}
       <div className={`hidden lg:flex fixed left-0 top-0 bottom-0 w-24 lg:w-28 ${styles.sidebar} border-r flex flex-col items-center z-[100] transition-all duration-700`}>
          <SidebarContent activeTab={activeTab} setActiveTab={setActiveTab} setIsMobileMenuOpen={setIsMobileMenuOpen} onLogout={onLogout} isDark={isDark} />
@@ -1426,19 +1427,19 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
          <header className={`min-h-20 lg:min-h-24 ${styles.header} backdrop-blur-xl border-b flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-10 py-4 sticky top-0 z-[90] transition-all duration-700 shrink-0`}>
             <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                {/* Burger Button for Mobile */}
-               <button 
+               <button
                  onClick={() => setIsMobileMenuOpen(true)}
                  className={`p-2 lg:hidden rounded-xl ${isDark ? 'bg-white/5 text-white' : 'bg-slate-100 text-slate-600'} hover:scale-105 active:scale-95 transition-all`}
                >
                  <Menu className="w-6 h-6" />
                </button>
                   <h1 className={`text-base sm:text-lg lg:text-2xl font-black ${styles.textMain} uppercase tracking-tighter`}>Контроль платформы</h1>
-                  <span className="hidden sm:inline-block px-3 py-1 bg-emerald-500/20 text-emerald-500 text-[8px] lg:text-[10px] font-black uppercase rounded-full border border-emerald-500/20">Система онлайн</span>
+                  <span className="hidden sm:inline-block px-3 py-1 bg-blue-500/20 text-blue-500 text-[8px] lg:text-[10px] font-black uppercase rounded-full border border-blue-500/20">Система онлайн</span>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 lg:gap-8 shrink-0">
                <div className={`hidden sm:flex items-center gap-3 ${styles.input} rounded-2xl px-4 py-2 border ${styles.border}`}>
-                  <Cpu className="w-4 h-4 text-emerald-400" />
+                  <Cpu className="w-4 h-4 text-blue-400" />
                   <span className={`text-[10px] font-black ${styles.textSub} uppercase`}>{systemHealth?.current?.cpu ?? 0}% нагрузки</span>
                </div>
                <div className={`flex items-center gap-3 lg:gap-4 sm:pl-8 sm:border-l ${styles.border}`}>
@@ -1462,8 +1463,3 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
 };
 
 export default AdminDashboard;
-
-
-
-
-

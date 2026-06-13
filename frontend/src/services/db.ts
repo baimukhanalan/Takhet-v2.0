@@ -1,5 +1,5 @@
-﻿import { Appointment, User, UserRole, MedicalRecord, Doctor, TimeSlot, ChatSession, PartnerAdmin, SwarmCase } from '../types';
-import { Language } from './i18n';
+import { Appointment, User, UserRole, MedicalRecord, Doctor, TimeSlot, ChatSession, PartnerAdmin, SwarmCase } from '../types';
+import { Language } from './language';
 
 const DB_KEY = 'takhet_v15_db';
 
@@ -65,6 +65,8 @@ export interface SystemConfig {
   maintenanceMode: boolean;
   aiDiagnosticEnabled: boolean;
   serviceFeePercent: number;
+  aiModel?: string;
+  supportEmail?: string;
 }
 
 export interface Notification {
@@ -385,7 +387,7 @@ export const MockDB = {
   getVerifiedDoctors: () => MockDB.get().doctors.filter(d => d.isApproved),
   getActiveMemberData: () => {
     const db = MockDB.get();
-    return { 
+    return {
       id: db.userProfile.id,
       name: db.userProfile.name
     };
@@ -393,13 +395,13 @@ export const MockDB = {
   getDoctorSchedule: (doctorId: string, date: string) => {
     const db = MockDB.get();
     const baseSlots = [
-      { id: '1', time: '09:00', isBooked: false }, 
+      { id: '1', time: '09:00', isBooked: false },
       { id: '2', time: '10:00', isBooked: false },
       { id: '3', time: '11:00', isBooked: false },
       { id: '4', time: '14:00', isBooked: false },
       { id: '5', time: '15:00', isBooked: false }
     ];
-    
+
     // Check existing appointments to mark slots as booked
     const dayApps = db.appointments.filter(a => a.doctorId === doctorId && a.date === date && a.status !== 'cancelled');
     return baseSlots.map(slot => ({
@@ -420,18 +422,18 @@ export const MockDB = {
     const patientBusy = db.appointments.some(a => a.patientId === patientId && a.date === date && a.time === slot.time && a.status !== 'cancelled');
     if (patientBusy) throw new Error('You already have an appointment at this time');
 
-    const newApp = { 
-      id: 'app_' + Date.now(), 
+    const newApp = {
+      id: 'app_' + Date.now(),
       patientId,
-      doctorId, 
-      doctorName: doctor.name, 
-      patientName, 
-      date, 
-      time: slot.time, 
-      status: 'upcoming', 
-      type: 'Video' 
+      doctorId,
+      doctorName: doctor.name,
+      patientName,
+      date,
+      time: slot.time,
+      status: 'upcoming',
+      type: 'Video'
     } as Appointment;
-    
+
     db.appointments.push(newApp);
     MockDB.save(db);
     return newApp;
@@ -441,11 +443,11 @@ export const MockDB = {
     const db = MockDB.get();
     if (doctorId) {
       const apps = db.appointments.filter(a => a.doctorId === doctorId && a.status === 'completed');
-      return { 
-        rating: 4.9, 
-        sessions: apps.length, 
-        patients: new Set(apps.map(a => a.patientId)).size, 
-        revenue: apps.length * 15000 
+      return {
+        rating: 4.9,
+        sessions: apps.length,
+        patients: new Set(apps.map(a => a.patientId)).size,
+        revenue: apps.length * 15000
       };
     }
     return { rating: 4.9, sessions: 42, patients: 28, revenue: 450000 };
@@ -481,7 +483,7 @@ export const MockDB = {
   updateRequestStatus: (id: string, status: any) => {
     const db = MockDB.get();
     db.platformRequests = db.platformRequests.map(r => r.id === id ? { ...r, status } : r);
-    
+
     // If approved, update doctor/partner status
     if (status === 'Approved') {
       const req = db.platformRequests.find(r => r.id === id);
@@ -494,7 +496,7 @@ export const MockDB = {
         }
       }
     }
-    
+
     MockDB.save(db);
   },
   updateSystemConfig: (updates: Partial<SystemConfig>) => {
@@ -542,24 +544,23 @@ export const MockDB = {
   },
   updateAppointment: (id: string, updates: Partial<Appointment>) => {
     const db = MockDB.get();
-    db.appointments = db.appointments.map(app => 
+    db.appointments = db.appointments.map(app =>
       app.id === id ? { ...app, ...updates } : app
     );
     MockDB.save(db);
   },
   startAppointment: (id: string) => {
     const db = MockDB.get();
-    db.appointments = db.appointments.map(app => 
+    db.appointments = db.appointments.map(app =>
       (app.id === id && app.status === 'upcoming') ? { ...app, status: 'ongoing' } : app
     );
     MockDB.save(db);
   },
   finishAppointment: (appId: string, reportId?: string) => {
     const db = MockDB.get();
-    db.appointments = db.appointments.map(app => 
+    db.appointments = db.appointments.map(app =>
       app.id === appId ? { ...app, status: 'completed', completedAt: new Date().toISOString(), reportId } : app
     );
     MockDB.save(db);
   }
 };
-

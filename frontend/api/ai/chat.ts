@@ -59,20 +59,8 @@ const setCachedChat = (key: string, text: string) => {
   chatCache.set(key, { expiresAt: Date.now() + CHAT_CACHE_TTL_MS, text });
 };
 
-const canUseFastPath = (message: string, useSearch?: boolean) => {
-  if (useSearch) return false;
-  const text = String(message || '').trim();
-  if (!text) return false;
-  const words = text.split(/\s+/).filter(Boolean);
-  return text.length <= 120 || (text.length <= 180 && words.length <= 16);
-};
-
 async function generateChatText(message: string, systemInstruction?: string, useSearch?: boolean) {
   const activeQuestion = extractActiveQuestion(message);
-
-  if (canUseFastPath(activeQuestion, useSearch)) {
-    return buildHelpfulFallback(activeQuestion);
-  }
 
   const ai = ensureAi();
   const strictInstruction = buildStrictChatInstruction(activeQuestion, systemInstruction);

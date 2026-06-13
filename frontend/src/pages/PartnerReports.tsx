@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BarChart3, CreditCard, Download, ShieldCheck, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { roleApi } from '../../services/roleApi';
@@ -164,4 +164,3 @@ const PartnerReports: React.FC = () => {
 };
 
 export default PartnerReports;
-

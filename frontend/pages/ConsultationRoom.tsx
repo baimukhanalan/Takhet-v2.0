@@ -167,9 +167,9 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
                <textarea value={doctorNotes.complaints} onChange={e => setDoctorNotes({...doctorNotes, complaints: e.target.value})} className="w-full h-64 bg-slate-50 border-none rounded-3xl p-6 font-bold" placeholder="Жалобы, осмотр..." />
                
                {finalReport && (
-                  <div className="p-6 bg-emerald-50 rounded-[2rem] border border-emerald-100 flex items-start gap-4">
-                     <BrainCircuit className="w-6 h-6 text-emerald-600 shrink-0" />
-                     <p className="text-xs font-bold text-emerald-800 leading-relaxed">{finalReport.summary}</p>
+                  <div className="p-6 bg-blue-50 rounded-[2rem] border border-blue-100 flex items-start gap-4">
+                     <BrainCircuit className="w-6 h-6 text-blue-600 shrink-0" />
+                     <p className="text-xs font-bold text-blue-800 leading-relaxed">{finalReport.summary}</p>
                   </div>
                )}
             </div>
@@ -201,7 +201,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
                 <div className="grid gap-3">
                    {sessionFiles.map((f, i) => (
                       <div key={i} className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-4">
-                         <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                         <CheckCircle2 className="w-5 h-5 text-blue-500" />
                          <div className="flex flex-col"><span className="text-xs font-bold text-slate-700">{f.name}</span><span className="text-[9px] font-bold text-slate-400 uppercase">{f.synced ? 'Cloud synced' : 'Local only'}</span></div>
                       </div>
                    ))}

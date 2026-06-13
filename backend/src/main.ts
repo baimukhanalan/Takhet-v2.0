@@ -9,11 +9,14 @@ const express = require('express');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
   const telemetryService = app.get(TelemetryService);
   const allowedOrigins = new Set([
     'https://takhet.com',
     'https://www.takhet.com',
     'https://api.takhet.com',
+    'https://enterprise.takhet.com',
+    'https://labs.takhet.com',
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:4173',
@@ -25,10 +28,14 @@ async function bootstrap() {
     'http://127.0.0.1:5173',
     'http://127.0.0.1:8080'
   ]);
+  const isAllowedVercelPreviewOrigin = (origin: string) =>
+    origin.startsWith('https://') &&
+    origin.endsWith('.vercel.app') &&
+    origin.includes('baimukhanalan1-5914s-projects');
 
   app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.has(origin)) {
+    origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+      if (!origin || allowedOrigins.has(origin) || isAllowedVercelPreviewOrigin(origin)) {
         callback(null, true);
         return;
       }
@@ -42,6 +49,10 @@ async function bootstrap() {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+    res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(), payment=(self), fullscreen=(self), clipboard-read=(), clipboard-write=(self), accelerometer=(), gyroscope=(), magnetometer=(), usb=()');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
     next();
   });
   app.use((req: any, _res: any, next: any) => {
@@ -60,25 +71,28 @@ async function bootstrap() {
         return;
       }
 
-      const isApiRequest =
-        req.path === '/auth/login' ||
-        req.path === '/auth/register' ||
-        req.path === '/auth/session' ||
-        req.path === '/auth/logout' ||
-        req.path === '/doctors' ||
-        req.path.startsWith('/doctors/') ||
-        req.path === '/doctor' ||
-        req.path.startsWith('/doctor/') ||
-        req.path === '/patient' ||
-        req.path.startsWith('/patient/') ||
-        req.path === '/partner' ||
-        req.path.startsWith('/partner/') ||
-        req.path === '/admin' ||
-        req.path.startsWith('/admin/') ||
-        req.path === '/realtime' ||
-        req.path.startsWith('/realtime/') ||
-        req.path === '/api' ||
-        req.path.startsWith('/api/');
+      const apiPrefixes = [
+        '/auth',
+        '/doctors',
+        '/doctor',
+        '/patient',
+        '/partner',
+        '/admin',
+        '/realtime',
+        '/api',
+        '/payments',
+        '/files',
+        '/cases',
+        '/notifications',
+        '/profiles',
+        '/community',
+        '/enterprise',
+        '/labs',
+        '/guest',
+        '/triage',
+        '/ai'
+      ];
+      const isApiRequest = apiPrefixes.some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`));
 
       if (isApiRequest) {
         next();

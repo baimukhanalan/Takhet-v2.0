@@ -17,7 +17,7 @@ const DATA_GROWTH = [
 
 const PIE_DATA = [
   { name: 'Кардиология', value: 400, color: '#0D47A1' },
-  { name: 'Неврология', value: 300, color: '#00BFA5' },
+  { name: 'Неврология', value: 300, color: '#64B5F6' },
   { name: 'Педиатрия', value: 300, color: '#64B5F6' },
   { name: 'Терапия', value: 200, color: '#CFD8DC' },
 ];

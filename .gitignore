@@ -17,7 +17,16 @@ backend/node_modules/
 *.tmp
 *.trace
 .playwright-cli/
+**/.playwright-cli/
 output/
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+coverage/
+**/coverage/
+.vite/
+**/.vite/
 tmp-*.json
 tmp_*.txt
 *runtime*.png
@@ -29,5 +38,8 @@ frontend/*.log
 frontend/*.err
 frontend/tmp-*.json
 frontend/*lighthouse*.json
+frontend/test-results/
 frontend/.tmp-*
 frontend/.playwright-cli/
+
+.vercel

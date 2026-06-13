@@ -236,7 +236,7 @@ const ChatPage: React.FC<{ user: User }> = ({ user }) => {
                 {user.role === UserRole.DOCTOR && !activeChat.consultationEndDate ? (
                   <button
                     onClick={handleFinish}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-success text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition-colors shadow-lg shadow-success/20"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-success text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-lg shadow-success/20"
                   >
                     <CheckCircle2 className="w-4 h-4" /> Завершить
                   </button>

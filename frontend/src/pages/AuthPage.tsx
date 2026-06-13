@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ChevronRight, ArrowLeft, Stethoscope, Building2, User as UserIcon, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -66,12 +66,20 @@ const AuthPage: React.FC<{
     if (state.mode) setMode(state.mode);
   }, [state.role, state.mode]);
 
-  const goBackOrHome = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
+  const resolveAuthReturnTarget = () => {
+    const source = state.from?.pathname || '/';
+    const search = state.from?.search || '';
+    const protectedFallbacks = new Set(['/dashboard', '/doctors-search', '/archive', '/ai-lab', '/settings']);
+
+    if (protectedFallbacks.has(source) || source.startsWith('/consultation/')) {
+      return '/';
     }
-    navigate('/');
+
+    return `${source}${search}`;
+  };
+
+  const goBackOrHome = () => {
+    navigate(resolveAuthReturnTarget(), { replace: true });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -112,6 +120,17 @@ const AuthPage: React.FC<{
       state: {
         role,
         mode: 'register',
+        from: state.from,
+        forcePublicAuth: true
+      }
+    });
+  };
+
+  const openLogin = () => {
+    navigate('/auth', {
+      state: {
+        role,
+        mode: 'login',
         from: state.from,
         forcePublicAuth: true
       }
@@ -219,11 +238,11 @@ const AuthPage: React.FC<{
               <div className="space-y-3">
                 <div className="group relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary transition-colors" />
-                  <input required type="email" inputMode="email" autoComplete="email" placeholder={t.auth.email} value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-primary focus:bg-white transition-all font-bold" />
+                  <input required name="email" type="email" inputMode="email" autoComplete="username" placeholder={t.auth.email} value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-primary focus:bg-white transition-all font-bold" />
                 </div>
                 <div className="group relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary transition-colors" />
-                  <input required type={showPassword ? 'text' : 'password'} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} placeholder={t.auth.password} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-12 py-4 outline-none focus:border-primary focus:bg-white transition-all font-bold" />
+                  <input required name="password" type={showPassword ? 'text' : 'password'} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} placeholder={t.auth.password} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-12 py-4 outline-none focus:border-primary focus:bg-white transition-all font-bold" />
                   <button
                     type="button"
                     onClick={() => setShowPassword((value) => !value)}
@@ -246,7 +265,7 @@ const AuthPage: React.FC<{
                 </div>
               )}
               {infoMessage && (
-                <div className="rounded-xl bg-emerald-50 p-4 text-xs font-bold text-emerald-700">
+                <div className="rounded-xl bg-blue-50 p-4 text-xs font-bold text-blue-700">
                   {infoMessage}
                 </div>
               )}
@@ -261,8 +280,8 @@ const AuthPage: React.FC<{
                 {!isLoading && <ChevronRight className="w-5 h-5" />}
               </motion.button>
 
-              <button type="button" onClick={openRegister} className="w-full text-center text-primary font-black text-xs uppercase tracking-widest hover:underline">
-                {registerActionLabel}
+              <button type="button" onClick={mode === 'register' ? openLogin : openRegister} className="w-full text-center text-primary font-black text-xs uppercase tracking-widest hover:underline">
+                {mode === 'register' ? 'Войти' : registerActionLabel}
               </button>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button type="button" onClick={handleRequestEmailVerification} className="rounded-2xl bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary">

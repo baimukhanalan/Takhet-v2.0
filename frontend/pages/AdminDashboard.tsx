@@ -153,16 +153,16 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
                {[
                  { label: 'Пользователи', val: String(backendDash?.usersTotal ?? '14,204'), change: '+12%', icon: Users, color: 'text-blue-500' },
-                 { label: 'Активные кейсы', val: String(backendDash?.cases?.active ?? '842'), change: '+5%', icon: Activity, color: 'text-green-500' },
+                 { label: 'Активные кейсы', val: String(backendDash?.cases?.active ?? '842'), change: '+5%', icon: Activity, color: 'text-blue-500' },
                  { label: 'Транзакции MTD', val: `₸${Number(backendDash?.payments?.paidAmount ?? 42500000).toLocaleString()}`, change: '+22%', icon: TrendingUp, color: 'text-amber-500' },
-                 { label: 'Uptime системы', val: '99.9%', change: 'Stable', icon: ShieldCheck, color: 'text-emerald-500' },
+                 { label: 'Uptime системы', val: '99.9%', change: 'Stable', icon: ShieldCheck, color: 'text-blue-500' },
                ].map((s, i) => (
                  <div key={i} className={`${styles.card} p-6 lg:p-8 rounded-[2rem] lg:rounded-[2.5rem] border hover:border-primary/20 transition-all group`}>
                     <div className="flex items-center justify-between mb-4 lg:mb-6">
                        <div className={`p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-primary/10 ${s.color} group-hover:scale-110 transition-transform`}>
                           <s.icon className="w-5 h-5 lg:w-6 lg:h-6" />
                        </div>
-                       <span className="text-[10px] font-black text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full">{s.change}</span>
+                       <span className="text-[10px] font-black text-blue-400 bg-blue-400/10 px-3 py-1 rounded-full">{s.change}</span>
                     </div>
                     <p className={`${styles.textSub} text-[10px] font-black uppercase tracking-widest`}>{s.label}</p>
                     <p className={`text-2xl lg:text-4xl font-black ${styles.textMain} mt-2`}>{s.val}</p>
@@ -204,7 +204,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                               <span className={`text-xs lg:text-sm font-black ${styles.textMain}`}>{item.label}</span>
                            </div>
                            <button onClick={() => handleConfigToggle(item.key)}>
-                              {sysConfig[item.key] ? <ToggleRight className="w-8 h-8 text-emerald-500" /> : <ToggleLeft className="w-8 h-8 text-slate-400" />}
+                              {sysConfig[item.key] ? <ToggleRight className="w-8 h-8 text-blue-500" /> : <ToggleLeft className="w-8 h-8 text-slate-400" />}
                            </button>
                         </div>
                      ))}
@@ -292,17 +292,17 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-10">
                    {[
-                     { label: 'Финансовый аудит', icon: DollarSign, color: 'text-emerald-500', desc: 'Маржинальность и P&L', prompt: 'Проведи финансовый аудит за текущий месяц' },
+                     { label: 'Финансовый аудит', icon: DollarSign, color: 'text-blue-500', desc: 'Маржинальность и P&L', prompt: 'Проведи финансовый аудит за текущий месяц' },
                      { label: 'Эффективность врачей', icon: Stethoscope, color: 'text-blue-500', desc: 'Конверсия в повторный прием', prompt: 'Дай отчет по эффективности врачей' },
                      { label: 'Аудит безопасности', icon: ShieldEllipsis, color: 'text-red-500', desc: 'Аномалии доступа и логи', prompt: 'Покажи отчет по инцидентам безопасности' },
                      { label: 'Телеметрия API', icon: Cpu, color: 'text-amber-500', desc: 'Нагрузка и задержки серверов', prompt: 'Проанализируй телеметрию системы' },
                      { label: 'Retention Анализ', icon: History, color: 'text-purple-500', desc: 'Удержание пациентов LTV', prompt: 'Покажи статистику удержания пациентов' },
-                     { label: 'Прогноз выручки', icon: BarChartHorizontal, color: 'text-emerald-400', desc: 'AI-прогнозирование роста', prompt: 'Сделай прогноз выручки на следующий квартал' },
+                     { label: 'Прогноз выручки', icon: BarChartHorizontal, color: 'text-blue-400', desc: 'AI-прогнозирование роста', prompt: 'Сделай прогноз выручки на следующий квартал' },
                      { label: 'Точность ИИ-диагностики', icon: Zap, color: 'text-orange-500', desc: 'Подтверждаемость анализов', prompt: 'Каков процент точности ИИ за неделю?' },
                      { label: 'География запросов', icon: Globe, color: 'text-cyan-500', desc: 'Тепловая карта обращений', prompt: 'Покажи географическое распределение вызовов' },
                      { label: 'Анализ онбординга', icon: UserCheck, color: 'text-indigo-500', desc: 'Скорость проверки дипломов', prompt: 'Дай отчет по скорости онбординга новых врачей' },
                      { label: 'Маркетинговый ROI', icon: LineChartIcon, color: 'text-rose-500', desc: 'Стоимость привлечения CAC', prompt: 'Рассчитай ROI маркетинговых кампаний' },
-                     { label: 'Compliance Статус', icon: ShieldCheck, color: 'text-teal-500', desc: 'Соответствие закону о ПД', prompt: 'Проверь статус комплаенса данных' },
+                     { label: 'Compliance Статус', icon: ShieldCheck, color: 'text-blue-500', desc: 'Соответствие закону о ПД', prompt: 'Проверь статус комплаенса данных' },
                      { label: 'Целостность БД', icon: Database, color: 'text-slate-500', desc: 'Здоровье репликаций и индексов', prompt: 'Проведи диагностику базы данных' }
                    ].map((btn, i) => (
                      <button 
@@ -400,7 +400,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                             <td className={`p-6 font-black ${styles.textMain}`}>{med.price} ₸</td>
                             <td className={`p-6 font-bold ${styles.textSub}`}>{med.stock} шт</td>
                             <td className="p-6">
-                                <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${med.stock > 10 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${med.stock > 10 ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
                                   {med.stock > 10 ? 'В наличии' : 'Мало'}
                                 </span>
                             </td>
@@ -463,11 +463,11 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                      <div className="flex gap-2 w-full md:w-auto">
                         {req.status === 'Pending' ? (
                           <>
-                             <button onClick={() => handleRequestAction(req.id, 'Approved')} className="flex-1 px-4 lg:px-6 py-2 lg:py-3 bg-emerald-500 text-white rounded-lg font-black text-[10px] uppercase tracking-widest">Да</button>
+                             <button onClick={() => handleRequestAction(req.id, 'Approved')} className="flex-1 px-4 lg:px-6 py-2 lg:py-3 bg-blue-500 text-white rounded-lg font-black text-[10px] uppercase tracking-widest">Да</button>
                              <button onClick={() => handleRequestAction(req.id, 'Rejected')} className="flex-1 px-4 lg:px-6 py-2 lg:py-3 bg-red-500 text-white rounded-lg font-black text-[10px] uppercase tracking-widest">Нет</button>
                           </>
                         ) : (
-                          <span className={`w-full px-4 py-2 rounded-lg text-center text-[10px] font-black uppercase tracking-widest ${req.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{req.status}</span>
+                          <span className={`w-full px-4 py-2 rounded-lg text-center text-[10px] font-black uppercase tracking-widest ${req.status === 'Approved' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>{req.status}</span>
                         )}
                      </div>
                   </div>
@@ -530,7 +530,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                    <div key={p.id} className={`${styles.card} p-6 lg:p-8 rounded-[2rem] lg:rounded-[3rem] border space-y-6 group hover:border-primary/20 transition-all`}>
                       <div className="flex justify-between items-start">
                          <div className="w-12 h-12 lg:w-14 lg:h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary"><Building2 className="w-7 h-7 lg:w-8 lg:h-8" /></div>
-                         <span className={`px-2 py-1 rounded-full text-[8px] lg:text-[9px] font-black uppercase ${p.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>{p.status}</span>
+                         <span className={`px-2 py-1 rounded-full text-[8px] lg:text-[9px] font-black uppercase ${p.status === 'Active' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'}`}>{p.status}</span>
                       </div>
                       <div>
                          <h4 className={`${styles.textMain} font-black text-lg lg:text-xl truncate`}>{p.name}</h4>
@@ -548,7 +548,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
              <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Аналитика</h2>
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                 <div className={`${styles.card} p-6 lg:p-10 rounded-[2rem] lg:rounded-[3.5rem] border space-y-8`}>
-                   <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight flex items-center gap-3`}><DollarSign className="text-emerald-500" /> Выручка (7 дней)</h3>
+                   <h3 className={`text-lg lg:text-xl font-black ${styles.textMain} uppercase tracking-tight flex items-center gap-3`}><DollarSign className="text-blue-500" /> Выручка (7 дней)</h3>
                    <div className="h-64 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                          <BarChart data={revenueHistory}>
@@ -570,7 +570,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                             <XAxis dataKey="name" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
                             <YAxis hide />
                             <Tooltip contentStyle={{backgroundColor: isDark ? '#0f172a' : '#fff', borderRadius: '1rem', border: 'none'}} />
-                            <Line type="monotone" dataKey="users" stroke="#00BFA5" strokeWidth={4} dot={{fill: '#00BFA5', r: 6}} />
+                            <Line type="monotone" dataKey="users" stroke="#64B5F6" strokeWidth={4} dot={{fill: '#64B5F6', r: 6}} />
                          </LineChart>
                       </ResponsiveContainer>
                    </div>
@@ -698,11 +698,11 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
                  <Menu className="w-6 h-6" />
                </button>
                <h1 className={`text-lg lg:text-2xl font-black ${styles.textMain} uppercase tracking-tighter`}>Root Control</h1>
-               <span className="hidden sm:inline-block px-3 py-1 bg-emerald-500/20 text-emerald-500 text-[8px] lg:text-[10px] font-black uppercase rounded-full border border-emerald-500/20">System Online</span>
+               <span className="hidden sm:inline-block px-3 py-1 bg-blue-500/20 text-blue-500 text-[8px] lg:text-[10px] font-black uppercase rounded-full border border-blue-500/20">System Online</span>
             </div>
             <div className="flex items-center gap-3 lg:gap-8">
                <div className={`hidden sm:flex items-center gap-3 ${styles.input} rounded-2xl px-4 py-2 border ${styles.border}`}>
-                  <Cpu className="w-4 h-4 text-emerald-400" />
+                  <Cpu className="w-4 h-4 text-blue-400" />
                   <span className={`text-[10px] font-black ${styles.textSub} uppercase`}>14% Load</span>
                </div>
                <div className={`flex items-center gap-3 lg:gap-4 sm:pl-8 sm:border-l ${styles.border}`}>

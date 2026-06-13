@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -141,4 +141,3 @@ export class PartnerController {
     return this.profilesService.updatePortalProfile(req.user.id, 'partner', dto);
   }
 }
-

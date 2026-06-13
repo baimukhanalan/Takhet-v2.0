@@ -85,7 +85,7 @@ for (const value of forbidden) {
   assert(!service.toLowerCase().includes(value), `Enterprise backend must not expose forbidden phrase: ${value}`);
 }
 
-for (const marker of ['Р’', 'Рџ', 'Р›', 'СЃ', 'вЂ']) {
+for (const marker of ['\u0420\u2019', '\u0420\u045f', 'Р›', '\u0421\u0403', '\u0432\u0402']) {
   assert(!service.includes(marker), `Enterprise service must not contain mojibake marker: ${marker}`);
   assert(!controller.includes(marker), `Enterprise controller must not contain mojibake marker: ${marker}`);
 }

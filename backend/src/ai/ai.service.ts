@@ -158,7 +158,11 @@ export class AiService {
           contents: message,
           config: {
             systemInstruction: `${config.systemInstruction || this.strictAnswerRules}\n${this.strictAnswerRules}\n${this.kazakhstanContext}`,
-            tools: config.useSearch ? [{ googleSearch: {} }] : undefined
+            tools: config.useSearch ? [{ googleSearch: {} }] : undefined,
+            temperature: 0.15,
+            topP: 0.9,
+            candidateCount: 1,
+            maxOutputTokens: this.maxOutputTokensForTask('chat')
           }
         });
 
@@ -254,7 +258,14 @@ export class AiService {
 
     for (const model of this.getModelCandidates(task, input)) {
       try {
-        return await this.client.models.generateContent({ ...request, model });
+        return await this.client.models.generateContent({
+          ...request,
+          model,
+          config: {
+            ...(request.config || {}),
+            maxOutputTokens: request.config?.maxOutputTokens || this.maxOutputTokensForTask(task)
+          }
+        });
       } catch (error) {
         lastError = error;
         if (!this.isQuotaError(error)) {
@@ -269,6 +280,12 @@ export class AiService {
   private isQuotaError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error || '');
     return /429|503|RESOURCE_EXHAUSTED|UNAVAILABLE|quota|rate-limits|high demand/i.test(message);
+  }
+
+  private maxOutputTokensForTask(task: 'chat' | 'browser' | 'analysis' | 'image' | 'file' | 'pdf' | 'archive' | 'consultation-report') {
+    if (task === 'browser') return 1600;
+    if (['analysis', 'image', 'file', 'pdf', 'archive', 'consultation-report'].includes(task)) return 1800;
+    return 1400;
   }
 
   private extractRisk(text: string) {

@@ -28,7 +28,7 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
     setError(null);
 
     try {
-      await onLogin(UserRole.PATIENT, { email, password });
+      await onLogin(UserRole.PATIENT, { email: email.trim().toLowerCase(), password });
       const from = (location.state as any)?.from;
       const target = from?.pathname ? `${from.pathname}${from.search || ''}` : '/dashboard';
       navigate(target, { replace: true });
@@ -89,7 +89,10 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
                   <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-primary transition-colors" />
                   <input
                     required
-                    type="text"
+                    name="patient-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="username"
                     placeholder="Электронная почта"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -101,7 +104,9 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
                   <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-primary transition-colors" />
                   <input
                     required
+                    name="patient-password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder="Пароль"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

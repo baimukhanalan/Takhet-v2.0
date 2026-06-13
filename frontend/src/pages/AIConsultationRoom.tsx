@@ -1,7 +1,7 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Video, Mic, MicOff, VideoOff, Send, Paperclip, 
-  X, ChevronRight, BrainCircuit, Sparkles, MessageSquare, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Video, Mic, MicOff, VideoOff, Send, Paperclip,
+  X, ChevronRight, BrainCircuit, Sparkles, MessageSquare,
   FileText, Download, AlertCircle, CheckCircle2, Play,
   Volume2, VolumeX, Radio, Loader2, Search, Zap,
   Clock, MapPin, Shield
@@ -14,7 +14,29 @@ import { roleApi } from '../../services/roleApi';
 import { motion, AnimatePresence } from 'motion/react';
 import { FadeIn, FadeInStagger } from '../components/FadeIn';
 
-const getGeminiBrowserApiKey = () => (process.env.GEMINI_API_KEY || process.env.API_KEY || '').trim();
+const DEFAULT_GEMINI_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
+
+const getRuntimeEnvValue = (key: string) => {
+  try {
+    return typeof process !== 'undefined' ? process.env?.[key] || '' : '';
+  } catch {
+    return '';
+  }
+};
+
+const getGeminiBrowserApiKey = () => (
+  import.meta.env.VITE_GEMINI_API_KEY ||
+  import.meta.env.VITE_API_KEY ||
+  getRuntimeEnvValue('GEMINI_API_KEY') ||
+  getRuntimeEnvValue('API_KEY') ||
+  ''
+).trim();
+
+const getGeminiLiveModel = () => (
+  import.meta.env.VITE_GEMINI_LIVE_MODEL ||
+  getRuntimeEnvValue('GEMINI_LIVE_MODEL') ||
+  DEFAULT_GEMINI_LIVE_MODEL
+).trim();
 
 const cleanAIText = (text: string) =>
   text
@@ -24,8 +46,22 @@ const cleanAIText = (text: string) =>
 
 const LIVE_VIDEO_FRAME_WIDTH = 320;
 const LIVE_VIDEO_FRAME_HEIGHT = 240;
-const LIVE_VIDEO_FRAME_QUALITY = 0.32;
-const LIVE_VIDEO_FRAME_INTERVAL_MS = 2500;
+const LIVE_VIDEO_FRAME_QUALITY = 0.24;
+const LIVE_VIDEO_FRAME_INTERVAL_MS = 900;
+const LIVE_AUDIO_PROCESSOR_BUFFER_SIZE = 512;
+const LIVE_BARGE_IN_RMS_THRESHOLD = 0.025;
+const LIVE_BARGE_IN_DEBOUNCE_MS = 250;
+
+const LIVE_BASE_SYSTEM_INSTRUCTION = [
+  'You are Takhet+ live AI consultation assistant.',
+  'Reply in Russian by default.',
+  'Your default orientation is safe medical triage and practical healthcare guidance for Kazakhstan.',
+  'If the patient asks a non-medical question, answer it directly and usefully instead of refusing only because it is not medical.',
+  'Do not provide a final diagnosis. Give orientation, red flags, next steps, and the relevant specialist when appropriate.',
+  'Listen first. Ask one concise question at a time and wait for the patient to answer.',
+  'Do not repeat disclaimers in every answer.',
+  'Use clean plain text without Markdown, internal instructions, or technical wording.'
+].join('\n');
 
 const LIVE_AI_BEHAVIOR_INSTRUCTION = [
   'Default mode: help a patient in Kazakhstan with medical orientation, symptoms, red flags, next steps, and safe recommendations.',
@@ -33,6 +69,8 @@ const LIVE_AI_BEHAVIOR_INSTRUCTION = [
   'Use incoming camera frames as real visual context: face, skin, posture, movement, documents, medicine packages, lab results, or visible symptoms.',
   'Do not diagnose from video alone. If visual evidence is insufficient, state what is visible, what cannot be confirmed, and what clarification is needed.',
   'Continue listening while answering. If the user interrupts, asks a new question, or clarifies a symptom, switch to the new request.',
+  'Ask one concise question, then stop and let the patient answer.',
+  'Do not talk over the patient. If the patient starts speaking while you answer, stop the current answer and listen.',
   'Reply to the patient in clean Russian text: no Markdown, no asterisks, no internal instructions, no technical wording.',
   'For urgent red flags in Kazakhstan, orient the patient to 103 or 112.'
 ].join('\n');
@@ -56,7 +94,7 @@ const AIConsultationRoom: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [micLevel, setMicLevel] = useState(0);
   const [chatMode, setChatMode] = useState<'standard' | 'thinking' | 'search'>('standard');
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [uploadedDocs, setUploadedDocs] = useState<{name: string, analysis: string}[]>([]);
@@ -82,6 +120,7 @@ const AIConsultationRoom: React.FC = () => {
   const sessionEndedRef = useRef(false);
   const isLiveConnectedRef = useRef(false);
   const isMicOnRef = useRef(true);
+  const lastUserSpeechInterruptAtRef = useRef(0);
   const draftSyncTimerRef = useRef<number | null>(null);
   const lastDraftSignatureRef = useRef('');
   const isFinalizingRef = useRef(false);
@@ -156,18 +195,19 @@ const AIConsultationRoom: React.FC = () => {
       }
     };
     window.addEventListener('click', resume);
-    
+
     // Periodic check to keep AudioContext alive
     const interval = setInterval(resume, 1000);
-    
+
     return () => {
       window.removeEventListener('click', resume);
       clearInterval(interval);
     };
   }, []);
 
-  const cleanupLive = () => {
+  const cleanupLive = (options: { preserveMediaStream?: boolean } = {}) => {
     if (isCleaningUpRef.current) return;
+    const { preserveMediaStream = false } = options;
     isCleaningUpRef.current = true;
     isConnectingRef.current = false;
     isLiveConnectedRef.current = false;
@@ -203,7 +243,7 @@ const AIConsultationRoom: React.FC = () => {
     liveSessionRef.current = null;
     sessionRef.current = null;
 
-    if (streamRef.current) {
+    if (streamRef.current && !preserveMediaStream) {
       streamRef.current.getTracks().forEach(track => {
         track.enabled = false;
         track.stop();
@@ -211,7 +251,7 @@ const AIConsultationRoom: React.FC = () => {
       streamRef.current = null;
     }
 
-    if (videoRef.current) {
+    if (videoRef.current && !preserveMediaStream) {
       videoRef.current.srcObject = null;
     }
 
@@ -314,76 +354,81 @@ const AIConsultationRoom: React.FC = () => {
 
   const startConsultation = async () => {
     if (isConnectingRef.current) return;
-    sessionEndedRef.current = false;
-    
-    // Cleanup any existing session before starting a new one
-    if (liveSessionRef.current || streamRef.current) {
-      cleanupLive();
+
+    // Stop old Live/audio nodes without throwing away an already granted camera/mic stream.
+    if (liveSessionRef.current || sessionRef.current || audioInputProcessorRef.current || videoFrameIntervalRef.current || audioContextRef.current) {
+      cleanupLive({ preserveMediaStream: true });
     }
 
+    sessionEndedRef.current = false;
     isConnectingRef.current = true;
     setConnectionError(null);
-    
+
     try {
       // 1. Create fresh Gemini instance
-      const ai = new GoogleGenAI({ apiKey: getGeminiBrowserApiKey() });
+      const apiKey = getGeminiBrowserApiKey();
+      if (!apiKey) {
+        throw new Error('Gemini Live API key is not configured for the browser build.');
+      }
+      const ai = new GoogleGenAI({ apiKey });
 
       // 2. Use existing stream or request new one if missing
       let stream = streamRef.current;
-      if (!stream) {
-        console.log("Requesting media stream...");
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } }, 
+      const hasLiveAudio = stream?.getAudioTracks().some((track) => track.readyState === 'live');
+      const hasLiveVideo = stream?.getVideoTracks().some((track) => track.readyState === 'live');
+      if (!stream || !hasLiveAudio || !hasLiveVideo) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true
-          } 
+          }
         });
         streamRef.current = stream;
       }
 
       // Validate audio tracks
       const audioTracks = stream.getAudioTracks();
-      console.log("Audio tracks found:", audioTracks.length, audioTracks[0]?.label);
       if (audioTracks.length === 0) {
         throw new Error("No audio tracks found. Please check your microphone.");
       }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.muted = true;
+        videoRef.current.playsInline = true;
+        await videoRef.current.play().catch(() => undefined);
       }
 
       // 3. Setup Audio Context
-      console.log("Initializing AudioContext...");
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      
+
       if (!audioContextRef.current) {
         audioContextRef.current = new AudioContextClass();
       }
-      
+
       const ctx = audioContextRef.current;
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
-      console.log("AudioContext state:", ctx.state, "SampleRate:", ctx.sampleRate);
       nextStartTimeRef.current = ctx.currentTime;
 
       const liveSystemInstruction = [
-        t.ai_consultation.room.systemInstruction,
+        LIVE_BASE_SYSTEM_INSTRUCTION,
         LIVE_AI_BEHAVIOR_INSTRUCTION
       ].join('\n');
 
       // 4. Connect Live API
       const sessionPromise = ai.live.connect({
-        model: "gemini-2.5-flash-native-audio-preview-12-2025",
+        model: getGeminiLiveModel(),
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
           },
-          outputAudioTranscription: {}, 
-          inputAudioTranscription: {}, 
+          outputAudioTranscription: {},
+          inputAudioTranscription: {},
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           systemInstruction: liveSystemInstruction,
         },
@@ -393,7 +438,6 @@ const AIConsultationRoom: React.FC = () => {
               sessionPromise.then((session) => session.close?.()).catch(() => undefined);
               return;
             }
-            console.log("Gemini Live Session Opened!");
             isLiveConnectedRef.current = true;
             setIsLiveConnected(true);
             isConnectingRef.current = false;
@@ -447,7 +491,7 @@ const AIConsultationRoom: React.FC = () => {
     canvas.width = LIVE_VIDEO_FRAME_WIDTH;
     canvas.height = LIVE_VIDEO_FRAME_HEIGHT;
 
-    videoFrameIntervalRef.current = window.setInterval(() => {
+    const sendVideoFrame = () => {
       const video = videoRef.current;
       const currentSession = sessionRef.current || liveSessionRef.current || session;
       if (sessionEndedRef.current) return;
@@ -471,7 +515,15 @@ const AIConsultationRoom: React.FC = () => {
       } catch (err) {
         console.error('Error sending video frame to Gemini:', err);
       }
-    }, LIVE_VIDEO_FRAME_INTERVAL_MS);
+    };
+
+    const video = videoRef.current;
+    if (video && video.readyState < 2) {
+      video.addEventListener('loadeddata', sendVideoFrame, { once: true });
+    }
+
+    sendVideoFrame();
+    videoFrameIntervalRef.current = window.setInterval(sendVideoFrame, LIVE_VIDEO_FRAME_INTERVAL_MS);
   };
 
   const setupAudioInput = (session: any) => {
@@ -479,9 +531,9 @@ const AIConsultationRoom: React.FC = () => {
       console.error("Audio setup failed: context or stream missing", { ctx: !!audioContextRef.current, stream: !!streamRef.current });
       return;
     }
-    
+
     const ctx = audioContextRef.current;
-    
+
     // Ensure context is running
     const ensureRunning = async () => {
       if (ctx.state === 'suspended') {
@@ -492,7 +544,7 @@ const AIConsultationRoom: React.FC = () => {
     ensureRunning();
 
     const source = ctx.createMediaStreamSource(streamRef.current);
-    
+
     // 1. Analyser for UI Visuals
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
@@ -512,30 +564,27 @@ const AIConsultationRoom: React.FC = () => {
         return;
       }
       if (ctx.state === 'suspended') ctx.resume();
-      
-      if (!isMicOn) {
+
+      if (!isMicOnRef.current) {
         setMicLevel(0);
         requestAnimationFrame(updateMicLevel);
         return;
       }
-      
+
       analyser.getByteFrequencyData(dataArray);
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) {
         sum += dataArray[i];
       }
       const average = sum / bufferLength;
-      
-      // Log occasionally to debug
-      if (Math.random() < 0.01) console.log("Mic Level Debug:", average);
-      
-      setMicLevel(Math.min(1, (average / 128) * 2)); 
+
+      setMicLevel(Math.min(1, (average / 128) * 2));
       requestAnimationFrame(updateMicLevel);
     };
     updateMicLevel();
 
     // 2. ScriptProcessor for Gemini Audio Streaming
-    const processor = ctx.createScriptProcessor(2048, 1, 1); 
+    const processor = ctx.createScriptProcessor(LIVE_AUDIO_PROCESSOR_BUFFER_SIZE, 1, 1);
     audioInputProcessorRef.current = processor;
     // Prevent garbage collection
     (window as any)._geminiProcessor = processor;
@@ -550,7 +599,7 @@ const AIConsultationRoom: React.FC = () => {
       if (!isMicOnRef.current || !isLiveConnectedRef.current || !currentSession) return;
 
       let inputData = e.inputBuffer.getChannelData(0);
-      
+
       if (sampleRate !== 16000) {
         const ratio = sampleRate / 16000;
         const newLength = Math.round(inputData.length / ratio);
@@ -568,12 +617,21 @@ const AIConsultationRoom: React.FC = () => {
         inputData = resampledData;
       }
 
+      let rmsTotal = 0;
+      for (let i = 0; i < inputData.length; i++) {
+        rmsTotal += inputData[i] * inputData[i];
+      }
+      const rms = Math.sqrt(rmsTotal / Math.max(inputData.length, 1));
+      if (rms > LIVE_BARGE_IN_RMS_THRESHOLD) {
+        stopAssistantAudioForUserSpeech();
+      }
+
       const pcmData = new Int16Array(inputData.length);
       for (let i = 0; i < inputData.length; i++) {
         const s = Math.max(-1, Math.min(1, inputData[i]));
         pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
-      
+
       const bytes = new Uint8Array(pcmData.buffer);
       let binary = '';
       for (let i = 0; i < bytes.length; i++) {
@@ -592,6 +650,26 @@ const AIConsultationRoom: React.FC = () => {
 
     source.connect(processor);
     processor.connect(ctx.destination);
+  };
+
+  const stopAssistantAudioForUserSpeech = () => {
+    const now = Date.now();
+    if (!isPlayingRef.current && audioOutputQueueRef.current.length === 0) return;
+    if (now - lastUserSpeechInterruptAtRef.current < LIVE_BARGE_IN_DEBOUNCE_MS) return;
+    lastUserSpeechInterruptAtRef.current = now;
+
+    audioOutputQueueRef.current = [];
+    activeAudioSourcesRef.current.forEach((source) => {
+      try {
+        source.stop();
+      } catch (error) {}
+    });
+    activeAudioSourcesRef.current = [];
+    isPlayingRef.current = false;
+    setIsAISpeaking(false);
+    if (audioContextRef.current) {
+      nextStartTimeRef.current = audioContextRef.current.currentTime;
+    }
   };
 
   const handleLiveMessage = (message: LiveServerMessage) => {
@@ -636,12 +714,7 @@ const AIConsultationRoom: React.FC = () => {
 
     // Interruption
     if (message.serverContent?.interrupted) {
-      audioOutputQueueRef.current = [];
-      isPlayingRef.current = false;
-      setIsAISpeaking(false);
-      if (audioContextRef.current) {
-        nextStartTimeRef.current = audioContextRef.current.currentTime;
-      }
+      stopAssistantAudioForUserSpeech();
     }
   };
 
@@ -673,12 +746,12 @@ const AIConsultationRoom: React.FC = () => {
 
     isPlayingRef.current = true;
     setIsAISpeaking(true);
-    
+
     const pcmData = audioOutputQueueRef.current.shift()!;
     // Gemini Live API outputs at 24000Hz. Playing at 16000Hz makes it sound "slowed down".
     const buffer = audioContextRef.current.createBuffer(1, pcmData.length, 24000);
     const channelData = buffer.getChannelData(0);
-    
+
     for (let i = 0; i < pcmData.length; i++) {
       channelData[i] = pcmData[i] / 0x7FFF;
     }
@@ -687,13 +760,13 @@ const AIConsultationRoom: React.FC = () => {
     source.buffer = buffer;
     source.connect(audioContextRef.current.destination);
     activeAudioSourcesRef.current.push(source);
-    
+
     const startTime = Math.max(audioContextRef.current.currentTime, nextStartTimeRef.current);
     source.start(startTime);
-    
+
     // Track duration and schedule next
     nextStartTimeRef.current = startTime + buffer.duration;
-    
+
     source.onended = () => {
       activeAudioSourcesRef.current = activeAudioSourcesRef.current.filter((item) => item !== source);
       if (!sessionEndedRef.current) processAudioQueue();
@@ -714,7 +787,7 @@ const AIConsultationRoom: React.FC = () => {
       const result = cleanAIText(await advancedChatStream(
         `Consultation context:\n${conversation}\n\nPatient question: ${query}`,
         {
-          systemInstruction: `${t.ai_consultation.room.systemInstruction}\nReturn a deep medical-oriented review in clean Russian text without Markdown or asterisks.`,
+          systemInstruction: `${LIVE_BASE_SYSTEM_INSTRUCTION}\nReturn a deep medical-oriented review in clean Russian text without Markdown or asterisks.`,
           useSearch: false,
           onDelta: (_delta, fullText) => {
             setMessages(prev => {
@@ -772,7 +845,7 @@ const AIConsultationRoom: React.FC = () => {
       const result = cleanAIText(await advancedChatStream(
         `Consultation context:\n${conversation}\n\n${t.ai_consultation.room.searchPrompt.replace('{query}', query)}`,
         {
-          systemInstruction: `${t.ai_consultation.room.systemInstruction}\nReturn clean Russian text without Markdown or asterisks.`,
+          systemInstruction: `${LIVE_BASE_SYSTEM_INSTRUCTION}\nReturn clean Russian text without Markdown or asterisks.`,
           useSearch: true,
           onDelta: (_delta, fullText) => {
             setMessages(prev => {
@@ -837,15 +910,15 @@ const AIConsultationRoom: React.FC = () => {
           ]
         }]
       });
-      
+
       const analysis = cleanAIText(response.text || t.ai_consultation.room.docAnalysisFail);
       setUploadedDocs(prev => [...prev, { name: file.name, analysis }]);
-      
+
       const currentSession = sessionRef.current || liveSessionRef.current;
       if (currentSession) {
         sendLiveTextTurn(currentSession, t.ai_consultation.room.docAnalysisResult.replace('{name}', file.name).replace('{analysis}', analysis));
       }
-      
+
       setMessages(prev => [...prev, { role: 'ai', text: `${t.ai_consultation.room.docAnalysis} ${file.name}: ${analysis}` }]);
       upsertTranscriptEntry('system', `Document: ${file.name}`, 'append');
       upsertTranscriptEntry('ai', `${t.ai_consultation.room.docAnalysis} ${file.name}: ${analysis}`, 'append');
@@ -978,18 +1051,18 @@ const AIConsultationRoom: React.FC = () => {
         ? consultationTranscript.map((m) => `${m.speaker}: ${m.text}`).join('\n')
         : messages.map(m => `${m.role}: ${m.text}`).join('\n');
       const docs = uploadedDocs.map(d => `Document ${d.name}: ${d.analysis}`).join('\n');
-      
+
       const response = await ai.models.generateContent({
         model: "gemini-2.5-pro",
-        contents: [{ 
-          role: "user", 
-          parts: [{ text: t.ai_consultation.room.reportPrompt.replace('{conversation}', conversation).replace('{docs}', docs) }] 
+        contents: [{
+          role: "user",
+          parts: [{ text: t.ai_consultation.room.reportPrompt.replace('{conversation}', conversation).replace('{docs}', docs) }]
         }],
         config: {
           systemInstruction: t.ai_consultation.room.reportSystemInstruction
         }
       });
-      
+
       const result = cleanAIText(response.text || t.ai_consultation.room.reportFail);
       setReport(result);
       setMessages(prev => [...prev, { role: 'ai', text: `${t.ai_consultation.room.reportFormed}: ${result}` }]);
@@ -1005,7 +1078,7 @@ const AIConsultationRoom: React.FC = () => {
 
   const handlePayment = () => {
     setIsAIThinking(true);
-    
+
     // Initialize AudioContext on user gesture to avoid "suspended" state issues
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -1030,7 +1103,7 @@ const AIConsultationRoom: React.FC = () => {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
         <AnimatePresence mode="wait">
           {!isReadyToStart ? (
-            <motion.div 
+            <motion.div
               key="payment-grid"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1057,29 +1130,29 @@ const AIConsultationRoom: React.FC = () => {
                 <FadeInStagger>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {[
-                      { 
-                        icon: <Zap className="w-6 h-6 text-amber-400" />, 
-                        title: t('ai_consultation.benefits.instant.title'), 
-                        desc: t('ai_consultation.benefits.instant.desc') 
+                      {
+                        icon: <Zap className="w-6 h-6 text-amber-400" />,
+                        title: t('ai_consultation.benefits.instant.title'),
+                        desc: t('ai_consultation.benefits.instant.desc')
                       },
-                      { 
-                        icon: <BrainCircuit className="w-6 h-6 text-primary" />, 
-                        title: t('ai_consultation.benefits.analysis.title'), 
-                        desc: t('ai_consultation.benefits.analysis.desc') 
+                      {
+                        icon: <BrainCircuit className="w-6 h-6 text-primary" />,
+                        title: t('ai_consultation.benefits.analysis.title'),
+                        desc: t('ai_consultation.benefits.analysis.desc')
                       },
-                      { 
-                        icon: <CheckCircle2 className="w-6 h-6 text-emerald-400" />, 
-                        title: t('ai_consultation.benefits.confidential.title'), 
-                        desc: t('ai_consultation.benefits.confidential.desc') 
+                      {
+                        icon: <CheckCircle2 className="w-6 h-6 text-blue-400" />,
+                        title: t('ai_consultation.benefits.confidential.title'),
+                        desc: t('ai_consultation.benefits.confidential.desc')
                       },
-                      { 
-                        icon: <FileText className="w-6 h-6 text-blue-400" />, 
-                        title: t('ai_consultation.benefits.report.title'), 
-                        desc: t('ai_consultation.benefits.report.desc') 
+                      {
+                        icon: <FileText className="w-6 h-6 text-blue-400" />,
+                        title: t('ai_consultation.benefits.report.title'),
+                        desc: t('ai_consultation.benefits.report.desc')
                       }
                     ].map((benefit, i) => (
                       <FadeIn key={i}>
-                        <motion.div 
+                        <motion.div
                           whileHover={{ y: -5, backgroundColor: 'rgba(255,255,255,0.1)' }}
                           className="p-6 bg-white/5 rounded-[2rem] border border-white/10 transition-all group"
                         >
@@ -1100,11 +1173,11 @@ const AIConsultationRoom: React.FC = () => {
                     <div className="space-y-4">
                       {[
                         { icon: <Clock className="w-5 h-5 text-primary" />, ...t('ai_consultation.whyChoose.p1') },
-                        { icon: <MapPin className="w-5 h-5 text-emerald-400" />, ...t('ai_consultation.whyChoose.p2') },
+                        { icon: <MapPin className="w-5 h-5 text-blue-400" />, ...t('ai_consultation.whyChoose.p2') },
                         { icon: <Shield className="w-5 h-5 text-blue-400" />, ...t('ai_consultation.whyChoose.p3') },
                         { icon: <Video className="w-5 h-5 text-amber-400" />, ...t('ai_consultation.whyChoose.p4') }
                       ].map((item, i) => (
-                        <motion.div 
+                        <motion.div
                           key={i}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -1136,14 +1209,14 @@ const AIConsultationRoom: React.FC = () => {
 
               {/* Payment Card */}
               <FadeIn direction="right" className="order-1 lg:order-2">
-                <motion.div 
+                <motion.div
                   whileHover={{ scale: 1.01 }}
                   className="bg-white rounded-[3.5rem] p-10 lg:p-14 space-y-10 shadow-[0_0_100px_rgba(13,71,161,0.2)] relative overflow-hidden"
                 >
                   <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-                  
+
                   <div className="text-center space-y-4 relative">
-                    <motion.div 
+                    <motion.div
                       animate={{ rotate: [3, -3, 3] }}
                       transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                       className="w-24 h-24 bg-primary/10 rounded-[2.5rem] flex items-center justify-center mx-auto"
@@ -1168,17 +1241,17 @@ const AIConsultationRoom: React.FC = () => {
                       </div>
                     </div>
                     <div className="h-px bg-slate-200 w-full opacity-50"></div>
-                    <div className="flex items-center gap-3 text-emerald-600">
+                    <div className="flex items-center gap-3 text-blue-600">
                       <CheckCircle2 className="w-5 h-5" />
                       <span className="text-[10px] font-black uppercase tracking-widest">{t('ai_consultation.payment.allFeatures')}</span>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <motion.button 
+                    <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={handlePayment} 
+                      onClick={handlePayment}
                       className="w-full py-7 bg-[#f14635] text-white rounded-[2.5rem] font-black uppercase text-sm tracking-widest shadow-2xl shadow-red-500/20 transition-all flex items-center justify-center gap-4 group"
                     >
                       <img src="https://kaspi.kz/img/kaspi_logo.png" className="w-8 h-8 invert brightness-0 group-hover:scale-110 transition-transform" alt="" />
@@ -1194,7 +1267,7 @@ const AIConsultationRoom: React.FC = () => {
               </FadeIn>
             </motion.div>
           ) : (
-            <motion.div 
+            <motion.div
               key="start-screen"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1221,14 +1294,14 @@ const AIConsultationRoom: React.FC = () => {
                     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
                     audioContextRef.current = new AudioContextClass();
                     await audioContextRef.current.resume();
-                    
+
                     // Pre-request stream
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                      video: { width: { ideal: 1280 }, height: { ideal: 720 } }, 
-                      audio: true 
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                      audio: true
                     });
                     streamRef.current = stream;
-                    
+
                     sessionEndedRef.current = false;
                     setStep('consultation');
                   } catch (err) {
@@ -1252,7 +1325,7 @@ const AIConsultationRoom: React.FC = () => {
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-white/10 flex items-center justify-between bg-slate-900/50 backdrop-blur-xl shrink-0">
         <div className="flex items-center gap-3 md:gap-4">
-          <motion.div 
+          <motion.div
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
             className="w-10 h-10 md:w-12 md:h-12 bg-primary rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20"
@@ -1262,12 +1335,12 @@ const AIConsultationRoom: React.FC = () => {
           <div>
             <h1 className="text-sm md:text-xl font-black tracking-tighter uppercase">{t('ai_consultation.room.title')}</h1>
             <p className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
-              <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span> 
+              <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${isLiveConnected ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`}></span>
               <span className="break-words max-w-[120px] md:max-w-none">
                 {isLiveConnected ? t('ai_consultation.room.connected') : connectionError || t('ai_consultation.room.connecting')}
               </span>
               {!isLiveConnected && !isConnectingRef.current && (
-                <button 
+                <button
                   onClick={() => startConsultation()}
                   className="ml-1 px-1.5 py-0.5 bg-white/10 hover:bg-white/20 rounded text-[7px] md:text-[8px] transition-all"
                 >
@@ -1277,10 +1350,10 @@ const AIConsultationRoom: React.FC = () => {
             </p>
           </div>
         </div>
-        <motion.button 
+        <motion.button
           whileHover={{ scale: 1.1, rotate: 90 }}
           whileTap={{ scale: 0.9 }}
-          onClick={finishConsultation} 
+          onClick={finishConsultation}
           className="p-3 md:p-4 bg-white/5 rounded-xl md:rounded-2xl hover:bg-white/10 transition-all"
         >
           <X className="w-5 h-5 md:w-6 md:h-6" />
@@ -1297,7 +1370,7 @@ const AIConsultationRoom: React.FC = () => {
           <FadeIn direction="right" className="absolute top-4 right-4 md:top-8 md:right-8 z-10">
             <div className="w-32 h-44 md:w-48 md:h-64 bg-slate-900/80 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden flex flex-col items-center justify-center p-4 md:p-6 space-y-2 md:space-y-4">
                <div className="relative">
-                  <motion.div 
+                  <motion.div
                     animate={isAISpeaking ? { scale: [1, 1.1, 1], boxShadow: "0 0 20px rgba(13,71,161,0.5)" } : {}}
                     transition={{ duration: 0.5, repeat: Infinity }}
                     className={`w-16 h-16 md:w-24 md:h-24 bg-primary/20 rounded-full flex items-center justify-center transition-all duration-300`}
@@ -1306,15 +1379,15 @@ const AIConsultationRoom: React.FC = () => {
                   </motion.div>
                   <AnimatePresence>
                     {isAISpeaking && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 md:gap-1"
                       >
                         {[...Array(4)].map((_, i) => (
-                          <motion.div 
-                            key={i} 
+                          <motion.div
+                            key={i}
                             animate={{ height: [3, 12, 3] }}
                             transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
                             className="w-0.5 md:w-1 bg-primary rounded-full"
@@ -1334,36 +1407,36 @@ const AIConsultationRoom: React.FC = () => {
           {/* Controls */}
           <div className="absolute bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-3 md:gap-6 p-3 md:p-4 bg-white/10 backdrop-blur-2xl rounded-[2rem] md:rounded-[3rem] border border-white/10 shadow-2xl z-20">
              <div className="relative">
-                <motion.button 
+                <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => setIsMicOn(!isMicOn)} 
-                  className={`p-3 md:p-5 rounded-full transition-all ${isMicOn ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}
+                  onClick={() => setIsMicOn(!isMicOn)}
+                  className={`p-3 md:p-5 rounded-full transition-all ${isMicOn ? 'bg-blue-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}
                 >
                    {isMicOn ? <Mic className="w-5 h-5 md:w-6 md:h-6" /> : <MicOff className="w-5 h-5 md:w-6 md:h-6" />}
                 </motion.button>
                 {isMicOn && (
                   <div className="absolute -bottom-1 md:-bottom-2 left-1/2 -translate-x-1/2 w-full h-0.5 md:h-1 bg-white/20 rounded-full overflow-hidden">
-                    <motion.div 
+                    <motion.div
                       animate={{ width: `${Math.min(100, micLevel * 100)}%` }}
-                      className="h-full bg-emerald-400"
+                      className="h-full bg-blue-400"
                     ></motion.div>
                   </div>
                 )}
              </div>
-             <motion.button 
+             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => setIsCameraOn(!isCameraOn)} 
+              onClick={() => setIsCameraOn(!isCameraOn)}
               className={`p-3 md:p-5 rounded-full transition-all ${isCameraOn ? 'bg-white/10 hover:bg-white/20' : 'bg-red-500 text-white'}`}
              >
                 {isCameraOn ? <Video className="w-5 h-5 md:w-6 md:h-6" /> : <VideoOff className="w-5 h-5 md:w-6 md:h-6" />}
              </motion.button>
              <div className="w-px h-8 md:h-10 bg-white/10 mx-1 md:mx-2"></div>
-             <motion.button 
+             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={finishConsultation} 
+              onClick={finishConsultation}
               className="px-6 md:px-10 py-3 md:py-5 bg-red-500 text-white rounded-xl md:rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-widest hover:bg-red-600 transition-all shadow-xl shadow-red-500/20"
              >
                {t('ai_consultation.room.finish')}
@@ -1381,7 +1454,7 @@ const AIConsultationRoom: React.FC = () => {
            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 no-scrollbar">
               <AnimatePresence initial={false}>
                 {messages.map((msg, i) => (
-                  <motion.div 
+                  <motion.div
                     key={i}
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1394,7 +1467,7 @@ const AIConsultationRoom: React.FC = () => {
                 ))}
               </AnimatePresence>
               {isAIThinking && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="flex justify-start"
@@ -1411,7 +1484,7 @@ const AIConsultationRoom: React.FC = () => {
            {/* Docs List */}
            <AnimatePresence>
              {uploadedDocs.length > 0 && (
-               <motion.div 
+               <motion.div
                  initial={{ height: 0, opacity: 0 }}
                  animate={{ height: 'auto', opacity: 1 }}
                  exit={{ height: 0, opacity: 0 }}
@@ -1420,7 +1493,7 @@ const AIConsultationRoom: React.FC = () => {
                   <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('ai_consultation.room.docAnalysis')}</p>
                   <div className="space-y-2 max-h-32 md:max-h-40 overflow-y-auto no-scrollbar">
                      {uploadedDocs.map((doc, i) => (
-                       <motion.div 
+                       <motion.div
                         key={i}
                         initial={{ x: -20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
@@ -1442,7 +1515,7 @@ const AIConsultationRoom: React.FC = () => {
            {/* Input Area */}
            <div className="p-4 md:p-6 bg-slate-950/50 border-t border-white/10 space-y-3 md:space-y-4 shrink-0">
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                <button 
+                <button
                   onClick={() => setChatMode('standard')}
                   className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[7px] md:text-[8px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 md:gap-2 whitespace-nowrap ${
                     chatMode === 'standard' ? 'bg-primary border-primary text-white' : 'bg-white/5 border-white/10 text-slate-400'
@@ -1450,7 +1523,7 @@ const AIConsultationRoom: React.FC = () => {
                 >
                   <MessageSquare className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t('ai_consultation.room.chatTab')}
                 </button>
-                <button 
+                <button
                   onClick={() => setChatMode('thinking')}
                   className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[7px] md:text-[8px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 md:gap-2 whitespace-nowrap ${
                     chatMode === 'thinking' ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-slate-400'
@@ -1458,7 +1531,7 @@ const AIConsultationRoom: React.FC = () => {
                 >
                   <BrainCircuit className="w-2.5 h-2.5 md:w-3 md:h-3" /> {t('ai_consultation.room.deepAnalysis')}
                 </button>
-                <button 
+                <button
                   onClick={() => setChatMode('search')}
                   className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl text-[7px] md:text-[8px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 md:gap-2 whitespace-nowrap ${
                     chatMode === 'search' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white/5 border-white/10 text-slate-400'
@@ -1469,12 +1542,12 @@ const AIConsultationRoom: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 md:gap-3">
-                 <motion.button 
+                 <motion.button
                    whileHover={{ scale: 1.1 }}
                    whileTap={{ scale: 0.9 }}
-                   onClick={generateFinalReport} 
+                   onClick={generateFinalReport}
                    disabled={isGeneratingReport || messages.length < 3}
-                   className="p-3 md:p-4 bg-emerald-500/10 text-emerald-500 rounded-xl md:rounded-2xl hover:bg-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                   className="p-3 md:p-4 bg-blue-500/10 text-blue-500 rounded-xl md:rounded-2xl hover:bg-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                    title={t('ai_consultation.room.reportBtn')}
                  >
                     {isGeneratingReport ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> : <FileText className="w-4 h-4 md:w-5 md:h-5" />}
@@ -1484,13 +1557,13 @@ const AIConsultationRoom: React.FC = () => {
                     <input type="file" className="hidden" onChange={handleFileUpload} accept="image/*" />
                  </label>
                  <div className="flex-1 relative">
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleSendText()}
-                      placeholder={chatMode === 'thinking' ? t.ai_consultation.room.deepAnalysisPlaceholder : chatMode === 'search' ? t.ai_consultation.room.searchPlaceholder : t.ai_consultation.room.placeholder} 
-                      className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 outline-none focus:border-primary transition-all font-medium text-xs md:text-sm" 
+                      placeholder={chatMode === 'thinking' ? t.ai_consultation.room.deepAnalysisPlaceholder : chatMode === 'search' ? t.ai_consultation.room.searchPlaceholder : t.ai_consultation.room.placeholder}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 outline-none focus:border-primary transition-all font-medium text-xs md:text-sm"
                     />
                     <div className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 flex gap-1">
                        <button onClick={handleSendText} className="p-2 md:p-3 bg-primary text-white rounded-lg md:rounded-xl hover:bg-blue-800 transition-all">

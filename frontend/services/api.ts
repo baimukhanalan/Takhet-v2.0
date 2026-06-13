@@ -17,6 +17,10 @@ const resolveApiUrl = () => {
       return 'https://api.takhet.com';
     }
 
+    if (hostname.endsWith('.vercel.app')) {
+      return 'https://api.takhet.com';
+    }
+
     if (port === '3000') {
       return origin;
     }

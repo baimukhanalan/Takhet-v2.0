@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CalendarDays, CheckCircle2, Clock, Search, ShieldCheck, Star } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
 import { roleApi } from '../../services/roleApi';
 
@@ -66,6 +66,10 @@ const resolveAvailableDates = (availability: AvailabilitySlot[] = []) => {
 
 const GuestConsultationPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedDoctorId = searchParams.get('doctorId') || '';
+  const requestedDate = searchParams.get('date') || '';
+  const requestedSlot = searchParams.get('slot') || '';
   const [doctors, setDoctors] = useState<PublicDoctor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
@@ -93,9 +97,15 @@ const GuestConsultationPage: React.FC = () => {
           const audience = doctor.catalogAudience || 'doctor';
           return audience === 'doctor' || audience === 'both';
         });
-        setDoctors(activeDoctors);
-        if (activeDoctors[0]) {
-          setSelectedDoctorId(activeDoctors[0].id);
+        const requestedDoctor = requestedDoctorId ? list.find((doctor) => doctor.id === requestedDoctorId) : null;
+        const visibleDoctors = requestedDoctor && !activeDoctors.some((doctor) => doctor.id === requestedDoctor.id)
+          ? [requestedDoctor, ...activeDoctors]
+          : activeDoctors;
+        setDoctors(visibleDoctors);
+        if (requestedDoctorId && visibleDoctors.some((doctor) => doctor.id === requestedDoctorId)) {
+          setSelectedDoctorId(requestedDoctorId);
+        } else if (visibleDoctors[0]) {
+          setSelectedDoctorId(visibleDoctors[0].id);
         }
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить врачей');
@@ -105,7 +115,7 @@ const GuestConsultationPage: React.FC = () => {
     };
 
     void load();
-  }, []);
+  }, [requestedDoctorId]);
 
   useEffect(() => {
     if (!selectedDoctorId) {
@@ -122,13 +132,26 @@ const GuestConsultationPage: React.FC = () => {
       try {
         const profile = await roleApi.publicDoctor(selectedDoctorId);
         setSelectedDoctor(profile);
+        const dates = resolveAvailableDates(profile.availability || []);
+        const requestedDateEntry = dates.find((item) => item.date === requestedDate);
+        if (requestedDateEntry) {
+          setSelectedDate(requestedDate);
+          setSelectedSlot(requestedDateEntry.slots.includes(requestedSlot) ? requestedSlot : requestedDateEntry.slots[0] || '');
+        }
       } catch {
-        setSelectedDoctor(doctors.find((doctor) => doctor.id === selectedDoctorId) || null);
+        const fallbackDoctor = doctors.find((doctor) => doctor.id === selectedDoctorId) || null;
+        setSelectedDoctor(fallbackDoctor);
+        const dates = resolveAvailableDates(fallbackDoctor?.availability || []);
+        const requestedDateEntry = dates.find((item) => item.date === requestedDate);
+        if (requestedDateEntry) {
+          setSelectedDate(requestedDate);
+          setSelectedSlot(requestedDateEntry.slots.includes(requestedSlot) ? requestedSlot : requestedDateEntry.slots[0] || '');
+        }
       }
     };
 
     void loadDoctor();
-  }, [selectedDoctorId, doctors]);
+  }, [selectedDoctorId, doctors, requestedDate, requestedSlot]);
 
   const filteredDoctors = useMemo(() => {
     const query = normalizeSearchText(searchTerm);
@@ -247,7 +270,7 @@ const GuestConsultationPage: React.FC = () => {
                       <div className="relative h-20 w-20 shrink-0">
                         <img src={doctor.avatar} className="h-20 w-20 rounded-[1.5rem] object-cover shadow-xl" alt={doctor.fullName} />
                         {doctor.verified ? (
-                          <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg">
+                          <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg">
                             <ShieldCheck className="h-4 w-4" />
                           </span>
                         ) : null}
@@ -358,7 +381,7 @@ const GuestConsultationPage: React.FC = () => {
                 </div>
 
                 {error ? <div className="rounded-2xl bg-red-50 p-4 text-xs font-bold text-red-600">{error}</div> : null}
-                {status ? <div className="rounded-2xl bg-emerald-50 p-4 text-xs font-bold text-emerald-700">{status}</div> : null}
+                {status ? <div className="rounded-2xl bg-blue-50 p-4 text-xs font-bold text-blue-700">{status}</div> : null}
 
                 <button
                   disabled={submitting || !selectedDoctorId || !selectedDate || !selectedSlot || !phoneVerificationToken}

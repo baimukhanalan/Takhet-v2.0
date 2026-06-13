@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { sign, verify } from 'jsonwebtoken';
+import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import { env } from '../config/env.config';
 
 type LabResultInput = {
@@ -89,6 +90,7 @@ const supportedBiomarkers = [
 export class LabsService {
   private schemaReady: Promise<void> | null = null;
   private readonly labsCookieName = 'takhet_labs_session';
+  private readonly hashPrefix = 'scrypt';
 
   // Architecture anchors for tests and future implementation:
   // biomarkerInterpretationEngine, riskScoringEngine, correlationEngine,
@@ -166,8 +168,11 @@ export class LabsService {
       [role, normalizedIdentifier]
     );
     const user = rows[0];
-    if (!user || user.passwordHash !== normalizedPassword) {
+    if (!user || !this.verifyPassword(user.passwordHash, normalizedPassword)) {
       throw new UnauthorizedException('Invalid Takhet Labs credentials');
+    }
+    if (!this.isHashedPassword(user.passwordHash)) {
+      await this.dataSource.query(`UPDATE labs_users SET password_hash = $1 WHERE id = $2`, [this.hashPassword(normalizedPassword), user.id]);
     }
     const accessToken = sign(
       { sub: user.id, role: user.role, email: user.email, fullName: user.fullName, scope: 'labs' },
@@ -750,20 +755,43 @@ export class LabsService {
     }
 
     const labsUsers = [
-      ['LABS-MEMBER', 'labs-member@takhet.local', 'member', 'Takhet Labs Member'],
-      ['LABS-PHYSICIAN', 'labs-physician@takhet.local', 'physician', 'Physician Reviewer'],
-      ['LABS-ADMIN', 'labs-admin@takhet.local', 'admin', 'Labs Admin'],
-      ['LABS-FAMILY', 'labs-family@takhet.local', 'family', 'Family Health']
+      ['LABS-MEMBER', 'baimukhanalan1@gmail.com', 'member', 'Takhet Labs Member'],
+      ['LABS-PHYSICIAN', 'baimukhanalan1@gmail.com', 'physician', 'Physician Reviewer'],
+      ['LABS-ADMIN', 'baimukhanalan1@gmail.com', 'admin', 'Labs Admin'],
+      ['LABS-FAMILY', 'baimukhanalan1@gmail.com', 'family', 'Family Health']
     ];
 
     for (const [identifier, email, role, fullName] of labsUsers) {
       await this.dataSource.query(
         `INSERT INTO labs_users (identifier, email, role, full_name, password_hash)
-         VALUES ($1, $2, $3, $4, 'admin')
-         ON CONFLICT (identifier, role) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name`,
-        [identifier, email, role, fullName]
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (identifier, role) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name, password_hash = EXCLUDED.password_hash`,
+        [identifier, email, role, fullName, this.hashPassword(env.enableDemoPortalLogin ? 'baimukhanalan1@gmail.com' : randomBytes(24).toString('base64url'))]
       );
     }
+  }
+
+  private hashPassword(password: string) {
+    const salt = randomBytes(16).toString('hex');
+    const hash = scryptSync(password, salt, 64).toString('hex');
+    return `${this.hashPrefix}$${salt}$${hash}`;
+  }
+
+  private isHashedPassword(value: string) {
+    return value.startsWith(`${this.hashPrefix}$`);
+  }
+
+  private verifyPassword(storedPassword: string, candidate: string) {
+    if (!this.isHashedPassword(storedPassword)) {
+      return env.enableDemoPortalLogin && storedPassword === candidate;
+    }
+
+    const [, salt, storedHash] = storedPassword.split('$');
+    if (!salt || !storedHash) return false;
+
+    const candidateHash = scryptSync(candidate, salt, 64);
+    const storedBuffer = Buffer.from(storedHash, 'hex');
+    return storedBuffer.length === candidateHash.length && timingSafeEqual(storedBuffer, candidateHash);
   }
 
   private async seedUserData(userId: string) {

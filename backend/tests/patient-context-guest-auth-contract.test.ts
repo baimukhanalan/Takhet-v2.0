@@ -85,7 +85,7 @@ for (const value of ['resendApiKey', 'authEmailFrom', 'RESEND_API_KEY', 'AUTH_EM
   assert(envConfig.includes(value), `env config must expose ${value}`);
 }
 
-for (const marker of ['Р’', 'Рџ', 'СЃ', 'вЂ', 'в‚ё', '����']) {
+for (const marker of ['\u0420\u2019', '\u0420\u045f', '\u0421\u0403', '\u0432\u0402', '\u0432\u201a\u0451', '\ufffd\ufffd\ufffd\ufffd']) {
   for (const [name, source] of [
     ['patient.controller', patientController],
     ['auth.controller', authController],

@@ -102,7 +102,7 @@ for (const value of forbidden) {
   assert(!service.includes(value), `Labs backend must not expose forbidden phrase: ${value}`);
 }
 
-for (const marker of ['Р’', 'Рџ', 'СЃ', 'вЂ', 'в‚ё', '����']) {
+for (const marker of ['\u0420\u2019', '\u0420\u045f', '\u0421\u0403', '\u0432\u0402', '\u0432\u201a\u0451', '\ufffd\ufffd\ufffd\ufffd']) {
   assert(!service.includes(marker), `Labs service must not contain mojibake marker: ${marker}`);
   assert(!controller.includes(marker), `Labs controller must not contain mojibake marker: ${marker}`);
 }

@@ -32,19 +32,6 @@ const extractActiveQuestion = (message: string) => {
   return lastLine.includes(':') ? lastLine.split(':').slice(1).join(':').trim().slice(0, 220) : lastLine.slice(0, 220);
 };
 
-const cleanStreamChunk = (value: string) =>
-  cleanAiText(value)
-    .replace(/\n{3,}/g, '\n\n')
-    .trimStart();
-
-const canUseFastPath = (message: string, useSearch?: boolean) => {
-  if (useSearch) return false;
-  const text = String(message || '').trim();
-  if (!text) return false;
-  const words = text.split(/\s+/).filter(Boolean);
-  return text.length <= 120 || (text.length <= 180 && words.length <= 16);
-};
-
 const streamText = async (res: any, text: string) => {
   const words = cleanAiText(text).split(/(\s+)/).filter(Boolean);
   let emitted = '';
@@ -80,11 +67,6 @@ export default async function handler(req: any, res: any) {
   try {
     const activeQuestion = extractActiveQuestion(message);
 
-    if (canUseFastPath(activeQuestion, useSearch)) {
-      await streamText(res, buildHelpfulFallback(activeQuestion));
-      return;
-    }
-
     const ai = ensureAi();
     const strictInstruction = buildStrictChatInstruction(activeQuestion, systemInstruction);
     const modelCandidates = getModelCandidatesForTask('chat', `${systemInstruction || ''}\n${activeQuestion}`);
@@ -102,12 +84,12 @@ export default async function handler(req: any, res: any) {
             temperature: 0.15,
             topP: 0.9,
             candidateCount: 1,
-            maxOutputTokens: 700
+            maxOutputTokens: 1400
           }
         });
 
         for await (const chunk of stream) {
-          const text = cleanStreamChunk(chunk.text || '');
+          const text = String(chunk.text || '');
           if (text) {
             streamed = true;
             res.write(text);

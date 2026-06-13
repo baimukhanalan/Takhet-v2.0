@@ -31,19 +31,19 @@ const forbidden = [
   'Digital Workforce Health & Risk Monitoring Platform'
 ];
 
-const mojibakeMarkers = ['Р’', 'Рџ', 'Р›', 'СЃ', 'вЂ', 'Рќ'];
+const mojibakeMarkers = ['\u0420\u2019', '\u0420\u045f', 'Р›', '\u0421\u0403', '\u0432\u0402', '\u0420\u045c'];
 
 mustInclude(app, '/enterprise/login', 'App must expose separate Enterprise login route');
 mustInclude(app, '/enterprise/*', 'App must expose Enterprise namespace route');
 mustInclude(app, 'enterprise.takhet.com', 'App must route enterprise subdomain into Enterprise namespace');
 
 mustInclude(enterprisePage, 'Takhet Enterprise', 'Enterprise must use product name');
-mustInclude(enterprisePage, 'Снизьте потери от выгорания', 'Enterprise landing must use new B2B healthcare hero');
+mustInclude(enterprisePage, 'Цифровое медицинское сопровождение предприятий', 'Enterprise landing must use requested B2B healthcare hero');
 mustInclude(enterprisePage, 'Корпоративная телемедицина', 'Enterprise landing must explain corporate healthcare positioning');
 mustInclude(enterprisePage, 'AI-поддержка 24/7', 'Enterprise landing must include AI mental support positioning');
 mustInclude(enterprisePage, 'обезличенная аналитика', 'Enterprise landing must emphasize anonymized analytics');
 mustInclude(enterprisePage, 'Запросить пилот', 'Enterprise landing must have pilot CTA');
-mustInclude(enterprisePage, 'Рассчитать стоимость', 'Enterprise landing must have pricing/ROI CTA');
+mustInclude(enterprisePage, 'Посчитать эффект', 'Enterprise landing must have ROI CTA');
 mustInclude(enterprisePage, 'Starter', 'Enterprise landing must include Starter plan');
 mustInclude(enterprisePage, 'Business', 'Enterprise landing must include Business plan');
 mustInclude(enterprisePage, 'Enterprise', 'Enterprise landing must include Enterprise plan');

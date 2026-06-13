@@ -150,7 +150,7 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
                              </div>
                              <div className="min-w-0">
                                 <h4 className="font-black text-xl text-slate-900 truncate">{member.name}</h4>
-                                <span className={`text-[9px] font-black uppercase tracking-widest ${member.status === 'Pending' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                <span className={`text-[9px] font-black uppercase tracking-widest ${member.status === 'Pending' ? 'text-amber-500' : 'text-blue-500'}`}>
                                    {member.status === 'Pending' ? 'Ожидание' : 'Активен'}
                                 </span>
                              </div>
@@ -160,10 +160,10 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
                              <div className="space-y-5">
                                 <div className="flex items-end justify-between">
                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Health Index</span>
-                                   <span className={`text-3xl font-black ${member.healthScore > 85 ? 'text-emerald-500' : 'text-orange-500'}`}>{member.healthScore}%</span>
+                                   <span className={`text-3xl font-black ${member.healthScore > 85 ? 'text-blue-500' : 'text-orange-500'}`}>{member.healthScore}%</span>
                                 </div>
                                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                   <div className={`h-full transition-all duration-1000 ${member.healthScore > 85 ? 'bg-emerald-500' : 'bg-orange-500'}`} style={{ width: `${member.healthScore}%` }} />
+                                   <div className={`h-full transition-all duration-1000 ${member.healthScore > 85 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${member.healthScore}%` }} />
                                 </div>
                              </div>
                           )}

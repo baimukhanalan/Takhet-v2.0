@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Check, Globe, Menu, X } from 'lucide-react';
 import { UserRole } from '../types';
 import type { Language } from '../services/language';
-import { getStoredLanguage, setStoredLanguage } from '../services/language';
+import { getStoredLanguage, LANGUAGE_OPTIONS, setStoredLanguage } from '../services/language';
 import { useLanguage } from '../services/useLanguage';
 
 interface PublicHeaderProps {
@@ -38,8 +38,8 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ activePath }) => {
     { name: t.nav.doctors, path: '/doctors' },
     { name: t.nav.partners, path: '/partners' },
     { name: t.nav.mental, path: '/mental' },
-    { name: 'Takhet Labs', path: '/takhet-labs' },
-    { name: 'Enterprise', path: '/enterprise' },
+    { name: t.nav.labs, path: '/takhet-labs' },
+    { name: t.nav.enterprise, path: '/enterprise' },
   ];
 
   return (
@@ -71,9 +71,9 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ activePath }) => {
             </button>
             {isLangOpen && (
               <div className="absolute top-14 right-0 bg-background rounded-2xl border border-border shadow-2xl p-2 w-32 animate-in fade-in zoom-in-95">
-                {(['ru', 'kz', 'en'] as Language[]).map((l) => (
-                  <button key={l} onClick={() => handleLangChange(l)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${lang === l ? 'bg-primary/5 text-primary' : 'hover:bg-secondary text-muted-foreground'}`}>
-                    {l} {lang === l && <Check className="w-3 h-3" />}
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <button key={option.value} onClick={() => handleLangChange(option.value)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${lang === option.value ? 'bg-primary/5 text-primary' : 'hover:bg-secondary text-muted-foreground'}`}>
+                    <span>{option.flag} {option.label}</span> {lang === option.value && <Check className="w-3 h-3" />}
                   </button>
                 ))}
               </div>

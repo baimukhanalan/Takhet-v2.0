@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { animate } from 'animejs';
 import {
   Activity,
   BarChart3,
@@ -86,6 +87,27 @@ const supportedBiomarkers = [
   'nutrient markers'
 ];
 
+const labsGraphSeries = [
+  {
+    label: 'Ферритин + усталость',
+    before: [72, 58, 44, 38, 34, 32],
+    after: [42, 48, 56, 63, 71, 78],
+    note: 'Система связывает показатель с жалобами, историей и сроком повторной сдачи.'
+  },
+  {
+    label: 'Vitamin D + настроение',
+    before: [36, 35, 34, 38, 41, 39],
+    after: [44, 51, 59, 66, 74, 82],
+    note: 'Пользователь видит не один анализ, а понятную линию улучшения.'
+  },
+  {
+    label: 'hsCRP + нагрузка',
+    before: [63, 70, 74, 78, 73, 80],
+    after: [68, 62, 57, 51, 46, 42],
+    note: 'Takhet Labs показывает тренд воспаления и спокойный план наблюдения.'
+  }
+];
+
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
 
 const SoftCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
@@ -104,10 +126,39 @@ const MiniTrend: React.FC<{ points: number[]; tone?: string }> = ({ points, tone
 
 const LandingLabs = () => {
   const [memberships, setMemberships] = useState<LabsMembership[]>(membershipsFallback);
+  const [activeGraphIndex, setActiveGraphIndex] = useState(0);
+  const graphRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     void takhetLabsApi.memberships().then(setMemberships).catch(() => setMemberships(membershipsFallback));
   }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveGraphIndex((index) => (index + 1) % labsGraphSeries.length);
+    }, 2600);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const activeGraph = labsGraphSeries[activeGraphIndex];
+
+  useEffect(() => {
+    if (!graphRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const motion = animate(graphRef.current, {
+      opacity: [0.84, 1],
+      translateY: [12, 0],
+      scale: [0.985, 1],
+      duration: 620,
+      ease: 'out(3)'
+    });
+
+    return () => {
+      motion.revert();
+    };
+  }, [activeGraphIndex]);
 
   return (
     <div className="min-h-screen bg-background text-slate-900">
@@ -170,6 +221,71 @@ const LandingLabs = () => {
           </div>
         </section>
 
+        <section data-labs-problem-solution className="px-4 py-12 sm:px-6 lg:px-10">
+          <div className="max-w-7xl mx-auto rounded-[3rem] border border-slate-100 bg-slate-50 p-6 md:p-10">
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-primary">Problem / Solution</p>
+                <h2 className="mt-4 text-4xl font-black tracking-tighter text-slate-900">Проблема: анализы показывают цифры, но не динамику</h2>
+                <p className="mt-4 text-sm font-semibold leading-7 text-slate-500">
+                  Результаты часто лежат в PDF, мессенджерах и разных лабораториях. Человек видит отдельные цифры, но не понимает, что меняется во времени и какой следующий шаг действительно нужен.
+                </p>
+                <p className="mt-4 text-sm font-black leading-7 text-slate-700">
+                  Решение: Takhet Labs собирает данные в одну линию, показывает тренды, объясняет связи между маркерами и формирует план наблюдения без постановки диагноза.
+                </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {['разные PDF', 'нет истории', 'сложно понять нормы', 'нет плана пересдачи'].map((item) => (
+                    <div key={item} className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-600 shadow-sm">{item}</div>
+                  ))}
+                </div>
+              </div>
+              <div data-labs-dynamic-graph ref={graphRef} className="grid gap-4">
+                <SoftCard className="bg-slate-950 text-white">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-200">Dynamic health trend</p>
+                      <h3 className="mt-3 text-3xl font-black tracking-tighter">{activeGraph.label}</h3>
+                    </div>
+                    <BarChart3 className="h-10 w-10 text-blue-200" />
+                  </div>
+                  <div className="mt-8 grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">До</p>
+                      <MiniTrend points={activeGraph.before} tone="bg-slate-500" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-200">После Takhet Labs</p>
+                      <MiniTrend points={activeGraph.after} tone="bg-blue-300" />
+                    </div>
+                  </div>
+                  <div className="mt-8 h-2 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-blue-300 transition-all duration-700"
+                      style={{ width: `${Math.min(96, activeGraph.after[activeGraph.after.length - 1])}%` }}
+                    />
+                  </div>
+                  <p className="mt-5 text-sm font-semibold leading-6 text-slate-300">{activeGraph.note}</p>
+                </SoftCard>
+                <SoftCard className="md:col-span-2 bg-primary/5">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {[
+                      ['01', 'Нормализация', 'PDF upload parsing, OCR и API приводятся к единой структуре.'],
+                      ['02', 'Интерпретация', 'AI объясняет маркеры без постановки диагноза.'],
+                      ['03', 'Мониторинг', 'Система показывает, что пересдать и когда.']
+                    ].map(([step, title, text]) => (
+                      <div key={step} className="rounded-2xl bg-white p-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">{step}</p>
+                        <p className="mt-2 text-base font-black text-slate-900">{title}</p>
+                        <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">{text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </SoftCard>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="memberships" className="px-4 py-12 sm:px-6 lg:px-10">
           <div className="max-w-7xl mx-auto">
             <p className="text-xs font-black uppercase tracking-[0.28em] text-primary">Memberships</p>
@@ -199,7 +315,7 @@ const LandingLabs = () => {
               <p className="text-xs font-black uppercase tracking-[0.28em] text-primary">Biomarkers</p>
               <h2 className="mt-4 text-4xl font-black tracking-tighter text-slate-900">Biomarker intelligence, Health Scores and Biological Age</h2>
               <p className="mt-4 text-sm font-semibold leading-7 text-slate-500">
-                PDF upload parsing, manual uploads, future laboratory APIs, OCR extraction, biomarker normalization and automatic mapping into Takhet Labs dashboard.
+                Загрузка PDF, ручной ввод, OCR-распознавание и нормализация показателей превращают результаты анализов в понятную динамику здоровья.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -227,6 +343,34 @@ const LandingLabs = () => {
             ))}
           </div>
         </section>
+
+        <section data-labs-final-section className="px-4 pb-20 sm:px-6 lg:px-10">
+          <div className="max-w-7xl mx-auto rounded-[3rem] bg-slate-950 p-8 text-white shadow-2xl md:p-12">
+            <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-200">Takhet Labs</p>
+                <h2 className="mt-4 text-4xl font-black tracking-tighter">Соберите анализы, тренды и рекомендации в один понятный health OS</h2>
+                <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-400">
+                  Начните с базового профиля, загрузите результаты и получите структурированную картину без замены врача и без самодиагностики.
+                </p>
+              </div>
+              <a href="/takhet-labs/login" className="inline-flex rounded-2xl bg-white px-7 py-4 text-xs font-black uppercase tracking-[0.18em] text-slate-950">Войти в Labs</a>
+            </div>
+          </div>
+        </section>
+        <footer data-labs-footer className="border-t border-slate-100 bg-white px-6 py-24 text-center">
+          <div className="mx-auto max-w-7xl space-y-8">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <span className="text-4xl font-black tracking-tighter text-slate-950">Takhet<span className="text-primary">+</span></span>
+              <p className="max-w-2xl text-sm font-bold leading-7 text-slate-400">
+                Takhet Labs встроен в Takhet+: анализы, динамика, AI-инсайты и врачебный review остаются частью единой медицинской истории пациента.
+              </p>
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400">
+              © 2026 Takhet+. Все права защищены.
+            </p>
+          </div>
+        </footer>
       </main>
     </div>
   );
@@ -409,7 +553,7 @@ const PatientLabsModule: React.FC<{ user?: User }> = ({ user }) => {
                   <h3 className="mt-2 text-xl font-black text-slate-900">{biomarker.name}</h3>
                   <p className="mt-1 text-sm font-semibold text-slate-500">{biomarker.value} / {biomarker.range}</p>
                 </div>
-                <span className={cn('rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest', biomarker.status === 'optimal' ? 'bg-emerald-50 text-emerald-600' : biomarker.status === 'watch' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}>
+                <span className={cn('rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest', biomarker.status === 'optimal' ? 'bg-blue-50 text-blue-600' : biomarker.status === 'watch' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600')}>
                   {biomarker.status}
                 </span>
               </div>

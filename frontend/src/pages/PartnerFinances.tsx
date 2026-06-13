@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { TrendingUp, Wallet, Calendar, Download, PieChart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { roleApi } from '../../services/roleApi';
@@ -130,7 +130,7 @@ const PartnerFinances: React.FC = () => {
                   <td className="p-6 text-sm font-medium text-slate-600">{item.provider}</td>
                   <td className="p-6 text-sm font-black text-primary">{item.currency || '₸'} {Number(item.amount).toLocaleString()}</td>
                   <td className="p-6">
-                    <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${item.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : item.status === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
+                    <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${item.status === 'paid' ? 'bg-blue-50 text-blue-600' : item.status === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
                       {item.status === 'paid' ? 'Оплачено' : item.status === 'pending' ? 'Ожидает' : 'Ошибка'}
                     </span>
                   </td>
@@ -150,4 +150,3 @@ const PartnerFinances: React.FC = () => {
 };
 
 export default PartnerFinances;
-

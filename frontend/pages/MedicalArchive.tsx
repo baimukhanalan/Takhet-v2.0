@@ -101,9 +101,9 @@ const MedicalArchive: React.FC = () => {
             >
               <div className="flex items-center gap-8 flex-1 min-w-0">
                 <div className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center shadow-inner shrink-0
-                  ${record.type === 'Analysis' ? 'bg-orange-50 text-orange-600' : 
-                    record.type === 'Prescription' ? 'bg-green-50 text-green-600' : 
-                    record.type === 'Visit' ? 'bg-blue-50 text-blue-600' : 
+                  ${record.type === 'Analysis' ? 'bg-orange-50 text-orange-600' :
+                    record.type === 'Prescription' ? 'bg-blue-50 text-blue-600' :
+                    record.type === 'Visit' ? 'bg-blue-50 text-blue-600' :
                     record.type === 'Photo' ? 'bg-amber-50 text-amber-600' : 'bg-purple-50 text-purple-600'}`}>
                   <FileText className="w-8 h-8" />
                 </div>
@@ -121,12 +121,12 @@ const MedicalArchive: React.FC = () => {
               <div className="flex items-center gap-6 shrink-0">
                 <div className="flex flex-col items-end gap-1">
                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg border
-                     ${record.status === 'Analyzed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                     ${record.status === 'Analyzed' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                        record.status === 'New' ? 'bg-blue-50 text-primary border-primary/10' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                      {record.status}
                    </span>
                    {record.isSigned && (
-                     <span className="flex items-center gap-1.5 text-[8px] font-black text-emerald-600 uppercase tracking-widest">
+                     <span className="flex items-center gap-1.5 text-[8px] font-black text-blue-600 uppercase tracking-widest">
                         <ShieldCheck className="w-3 h-3" /> Подписано ЭЦП
                      </span>
                    )}
@@ -195,11 +195,11 @@ const MedicalArchive: React.FC = () => {
 
                  {selectedRecord.fullData?.recommendations && (
                     <section className="space-y-6">
-                       <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Рекомендации по лечению</h4>
+                       <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">Рекомендации по лечению</h4>
                        <div className="grid gap-4">
                           {selectedRecord.fullData.recommendations.map((r: string, i: number) => (
                              <div key={i} className="p-6 bg-slate-50 border border-slate-100 rounded-[2rem] flex items-start gap-4">
-                                <ShieldCheck className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
+                                <ShieldCheck className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
                                 <span className="font-medium text-slate-600 leading-relaxed">{r}</span>
                              </div>
                           ))}
@@ -213,9 +213,9 @@ const MedicalArchive: React.FC = () => {
                     <Download className="w-5 h-5" /> Скачать отчет PDF
                  </button>
                  {selectedRecord.isSigned && (
-                    <div className="px-8 py-5 bg-emerald-50 border border-emerald-100 rounded-3xl flex items-center gap-3">
-                       <ShieldCheck className="w-6 h-6 text-emerald-600" />
-                       <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Подписано ЭЦП</span>
+                    <div className="px-8 py-5 bg-blue-50 border border-blue-100 rounded-3xl flex items-center gap-3">
+                       <ShieldCheck className="w-6 h-6 text-blue-600" />
+                       <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Подписано ЭЦП</span>
                     </div>
                  )}
               </footer>

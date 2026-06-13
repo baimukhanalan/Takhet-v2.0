@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import { User, UserRole } from './types';
@@ -7,6 +7,7 @@ import { roleApi } from '../services/roleApi';
 
 const Sidebar = lazy(() => import('./components/Sidebar'));
 const Header = lazy(() => import('./components/Header'));
+const PlatformMotionShell = lazy(() => import('./components/PlatformMotionShell'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const DoctorsPage = lazy(() => import('./pages/DoctorsPage'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage'));
@@ -81,6 +82,17 @@ const fallbackUserName: Record<UserRole, string> = {
   [UserRole.PARTNER]: 'Партнер Takhet',
   [UserRole.ADMIN]: 'Администратор Takhet'
 };
+
+const PUBLIC_MOTION_ROUTES = new Set([
+  '/',
+  '/services',
+  '/takhet-ai/try',
+  '/doctors',
+  '/partners',
+  '/mental',
+  '/takhet-labs',
+  '/enterprise'
+]);
 
 const buildAvatar = (name: string, role: UserRole) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${role === UserRole.ADMIN ? '0f172a' : '0D47A1'}&color=fff`;
@@ -163,13 +175,18 @@ const AppShell: React.FC<{ user: User | null; onLogout: () => void; children: Re
   const isEnterprise = pathname.startsWith('/enterprise');
   const isTakhetLabsNamespace = pathname.startsWith('/takhet-labs/login') || pathname.startsWith('/takhet-labs/portal');
   const shouldShowCoordinator = !user && isPublic && !isTakhetAi && !isAiConsultation;
+  const isPublicMotionRoute = PUBLIC_MOTION_ROUTES.has(pathname) && pathname !== '/';
 
   if (isEnterprise || isTakhetLabsNamespace) {
-    return <>{children}</>;
+    return (
+      <Suspense fallback={null}>
+        <PlatformMotionShell variant="portal">{children}</PlatformMotionShell>
+      </Suspense>
+    );
   }
 
   if (!user || isPublic) {
-    return (
+    const publicContent = (
       <>
         {children}
         {shouldShowCoordinator ? (
@@ -179,28 +196,44 @@ const AppShell: React.FC<{ user: User | null; onLogout: () => void; children: Re
         ) : null}
       </>
     );
+
+    if (isPublicMotionRoute) {
+      return (
+        <Suspense fallback={null}>
+          <PlatformMotionShell variant="rich">{publicContent}</PlatformMotionShell>
+        </Suspense>
+      );
+    }
+
+    return publicContent;
   }
 
   if (isAdmin || isDoctorCaseRoom || isTakhetAi || isHealthBrowser) {
     return (
-      <>
+      <Suspense fallback={null}>
+        <PlatformMotionShell variant="portal">
         {children}
-      </>
+        </PlatformMotionShell>
+      </Suspense>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background overflow-hidden">
-      <Suspense fallback={null}>
-        <Sidebar role={user.role} onLogout={onLogout} />
-      </Suspense>
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
+    <Suspense fallback={null}>
+      <PlatformMotionShell variant="portal">
+        <div className="flex min-h-screen bg-background overflow-hidden">
+          <Suspense fallback={null}>
+            <Sidebar role={user.role} onLogout={onLogout} />
+          </Suspense>
+          <div className="flex-1 flex flex-col min-w-0 h-screen">
         <Suspense fallback={null}>
           <Header user={user} />
         </Suspense>
         <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6 xl:p-10">{children}</main>
+          </div>
       </div>
-    </div>
+      </PlatformMotionShell>
+    </Suspense>
   );
 };
 
@@ -381,7 +414,7 @@ const AppRoutes: React.FC = () => {
             </PrivateRoute>
           }
         />
-        <Route path="/swarm-medicine" element={<PrivateRoute user={user} allowed={[UserRole.DOCTOR]}><SwarmMedicinePage /></PrivateRoute>} />
+        <Route path="/swarm-medicine" element={<PrivateRoute user={user} allowed={[UserRole.DOCTOR]}><SwarmMedicinePage user={user!} /></PrivateRoute>} />
 
         <Route path="/partner-doctors" element={<PrivateRoute user={user} allowed={[UserRole.PARTNER]}><PartnerDoctors /></PrivateRoute>} />
         <Route path="/reports" element={<PrivateRoute user={user} allowed={[UserRole.PARTNER]}><PartnerReports /></PrivateRoute>} />
@@ -402,4 +435,3 @@ const App: React.FC = () => (
 );
 
 export default App;
-

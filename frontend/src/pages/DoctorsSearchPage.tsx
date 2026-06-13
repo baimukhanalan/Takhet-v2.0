@@ -88,7 +88,7 @@ const DoctorsSearchPage: React.FC = () => {
                 <div className="relative h-20 w-20 shrink-0 overflow-visible rounded-[1.5rem]">
                   <img src={doctor.avatar} className="h-20 w-20 rounded-[1.5rem] object-cover shadow-xl" alt={doctor.fullName} />
                   {doctor.verified ? (
-                    <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg">
+                    <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg">
                       <ShieldCheck className="h-4 w-4" />
                     </span>
                   ) : null}

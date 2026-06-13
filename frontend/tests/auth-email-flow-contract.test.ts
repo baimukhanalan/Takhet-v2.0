@@ -48,7 +48,7 @@ for (const marker of [
 }
 
 for (const source of [confirmPage, resetPage]) {
-  for (const marker of ['Р’', 'Рџ', 'СЃ', 'вЂ', 'в‚ё', '����']) {
+  for (const marker of ['\u0420\u2019', '\u0420\u045f', '\u0421\u0403', '\u0432\u0402', '\u0432\u201a\u0451', '\ufffd\ufffd\ufffd\ufffd']) {
     assert(!source.includes(marker), `Auth email flow pages must not contain mojibake marker: ${marker}`);
   }
 }

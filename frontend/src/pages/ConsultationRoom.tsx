@@ -669,7 +669,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
                 <ChevronLeft className="h-4 w-4" />
                 Назад
               </button>
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-300">
+              <div className="rounded-2xl border border-blue-400/20 bg-blue-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.28em] text-blue-300">
                 WebRTC Room
               </div>
             </div>
@@ -796,7 +796,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
               </div>
 
               <div className="border-t border-slate-100 px-4 py-4">
-                {localStatus ? <p className="mb-3 text-xs font-bold text-emerald-600">{localStatus}</p> : null}
+                {localStatus ? <p className="mb-3 text-xs font-bold text-blue-600">{localStatus}</p> : null}
                 {error ? <p className="mb-3 text-xs font-bold text-red-500">{error}</p> : null}
                 <div className="mb-3 flex items-center gap-2">
                   <label className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500">
@@ -996,7 +996,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
 
                 <div className="rounded-[1.75rem] border border-slate-100 bg-slate-50 p-4">
                   <div className="mb-3 flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-emerald-600" />
+                    <FileText className="h-5 w-5 text-blue-600" />
                     <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Рекомендации врача</p>
                   </div>
                   <textarea
@@ -1011,7 +1011,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
                   <button
                     onClick={() => void handleConfirmReport()}
                     disabled={!doctorNotes.recommendations.trim() || busy}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-xs font-black uppercase tracking-[0.22em] text-white disabled:opacity-50"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-500 px-4 py-3 text-xs font-black uppercase tracking-[0.22em] text-white disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     Подтвердить PDF
@@ -1027,7 +1027,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
                   ) : null}
                 </div>
 
-                {localStatus ? <p className="text-xs font-bold text-emerald-600">{localStatus}</p> : null}
+                {localStatus ? <p className="text-xs font-bold text-blue-600">{localStatus}</p> : null}
                 {error ? <p className="text-xs font-bold text-red-500">{error}</p> : null}
               </div>
             )}

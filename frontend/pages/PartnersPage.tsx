@@ -138,7 +138,7 @@ const PartnersPage: React.FC = () => {
                 title: 'Аналитика записей', 
                 desc: 'Прозрачная статистика приёмов в личном кабинете. Скачивайте отчёт о записях за любой период — от дня до года.', 
                 icon: BarChart3,
-                color: 'bg-emerald-50 text-emerald-600'
+                color: 'bg-blue-50 text-blue-600'
               },
               { 
                 title: 'Методика оценки', 

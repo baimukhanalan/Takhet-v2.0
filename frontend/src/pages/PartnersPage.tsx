@@ -73,6 +73,69 @@ const B2BMatrix = () => {
   );
 };
 
+const PartnerRoiCalculator = () => {
+  const [consultations, setConsultations] = useState(120);
+  const [conversionGrowth, setConversionGrowth] = useState(18);
+  const [averageCheck, setAverageCheck] = useState(14000);
+  const addedRevenue = Math.round(consultations * (conversionGrowth / 100) * averageCheck);
+  const controls: Array<{
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    step: number;
+    suffix?: string;
+    setter: React.Dispatch<React.SetStateAction<number>>;
+  }> = [
+    { label: 'Консультаций в месяц', value: consultations, min: 20, max: 800, step: 1, setter: setConsultations },
+    { label: 'Рост конверсии во второй прием', value: conversionGrowth, min: 5, max: 45, step: 1, suffix: '%', setter: setConversionGrowth },
+    { label: 'Средний чек', value: averageCheck, min: 5000, max: 50000, step: 1000, suffix: ' ₸', setter: setAverageCheck }
+  ];
+
+  return (
+    <section data-partner-roi-calculator className="py-20 bg-white px-4 sm:px-6 lg:px-12 xl:px-20">
+      <div className="max-w-7xl mx-auto rounded-[3rem] border border-slate-100 bg-slate-50 p-6 md:p-10">
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-primary">Partner ROI calculator</p>
+            <h2 className="mt-4 text-3xl md:text-5xl font-black tracking-tighter text-foreground">Посчитайте эффект цифрового потока пациентов</h2>
+            <p className="mt-4 max-w-3xl text-sm md:text-base font-semibold leading-7 text-slate-500">
+              Калькулятор показывает ориентир: сколько дополнительной выручки может дать рост повторных приемов, онлайн-записей и прозрачной маршрутизации пациентов.
+            </p>
+            <div className="mt-8 space-y-4">
+              {controls.map(({ label, value, min, max, step, suffix = '', setter }) => (
+                <label key={label} className="block rounded-3xl bg-white p-4 shadow-sm">
+                  <span className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    {label}
+                    <span className="text-primary">{value.toLocaleString('ru-RU')}{suffix}</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={value}
+                    onChange={(event) => setter(Number(event.target.value))}
+                    className="mt-4 w-full accent-primary"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[2.5rem] bg-slate-950 p-8 text-white">
+            <BarChart3 className="h-10 w-10 text-blue-200" />
+            <p className="mt-6 text-[10px] font-black uppercase tracking-[0.24em] text-blue-200">Ориентир дополнительной выручки</p>
+            <p className="mt-4 text-5xl font-black tracking-tighter">{addedRevenue.toLocaleString('ru-RU')} ₸</p>
+            <p className="mt-3 text-sm font-semibold leading-7 text-slate-400">
+              Расчет не является гарантией результата, но помогает быстро оценить экономику партнерского подключения.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const PartnersPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -155,6 +218,8 @@ const PartnersPage: React.FC = () => {
         </div>
       </section>
 
+      <PartnerRoiCalculator />
+
       <section className="py-20 sm:py-24 md:py-32 px-4 sm:px-6 lg:px-12 xl:px-20">
         <div className="max-w-7xl mx-auto space-y-24">
           <FadeInStagger>
@@ -170,7 +235,7 @@ const PartnersPage: React.FC = () => {
                   title: 'Аналитика записей',
                   desc: 'Прозрачная статистика приемов в личном кабинете. Можно скачивать отчеты за любой период.',
                   icon: BarChart3,
-                  color: 'bg-emerald-50 text-emerald-600'
+                  color: 'bg-blue-50 text-blue-600'
                 },
                 {
                   title: 'Методика оценки',

@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 
 const legalLinks = [
-  { label: 'Offer / Terms', to: '/offer' },
-  { label: 'Terms', to: '/terms' },
-  { label: 'Privacy Policy', to: '/privacy' },
-  { label: 'Refund Policy', to: '/refund' },
-  { label: 'Contacts', to: '/contacts' }
+  { label: 'Оферта', to: '/offer' },
+  { label: 'Условия', to: '/terms' },
+  { label: 'Конфиденциальность', to: '/privacy' },
+  { label: 'Возврат', to: '/refund' },
+  { label: 'Контакты', to: '/contacts' }
 ];
 
-const paymentMethods = ['Visa', 'Mastercard', 'Halyk QR'];
+const paymentMethods = ['Halyk ePay', 'Visa', 'Mastercard', '3D Secure'];
 
 const ComplianceFooter: React.FC = () => (
   <footer className="border-t border-slate-100 bg-white px-6 py-16 text-center">
@@ -21,11 +21,14 @@ const ComplianceFooter: React.FC = () => (
         </Link>
         <div className="space-y-2 text-xs font-bold uppercase tracking-[0.24em] text-slate-400">
           <p>ИП "Алам"</p>
-          <p>БИН: 850707401371</p>
-          <p>ADDRESS</p>
+          <p>БИН/ИИН: 850707401371</p>
+          <p>Казахстан, Алматы, Самал-3, дом 15</p>
+          <p>График поддержки: пн-пт с 9:00 до 18:00</p>
+          <p>Стоимость услуг указывается в тенге, без НДС</p>
         </div>
         <p className="max-w-xl text-sm font-semibold leading-6 text-slate-500">
-          Takhet+ предоставляет цифровые медицинские инструменты, онлайн-консультации, запись к специалистам и поддержку работы с медицинской информацией. Сервис не заменяет очный осмотр и решения лицензированных медицинских специалистов.
+          Takhet+ предоставляет цифровые медицинские инструменты, онлайн-консультации, запись к специалистам и поддержку работы с медицинской информацией.
+          Платформа не заменяет очный осмотр, экстренную помощь и решения лицензированных медицинских специалистов.
         </p>
       </div>
 
@@ -43,11 +46,24 @@ const ComplianceFooter: React.FC = () => (
       <div className="space-y-5">
         <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-400">Payments & support</p>
         <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
-          {paymentMethods.map((method) => (
-            <span key={method} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
-              {method}
-            </span>
-          ))}
+          {paymentMethods.map((method) =>
+            method === 'Halyk ePay' ? (
+              <a
+                key={method}
+                href="https://epayment.kz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors hover:text-primary"
+                aria-label="Halyk ePay"
+              >
+                {method}
+              </a>
+            ) : (
+              <span key={method} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                {method}
+              </span>
+            )
+          )}
         </div>
         <div className="space-y-2 text-sm font-bold text-slate-500">
           <p>takhetplus@gmail.com</p>
@@ -55,7 +71,7 @@ const ComplianceFooter: React.FC = () => (
         </div>
         <div className="inline-flex items-center gap-2 rounded-2xl bg-primary/5 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-primary">
           <ShieldCheck className="h-4 w-4" />
-          Secure payment information
+          Защищенная оплата
         </div>
       </div>
     </div>

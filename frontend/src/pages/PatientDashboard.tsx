@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { User } from '../types';
 import { Activity, FileText, Video as VideoIcon, Zap, Settings2, ChevronRight, Shield, Clock, CreditCard, Plus, Download } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -172,7 +172,7 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {[
               { label: 'Обращения', value: cases.length, icon: FileText, tone: 'bg-blue-50 text-primary', action: () => navigate('/appointments') },
-              { label: 'Активные', value: cases.filter((item) => item.status !== 'closed').length, icon: VideoIcon, tone: 'bg-emerald-50 text-emerald-600', action: () => navigate('/appointments') },
+              { label: 'Активные', value: cases.filter((item) => item.status !== 'closed').length, icon: VideoIcon, tone: 'bg-blue-50 text-blue-600', action: () => navigate('/appointments') },
               { label: 'Неоплаченные', value: unpaidCases, icon: CreditCard, tone: 'bg-amber-50 text-amber-600', action: () => navigate('/appointments') },
               { label: 'Уведомления', value: unreadNotifications, icon: Zap, tone: 'bg-slate-900 text-white', action: () => navigate('/chat') }
             ].map((item) => (
@@ -210,7 +210,7 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
                   <p className="text-xs md:text-sm text-slate-500 font-medium line-clamp-3 italic mb-6 md:mb-8 leading-relaxed">{formatCaseSummary(record.summary)}</p>
                   <div className="flex items-center justify-between pt-6 md:pt-8 border-t border-slate-50">
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                      <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse"></div>
                       <span className="text-[8px] md:text-[9px] font-black text-slate-900 uppercase tracking-widest">{formatCaseStatus(record.status)}</span>
                     </div>
                     <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-slate-200 group-hover:text-primary group-hover:translate-x-1 transition-all" />
@@ -272,10 +272,10 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
                     await roleApi.patientCreateCase('Новое обращение создано из кабинета пациента');
                     navigate('/appointments');
                   }}
-                  className="w-full p-6 md:p-8 bg-emerald-50 text-emerald-600 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-emerald-100 transition-all flex items-center justify-between group"
+                  className="w-full p-6 md:p-8 bg-blue-50 text-blue-600 rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-blue-100 transition-all flex items-center justify-between group"
                 >
                   <span className="break-words pr-2">Создать кейс</span>
-                  <Plus className="w-5 h-5 group-hover:translate-x-1 transition-transform text-emerald-300" />
+                  <Plus className="w-5 h-5 group-hover:translate-x-1 transition-transform text-blue-300" />
                 </button>
               </div>
             </div>
@@ -297,4 +297,3 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
 };
 
 export default PatientDashboard;
-

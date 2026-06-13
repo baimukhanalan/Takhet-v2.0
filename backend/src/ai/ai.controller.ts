@@ -1,6 +1,7 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+﻿import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { AiService } from './ai.service';
+import { AuthGuard } from '../auth/auth.guard';
 
 class HealthInsightsDto {
   @IsString()
@@ -51,7 +52,13 @@ export class AiController {
     return this.aiService.getHealthInsights(dto.query);
   }
 
+  @Post('public-health-insights')
+  getPublicHealthInsights(@Body() dto: HealthInsightsDto) {
+    return this.aiService.getHealthInsights(dto.query);
+  }
+
   @Post('chat')
+  @UseGuards(AuthGuard)
   async chat(@Body() dto: ChatDto) {
     return {
       text: await this.aiService.chat(dto.message, {
@@ -62,6 +69,7 @@ export class AiController {
   }
 
   @Post('chat-stream')
+  @UseGuards(AuthGuard)
   async chatStream(@Body() dto: ChatDto, @Res() res: any) {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -85,6 +93,7 @@ export class AiController {
   }
 
   @Post('speech')
+  @UseGuards(AuthGuard)
   async speech(@Body() dto: SpeechDto) {
     return {
       audio: await this.aiService.generateSpeech(dto.text)
@@ -92,6 +101,7 @@ export class AiController {
   }
 
   @Post('analyze')
+  @UseGuards(AuthGuard)
   analyze(@Body() dto: AnalyzeDto) {
     return this.aiService.analyzeHealthData(dto.type, dto.data);
   }

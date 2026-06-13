@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -1028,8 +1028,8 @@ export class ProfilesService {
     const text = value.trim();
     if (!text) return true;
     if (text.includes('????')) return true;
-    if (/[�]/.test(text)) return true;
-    if (/Р[а-яА-ЯёЁ]/.test(text) || /вЂ|в„–|вЂ”|вЂ¦|СЂ|С‚|Ð|Ñ/.test(text)) return true;
+    if (/[\ufffd]/.test(text)) return true;
+    if (/\u0420\u045f|\u0420\u2019|\u0420\u040e|\u0420\u045c|\u0421\u0403|\u0421\u201a|\u0420\x98|\u0432\u0402|\u0432\u201e\u2013/.test(text)) return true;
 
     const questionMarks = (text.match(/\?/g) || []).length;
     return questionMarks > 0 && questionMarks / Math.max(text.length, 1) > 0.2;
@@ -1499,19 +1499,28 @@ ${aiRecommendations || 'Нет данных'}`
   }
 
   private normalizePdfText(value: string) {
-    return value
-      .replace(/Р—РґСЂР°РІСЃС‚РІСѓР№С‚Рµ/g, 'Здравствуйте')
-      .replace(/РћРїРёС€РёС‚Рµ/g, 'Опишите')
-      .replace(/РєРѕРЅСЃСѓР»СЊС‚Р°С†РёРё/g, 'консультации')
-      .replace(/РіРѕСЃС‚РµРІРѕР№/g, 'гостевой')
-      .replace(/РР/g, 'ИИ')
-      .replace(/РџР°С†РёРµРЅС‚/g, 'Пациент')
-      .replace(/Р’СЂР°С‡/g, 'Врач')
-      .replace(/РЎРёСЃС‚РµРјР°/g, 'Система')
-      .replace(/вЂў/g, '•')
-      .replace(/вЂ”/g, '—')
-      .replace(/вЂњ|вЂќ/g, '"')
-      .replace(/вЂ¦/g, '...')
+    const replacements: Array<[string, string]> = [
+      ['\u0420\u2014\u0420\u0491\u0421\u0402\u0420\xb0\u0420\u0406\u0421\u0403\u0421\u201a\u0420\u0406\u0421\u0453\u0420\u2116\u0421\u201a\u0420\xb5', '\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435'],
+      ['\u0420\u045b\u0420\u0457\u0420\u0451\u0421\u20ac\u0420\u0451\u0421\u201a\u0420\xb5', '\u041e\u043f\u0438\u0448\u0438\u0442\u0435'],
+      ['\u0420\u0454\u0420\u0455\u0420\u0405\u0421\u0403\u0421\u0453\u0420\xbb\u0421\u040a\u0421\u201a\u0420\xb0\u0421\u2020\u0420\u0451\u0420\u0451', '\u043a\u043e\u043d\u0441\u0443\u043b\u044c\u0442\u0430\u0446\u0438\u0438'],
+      ['\u0420\u0456\u0420\u0455\u0421\u0403\u0421\u201a\u0420\xb5\u0420\u0406\u0420\u0455\u0420\u2116', '\u0433\u043e\u0441\u0442\u0435\u0432\u043e\u0439'],
+      ['\u0420\x98\u0420\x98', '\u0418\u0418'],
+      ['\u0420\u045f\u0420\xb0\u0421\u2020\u0420\u0451\u0420\xb5\u0420\u0405\u0421\u201a', '\u041f\u0430\u0446\u0438\u0435\u043d\u0442'],
+      ['\u0420\u2019\u0421\u0402\u0420\xb0\u0421\u2021', '\u0412\u0440\u0430\u0447'],
+      ['\u0420\u040e\u0420\u0451\u0421\u0403\u0421\u201a\u0420\xb5\u0420\u0458\u0420\xb0', '\u0421\u0438\u0441\u0442\u0435\u043c\u0430'],
+      ['\u0432\u0402\u045e', '\u2022'],
+      ['\u0432\u0402\u201d', '\u2014'],
+      ['\u0432\u0402\u045a', '"'],
+      ['\u0432\u0402\u045c', '"'],
+      ['\u0432\u0402\xa6', '...']
+    ];
+
+    let normalized = value;
+    for (const [broken, readable] of replacements) {
+      normalized = normalized.split(broken).join(readable);
+    }
+
+    return normalized
       .replace(/[^\x09\x0A\x0D\x20-\uFFFF]/g, '')
       .replace(/\r/g, '')
       .replace(/\t/g, ' ')
@@ -1535,6 +1544,3 @@ ${aiRecommendations || 'Нет данных'}`
     }
   }
 }
-
-
-

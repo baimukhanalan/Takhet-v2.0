@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+﻿import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { sign, verify } from 'jsonwebtoken';
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'crypto';
@@ -15,8 +15,8 @@ export class AuthService {
   private readonly hashPrefix = 'scrypt';
   private readonly sessionCookieName = 'takhet_session';
   private readonly tempPortalCredentials = {
-    login: 'admin',
-    password: 'admin'
+    login: 'baimukhanalan1@gmail.com',
+    password: 'baimukhanalan1@gmail.com'
   } as const;
 
   constructor(
@@ -39,7 +39,8 @@ export class AuthService {
 
   async login(email: string, password: string, role: LoginRole) {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!this.isTempPortalLogin(normalizedEmail, password) && !this.isValidEmail(normalizedEmail)) {
+    const isDemoPortalLogin = env.enableDemoPortalLogin && this.isTempPortalLogin(normalizedEmail, password);
+    if (!isDemoPortalLogin && !this.isValidEmail(normalizedEmail)) {
       throw new UnauthorizedException('Invalid email format');
     }
 
@@ -50,7 +51,7 @@ export class AuthService {
       patient: { email: env.appPatientEmail, password: env.appPatientPassword, userId: '44444444-4444-4444-4444-444444444444' }
     };
 
-    if (this.isTempPortalLogin(normalizedEmail, password)) {
+    if (isDemoPortalLogin) {
       const tempAccount = await this.ensureTempPortalAccount(role);
       await this.ensureAccountIsActive(tempAccount.id);
       await this.markEmailVerified(tempAccount.id, tempAccount.email, role);

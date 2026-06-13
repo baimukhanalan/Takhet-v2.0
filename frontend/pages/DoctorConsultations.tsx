@@ -111,7 +111,7 @@ const DoctorConsultations: React.FC = () => {
           {past.length > 0 ? past.map(app => (
             <div key={app.id} className="bg-slate-50 p-8 rounded-[3.5rem] border border-border flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="flex items-center gap-8">
-                <div className="w-16 h-16 rounded-[1.5rem] bg-white text-emerald-500 flex items-center justify-center shadow-sm">
+                <div className="w-16 h-16 rounded-[1.5rem] bg-white text-blue-500 flex items-center justify-center shadow-sm">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
                 <div>

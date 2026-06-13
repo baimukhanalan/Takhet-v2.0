@@ -10,8 +10,8 @@ interface AdminAuthPageProps {
 
 const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onLogin }) => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('baimukhanalan1@gmail.com');
-  const [password, setPassword] = useState('baimukhanalan1@gmail.com');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

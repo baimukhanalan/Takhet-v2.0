@@ -320,7 +320,7 @@ const AIAnalysisCenter: React.FC<{ user: User }> = ({ user }) => {
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-100 pb-8 gap-5">
                   <div className="flex items-center gap-5">
-                    <div className={`w-16 h-16 rounded-[1.6rem] flex items-center justify-center shadow-xl ${mode === 'symptoms' ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                    <div className={`w-16 h-16 rounded-[1.6rem] flex items-center justify-center shadow-xl ${mode === 'symptoms' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
                       <CheckCircle2 className="w-8 h-8" />
                     </div>
                     <div>
@@ -398,7 +398,7 @@ const AIAnalysisCenter: React.FC<{ user: User }> = ({ user }) => {
               Результат анализа ИИ не является окончательным диагнозом и используется как вспомогательная информация для ускорения обработки данных.
             </p>
             <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              <CheckCircle2 className="w-5 h-5 text-blue-500" />
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Безопасность данных: AES-256</span>
             </div>
           </div>

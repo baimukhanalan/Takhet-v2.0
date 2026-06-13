@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Search, Calendar, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { roleApi } from '../../services/roleApi';
@@ -156,4 +156,3 @@ const DoctorPatients: React.FC = () => {
 };
 
 export default DoctorPatients;
-

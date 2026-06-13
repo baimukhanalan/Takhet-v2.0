@@ -3,7 +3,7 @@ import { Bell, Search, X, Check, Info, AlertCircle, CheckCircle2, Globe } from '
 import { User, UserRole } from '../types';
 import type { Language } from '../services/language';
 import { useLanguage } from '../services/useLanguage';
-import { getStoredLanguage, setStoredLanguage } from '../services/language';
+import { getStoredLanguage, LANGUAGE_OPTIONS, setStoredLanguage } from '../services/language';
 import { roleApi } from '../../services/roleApi';
 import { useNavigate } from 'react-router-dom';
 import TakhetLogo from './Logo';
@@ -50,12 +50,12 @@ const Header: React.FC<HeaderProps> = ({ user }) => {
   const unreadCount = notifications.length;
   const roleLabel =
     user.role === UserRole.PATIENT
-      ? 'Пациент'
+      ? t.roles.patient
       : user.role === UserRole.DOCTOR
-        ? 'Врач'
+        ? t.roles.doctor
         : user.role === UserRole.PARTNER
-          ? 'Партнер'
-          : 'Админ';
+          ? t.roles.partner
+          : t.roles.admin;
 
   const handleLangChange = (newLang: Language) => {
     setStoredLanguage(newLang);
@@ -121,13 +121,13 @@ const Header: React.FC<HeaderProps> = ({ user }) => {
           </button>
           {isLangOpen && (
             <div className="absolute top-14 right-0 bg-background rounded-2xl border border-border shadow-2xl p-2 w-32 animate-in fade-in zoom-in-95 z-[60]">
-              {(['ru', 'kz', 'en'] as Language[]).map((languageValue) => (
+              {LANGUAGE_OPTIONS.map((option) => (
                 <button
-                  key={languageValue}
-                  onClick={() => handleLangChange(languageValue)}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${lang === languageValue ? 'bg-primary/5 text-primary' : 'hover:bg-secondary text-muted-foreground'}`}
+                  key={option.value}
+                  onClick={() => handleLangChange(option.value)}
+                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${lang === option.value ? 'bg-primary/5 text-primary' : 'hover:bg-secondary text-muted-foreground'}`}
                 >
-                  {languageValue} {lang === languageValue && <Check className="w-3 h-3" />}
+                  <span>{option.flag} {option.label}</span> {lang === option.value && <Check className="w-3 h-3" />}
                 </button>
               ))}
             </div>
@@ -159,9 +159,9 @@ const Header: React.FC<HeaderProps> = ({ user }) => {
                       {notification.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : notification.type === 'alert' ? <AlertCircle className="w-5 h-5" /> : <Info className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 space-y-1">
-                      <p className="text-sm tracking-tight font-black text-foreground">{notification.title || 'Уведомление'}</p>
-                      <p className="text-xs text-muted-foreground font-medium leading-relaxed">{notification.body || 'Подробности пока недоступны'}</p>
-                      <p className="text-[10px] text-muted font-black uppercase">{notification.createdAt ? new Date(notification.createdAt).toLocaleString('ru-RU') : 'Недавно'}</p>
+                      <p className="text-sm tracking-tight font-black text-foreground">{notification.title || t.common.notificationFallbackTitle}</p>
+                      <p className="text-xs text-muted-foreground font-medium leading-relaxed">{notification.body || t.common.notificationFallbackBody}</p>
+                      <p className="text-[10px] text-muted font-black uppercase">{notification.createdAt ? new Date(notification.createdAt).toLocaleString(lang === 'kk' ? 'kk-KZ' : lang === 'en' ? 'en-US' : 'ru-RU') : t.common.recently}</p>
                     </div>
                   </div>
                 ))

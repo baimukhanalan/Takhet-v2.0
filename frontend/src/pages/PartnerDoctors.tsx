@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Search, Star, TrendingUp, UserCheck, UserPlus, Filter, Mail, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../services/useLanguage';
@@ -87,7 +87,7 @@ const PartnerDoctors: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {[
           { label: 'Всего специалистов', val: doctors.length, icon: Users, color: 'text-primary bg-primary/5' },
-          { label: 'Активных врачей', val: doctors.filter((doctor) => doctor.verified).length, icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' },
+          { label: 'Активных врачей', val: doctors.filter((doctor) => doctor.verified).length, icon: UserCheck, color: 'text-blue-600 bg-blue-50' },
           { label: 'Ожидают активации', val: doctors.filter((doctor) => !doctor.verified).length, icon: TrendingUp, color: 'text-amber-600 bg-amber-50' }
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-border shadow-sm flex items-center gap-4 md:gap-6">
@@ -133,7 +133,7 @@ const PartnerDoctors: React.FC = () => {
                         <div className="w-14 h-14 rounded-2xl bg-primary/5 text-primary flex items-center justify-center shadow-sm border-2 border-white font-black">
                           {doctorName(doctor).slice(0, 2).toUpperCase()}
                         </div>
-                        <div className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full ${doctor.verified ? 'bg-emerald-500' : 'bg-amber-400'}`}></div>
+                        <div className={`absolute -bottom-1 -right-1 w-5 h-5 border-2 border-white rounded-full ${doctor.verified ? 'bg-blue-500' : 'bg-amber-400'}`}></div>
                       </div>
                       <div>
                         <h4 className="font-black text-foreground leading-tight">{doctorName(doctor)}</h4>
@@ -142,7 +142,7 @@ const PartnerDoctors: React.FC = () => {
                     </div>
                   </td>
                   <td className="p-6">
-                    <span className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border flex items-center w-fit gap-2 ${doctor.verified ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                    <span className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-lg border flex items-center w-fit gap-2 ${doctor.verified ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
                       <UserCheck className="w-3 h-3" /> {doctor.verified ? 'Активен' : 'Ожидает'}
                     </span>
                   </td>

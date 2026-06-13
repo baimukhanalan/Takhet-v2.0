@@ -113,7 +113,7 @@ const TakhetAIChat: React.FC<{ user?: User; trialMode?: boolean }> = ({ user, tr
 
   const medicalModeActions = useMemo<QuickAction[]>(() => [
     { id: 'ai-consultation', label: 'ИИ консультация', action: 'navigate', value: '/ai-consultation' },
-    { id: 'find-doctor', label: 'Найти врача', action: 'navigate', value: '/doctors-search' },
+    { id: 'find-doctor', label: 'Найти врача', action: 'navigate', value: '/guest-consultation' },
     { id: 'ai-decoding', label: 'ИИ расшифровка', action: 'navigate', value: '/ai-lab' },
     { id: 'describe-symptoms', label: 'Описать симптомы', action: 'prompt', value: 'Помоги структурированно описать мои симптомы. Сначала задай мне короткие уточняющие вопросы: что беспокоит, как давно, насколько сильно, есть ли температура и тревожные признаки.' },
     { id: 'ai-browser', label: 'ИИ браузер', action: 'navigate', value: '/health-browser' },
@@ -121,7 +121,7 @@ const TakhetAIChat: React.FC<{ user?: User; trialMode?: boolean }> = ({ user, tr
   ], []);
 
   const soulfulModeActions = useMemo<QuickAction[]>(() => [
-    { id: 'find-specialist', label: 'Найти специалиста', action: 'navigate', value: '/portal/mental' },
+    { id: 'find-specialist', label: 'Найти специалиста', action: 'navigate', value: '/mental' },
     { id: 'talk', label: 'Поговорить', action: 'prompt', value: 'Я рядом. Расскажите, что сейчас происходит и что вас больше всего беспокоит?' },
     { id: 'psychosomatics', label: 'Психосоматика', action: 'prompt', value: 'Давай поговорим с акцентом на психосоматику: что я чувствую в теле, где напряжение, когда это усиливается и с чем это может быть связано.' },
     { id: 'psychology', label: 'Психология', action: 'prompt', value: 'Давай поговорим с акцентом на психологию: помоги понять мои эмоции, мысли, тревоги и что я могу сделать сейчас.' },
@@ -404,9 +404,9 @@ const TakhetAIChat: React.FC<{ user?: User; trialMode?: boolean }> = ({ user, tr
         }
       : mode === 'business'
         ? {
-            accentButton: 'bg-emerald-600',
-            accentText: 'text-emerald-300',
-            icon: <Wallet className="w-10 h-10 text-emerald-400" />,
+            accentButton: 'bg-blue-600',
+            accentText: 'text-blue-300',
+            icon: <Wallet className="w-10 h-10 text-blue-400" />,
             heading: 'Takhet AI для партнера',
             description: 'Помощь с врачебной сетью, операционными задачами, отчетами и точками роста.'
           }

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { animate } from 'animejs';
 import {
   Activity,
   AlertTriangle,
@@ -54,55 +55,43 @@ const roleHome: Record<EnterpriseRole, string> = {
 
 const enterpriseRoleConfigs: Record<
   EnterpriseRole,
-  { title: string; shortTitle: string; icon: React.ElementType; description: string; demoIdentifier: string; demoPassword: string }
+  { title: string; shortTitle: string; icon: React.ElementType; description: string }
 > = {
   employee: {
     title: 'Employee',
     shortTitle: 'Employee',
     icon: User,
     description: 'Личный доступ к корпоративным услугам здоровья, AI-поддержке и консультациям.',
-    demoIdentifier: 'admin',
-    demoPassword: 'admin'
   },
   employer_admin: {
     title: 'Employer / HR',
     shortTitle: 'HR',
     icon: Building2,
     description: 'Агрегированная аналитика, сотрудники, пакет, лимиты и приватность.',
-    demoIdentifier: 'admin',
-    demoPassword: 'admin'
   },
   doctor: {
     title: 'Doctor',
     shortTitle: 'Doctor',
     icon: Stethoscope,
     description: 'Корпоративные консультации, расписание, triage summary и медицинские записи.',
-    demoIdentifier: 'admin',
-    demoPassword: 'admin'
   },
   psychologist: {
     title: 'Psychologist',
     shortTitle: 'Psychologist',
     icon: Brain,
     description: 'Сессии, risk flags, заметки, эскалации и обучение.',
-    demoIdentifier: 'admin',
-    demoPassword: 'admin'
   },
   takhet_admin: {
     title: 'Takhet Admin',
     shortTitle: 'Admin',
     icon: ShieldCheck,
     description: 'Компании, планы, врачи, лимиты, billing, payouts и compliance.',
-    demoIdentifier: 'admin',
-    demoPassword: 'admin'
   },
   clinical_supervisor: {
     title: 'Clinical Supervisor',
     shortTitle: 'Supervisor',
     icon: UserCheck,
     description: 'Quality Review, flagged cases, notes audit, escalations и clinical protocols.',
-    demoIdentifier: 'admin',
-    demoPassword: 'admin'
   }
 };
 
@@ -232,6 +221,106 @@ const SafeTable: React.FC<{ rows: any[]; columns?: string[] }> = ({ rows, column
   );
 };
 
+const deriveMonthlyLoss = (employees: number) => {
+  if (employees < 80) return 120000;
+  if (employees < 250) return 155000;
+  if (employees < 600) return 185000;
+  return 210000;
+};
+
+const deriveReduction = (employees: number) => {
+  if (employees < 80) return 12;
+  if (employees < 250) return 16;
+  if (employees < 600) return 20;
+  return 23;
+};
+
+const EnterpriseRoiCalculator = () => {
+  const [employees, setEmployees] = useState(120);
+  const derivedMonthlyLoss = deriveMonthlyLoss(employees);
+  const derivedReduction = deriveReduction(employees);
+  const monthlySavings = Math.round(employees * derivedMonthlyLoss * (derivedReduction / 100));
+  const yearlySavings = monthlySavings * 12;
+  const previousSavingsRef = useRef({ monthly: monthlySavings, yearly: yearlySavings });
+  const [displayedMonthlySavings, setDisplayedMonthlySavings] = useState(monthlySavings);
+  const [displayedYearlySavings, setDisplayedYearlySavings] = useState(yearlySavings);
+
+  useEffect(() => {
+    const animatedValue = {
+      monthly: previousSavingsRef.current.monthly,
+      yearly: previousSavingsRef.current.yearly
+    };
+
+    const motion = animate(animatedValue, {
+      monthly: monthlySavings,
+      yearly: yearlySavings,
+      duration: 520,
+      ease: 'out(3)',
+      onUpdate: () => {
+        setDisplayedMonthlySavings(Math.round(animatedValue.monthly));
+        setDisplayedYearlySavings(Math.round(animatedValue.yearly));
+      },
+      onComplete: () => {
+        previousSavingsRef.current = { monthly: monthlySavings, yearly: yearlySavings };
+      }
+    });
+
+    return () => {
+      motion.revert();
+    };
+  }, [monthlySavings, yearlySavings]);
+
+  return (
+    <div data-enterprise-roi-calculator className="mt-8 grid gap-6 rounded-[2.5rem] border border-slate-100 bg-slate-50 p-6 lg:grid-cols-[1fr_0.9fr]">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.26em] text-primary">ROI calculator</p>
+        <h2 className="mt-3 text-3xl font-black text-slate-950">Оцените эффект пилота</h2>
+        <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-500">
+          Только количество сотрудников. Остальные параметры модель подстраивает сама, потому что HR не обязан заранее знать скрытые потери или точный процент снижения.
+        </p>
+        <div className="mt-6 space-y-4">
+          <label className="block rounded-3xl bg-white p-4">
+            <span className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+              Сотрудников
+              <span className="text-primary">{employees.toLocaleString('ru-RU')}</span>
+            </span>
+            <input
+              type="range"
+              min={20}
+              max={1000}
+              step={1}
+              value={employees}
+              onChange={(event) => setEmployees(Number(event.target.value))}
+              className="mt-4 w-full accent-primary"
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-3xl bg-white p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Модельная потеря</p>
+              <p className="mt-2 text-2xl font-black text-slate-950">{derivedMonthlyLoss.toLocaleString('ru-RU')} ₸</p>
+              <p className="mt-1 text-xs font-semibold text-slate-400">на сотрудника в месяц</p>
+            </div>
+            <div className="rounded-3xl bg-white p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Снижение потерь</p>
+              <p className="mt-2 text-2xl font-black text-slate-950">{derivedReduction}%</p>
+              <p className="mt-1 text-xs font-semibold text-slate-400">расчетный сценарий</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="rounded-[2rem] bg-slate-950 p-6 text-white">
+        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-200">Ориентир</p>
+        <p className="mt-5 text-5xl font-black tracking-tighter">{displayedMonthlySavings.toLocaleString('ru-RU')} ₸</p>
+        <p className="mt-2 text-sm font-semibold text-slate-400">потенциальная экономия в месяц</p>
+        <div className="mt-6 rounded-3xl bg-white/10 p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">За год</p>
+          <p className="mt-2 text-3xl font-black">{displayedYearlySavings.toLocaleString('ru-RU')} ₸</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const EnterpriseLanding: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
   <div className="min-h-screen bg-white selection:bg-primary selection:text-white overflow-x-hidden">
     <PublicHeader activePath="/enterprise" />
@@ -241,14 +330,14 @@ const EnterpriseLanding: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
           <div>
             <p className="text-xs font-black uppercase tracking-[0.28em] text-primary">Takhet Enterprise</p>
             <h1 className="mt-6 max-w-5xl text-5xl font-black uppercase leading-[0.9] tracking-tighter text-slate-950 sm:text-6xl lg:text-7xl">
-              Снизьте потери от выгорания, больничных и скрытого падения продуктивности
+              Цифровое медицинское сопровождение предприятий
             </h1>
             <p className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-slate-500">
-              Корпоративная телемедицина, AI-поддержка 24/7 и обезличенная аналитика рисков для команд.
+              Корпоративная телемедицина, психологическая поддержка, AI-поддержка 24/7 и обезличенная аналитика для HR: компания видит тренды, а не личные медицинские данные.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="#lead" className="rounded-2xl bg-primary px-7 py-4 text-xs font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-primary/20">Запросить пилот</a>
-              <a href="#roi" className="rounded-2xl border border-slate-200 bg-white px-7 py-4 text-xs font-black uppercase tracking-[0.18em] text-primary shadow-sm">Рассчитать стоимость</a>
+              <a href="#roi" className="rounded-2xl border border-slate-200 bg-white px-7 py-4 text-xs font-black uppercase tracking-[0.18em] text-primary shadow-sm">Посчитать эффект</a>
               <button onClick={onLogin} className="rounded-2xl border border-slate-200 bg-slate-50 px-7 py-4 text-xs font-black uppercase tracking-[0.18em] text-slate-700">Войти</button>
             </div>
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -299,9 +388,9 @@ const EnterpriseLanding: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-5 lg:grid-cols-3">
             {[
-              ['Starter', '2 000 ₸ / сотрудник', 'AI support 24/7, 1 консультация дежурного врача в месяц, обезличенная аналитика.'],
-              ['Business', '4 000-6 000 ₸ / сотрудник', 'AI support, 2 консультации врача, психологическая консультация по лимиту, расширенная аналитика.'],
-              ['Enterprise', 'Индивидуально', 'SLA, выделенный аккаунт-менеджер, кастомные лимиты, интеграции и отчёты для HR/CFO.']
+              ['Starter', 'Базовое сопровождение', 'AI support 24/7, дежурный врач по лимиту и обезличенная HR-аналитика.'],
+              ['Business', 'Расширенная поддержка', 'Дежурный врач, психологическая поддержка по лимитам, triage к специалистам и отчеты.'],
+              ['Enterprise', 'Индивидуальная программа', 'SLA, выделенный менеджер, кастомные лимиты, интеграции и отчеты для HR/CFO.']
             ].map(([title, price, text]) => (
               <div key={title} className={cx(cardClass, title === 'Business' && 'ring-2 ring-primary')}>
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">{title}</p>
@@ -310,12 +399,7 @@ const EnterpriseLanding: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
               </div>
             ))}
           </div>
-          <div className="mt-8 rounded-[2.5rem] border border-slate-100 bg-slate-50 p-6">
-            <h2 className="text-3xl font-black text-slate-950">ROI calculator</h2>
-            <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-500">
-              Пилот на 50 сотрудников помогает оценить активацию, использование, частые категории обращений и экономику пакета без раскрытия личных данных.
-            </p>
-          </div>
+          <EnterpriseRoiCalculator />
         </div>
       </section>
 
@@ -360,6 +444,34 @@ const EnterpriseLanding: React.FC<{ onLogin: () => void }> = ({ onLogin }) => (
           <B2BLeadForm />
         </div>
       </section>
+
+      <section data-enterprise-final-section className="px-4 pb-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl rounded-[3rem] bg-slate-950 p-8 text-white shadow-2xl lg:p-14">
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-200">Next step</p>
+              <h2 className="mt-4 text-4xl font-black tracking-tighter">Запустите пилот без доступа к личным медданным сотрудников</h2>
+              <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-400">
+                Takhet Enterprise помогает собрать пакет, лимиты, правила приватности и первый отчет для руководства без превращения заботы о здоровье в слежку.
+              </p>
+            </div>
+            <a href="#lead" className="inline-flex rounded-2xl bg-white px-7 py-4 text-xs font-black uppercase tracking-[0.18em] text-slate-950">Запросить пилот</a>
+          </div>
+        </div>
+      </section>
+      <footer data-enterprise-footer className="border-t border-slate-100 bg-white px-6 py-24 text-center">
+        <div className="mx-auto max-w-7xl space-y-8">
+          <div className="flex flex-col items-center justify-center gap-3">
+            <span className="text-4xl font-black tracking-tighter text-slate-950">Takhet<span className="text-primary">+</span></span>
+            <p className="max-w-2xl text-sm font-bold leading-7 text-slate-400">
+              Enterprise остается частью Takhet+: медицинское сопровождение, приватность сотрудников и понятная аналитика для руководства в одном контуре.
+            </p>
+          </div>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400">
+            © 2026 Takhet+. Все права защищены.
+          </p>
+        </div>
+      </footer>
     </main>
   </div>
 );
@@ -413,7 +525,7 @@ const B2BLeadForm = () => {
         />
       </div>
       <button className="mt-5 w-full rounded-2xl bg-primary px-6 py-4 text-xs font-black uppercase tracking-[0.18em] text-white">Отправить заявку</button>
-      {status === 'sent' ? <p className="mt-3 text-sm font-bold text-emerald-600">Заявка сохранена.</p> : null}
+      {status === 'sent' ? <p className="mt-3 text-sm font-bold text-blue-600">Заявка сохранена.</p> : null}
       {status === 'error' ? <p className="mt-3 text-sm font-bold text-red-500">Не удалось отправить. Повторите позже.</p> : null}
     </form>
   );
@@ -423,8 +535,8 @@ const EnterpriseLogin: React.FC<{ onSession: (session: EnterpriseSession) => voi
   const navigate = useNavigate();
   const [role, setRole] = useState<EnterpriseRole>('employee');
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [identifier, setIdentifier] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const config = enterpriseRoleConfigs[role];
 
@@ -484,8 +596,8 @@ const EnterpriseLogin: React.FC<{ onSession: (session: EnterpriseSession) => voi
             </div>
             <p className="mt-4 rounded-2xl bg-primary/5 px-4 py-3 text-xs font-bold leading-5 text-slate-500">{config.description}</p>
             <div className="mt-6 space-y-3">
-              <input value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="Email или Employee ID" className="w-full rounded-2xl bg-blue-50 px-5 py-5 text-base font-bold text-slate-950 outline-none focus:ring-2 focus:ring-primary" />
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Пароль" className="w-full rounded-2xl bg-blue-50 px-5 py-5 text-base font-bold text-slate-950 outline-none focus:ring-2 focus:ring-primary" />
+              <input name="enterprise-identifier" type="text" autoComplete="username" value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="Email или Employee ID" className="w-full rounded-2xl bg-blue-50 px-5 py-5 text-base font-bold text-slate-950 outline-none focus:ring-2 focus:ring-primary" />
+              <input name="enterprise-password" type="password" autoComplete={mode === 'register' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Пароль" className="w-full rounded-2xl bg-blue-50 px-5 py-5 text-base font-bold text-slate-950 outline-none focus:ring-2 focus:ring-primary" />
             </div>
             <button className="mt-6 flex w-full items-center justify-center gap-3 rounded-[2rem] bg-primary px-8 py-5 text-lg font-black text-white shadow-xl shadow-primary/20">
               {mode === 'login' ? 'Войти' : 'Перейти к регистрации'}
@@ -572,11 +684,11 @@ const EnterpriseShell: React.FC<{ user: EnterpriseUser; onLogout: () => void; ch
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden text-right md:block">
-              <p className="text-sm font-black text-foreground">{user.name}</p>
+              <p className="text-sm font-black text-foreground">{user.fullName}</p>
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">{enterpriseRoleConfigs[user.role]?.title}</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-primary/20 bg-primary text-xs font-black text-white">
-              {user.name.slice(0, 2).toUpperCase()}
+              {user.fullName.slice(0, 2).toUpperCase()}
             </div>
           </div>
         </header>

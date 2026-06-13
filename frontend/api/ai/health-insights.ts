@@ -12,6 +12,9 @@ import {
 } from './_shared.js';
 
 const HEALTH_BROWSER_CACHE_TTL_MS = 3 * 60 * 1000;
+const HEALTH_BROWSER_CACHE_MAX_ITEMS = 80;
+const HEALTH_BROWSER_AI_DEADLINE_MS = 6500;
+const HEALTH_BROWSER_SINGLE_PASS = true;
 const healthBrowserCache = new Map<string, { expiresAt: number; value: any }>();
 const inFlightHealthBrowserRequests = new Map<string, Promise<any>>();
 
@@ -92,6 +95,37 @@ const setCachedInsight = (query: string, value: any) => {
     expiresAt: Date.now() + HEALTH_BROWSER_CACHE_TTL_MS,
     value
   });
+  trimHealthBrowserCache();
+};
+
+const trimHealthBrowserCache = () => {
+  const now = Date.now();
+  for (const [key, cached] of healthBrowserCache.entries()) {
+    if (cached.expiresAt <= now) {
+      healthBrowserCache.delete(key);
+    }
+  }
+
+  while (healthBrowserCache.size > HEALTH_BROWSER_CACHE_MAX_ITEMS) {
+    const oldestKey = healthBrowserCache.keys().next().value;
+    if (!oldestKey) break;
+    healthBrowserCache.delete(oldestKey);
+  }
+};
+
+const withAiDeadline = async <T>(promise: Promise<T>, timeoutMs = HEALTH_BROWSER_AI_DEADLINE_MS): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('AI_BROWSER_DEADLINE_EXCEEDED')), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 };
 
 const ensureArray = (value: unknown, fallback: string[]) =>
@@ -325,11 +359,8 @@ const buildGenerateConfig = (query: string, medical: boolean) => ({
   temperature: medical ? 0.15 : 0.2,
   topP: 0.9,
   candidateCount: 1,
-  maxOutputTokens: medical ? 1000 : 900
+  maxOutputTokens: medical ? 1600 : 1400
 });
-
-const canUseFastMedicalAnswer = (query: string) =>
-  /(диаре|понос|туберкул|спин|поясниц|лопат|позвоноч|радикул|седалищ|ишиас|back pain)/i.test(query);
 
 const textToInsight = (text: string, query: string, medical: boolean) =>
   ensureInsightShape(
@@ -374,10 +405,6 @@ const generateInsight = async (query: string, medical: boolean) => {
     return newsInsight;
   }
 
-  if (medical && query.trim().length <= 80 && canUseFastMedicalAnswer(query)) {
-    return textToInsight(buildHelpfulFallback(query), query, medical);
-  }
-
   const ai = ensureAi();
   const modelCandidates = getModelCandidatesForTask('browser', query);
   const prompt = buildPrompt(query, medical);
@@ -386,12 +413,44 @@ const generateInsight = async (query: string, medical: boolean) => {
   let lastError: unknown = null;
 
   for (const model of modelCandidates) {
+    if (HEALTH_BROWSER_SINGLE_PASS) {
+      try {
+        const response = await withAiDeadline(
+          ai.models.generateContent({
+            model,
+            contents: plainPrompt,
+            config: {
+              systemInstruction: buildSystemInstruction(medical),
+              tools: isFreshDataLike(query) ? [{ googleSearch: {} }] : undefined,
+              temperature: medical ? 0.15 : 0.2,
+              topP: 0.9,
+              candidateCount: 1,
+              maxOutputTokens: medical ? 1600 : 1400
+            }
+          })
+        );
+        const plainText = cleanAiText(String(response.text || '').trim());
+        if (plainText && !isLowValueAiText(plainText)) {
+          return textToInsight(plainText, query, medical);
+        }
+      } catch (error) {
+        lastError = error;
+        console.error(`health-insights single-pass mode failed on ${model}:`, error);
+        if (!isQuotaError(error)) {
+          break;
+        }
+      }
+      continue;
+    }
+
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: generateConfig
-      });
+      const response = await withAiDeadline(
+        ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: generateConfig
+        })
+      );
       const responseText = String(response.text || '').trim();
       if (responseText) {
         const insight = ensureInsightShape(JSON.parse(extractJson(responseText)), query, medical);
@@ -405,18 +464,20 @@ const generateInsight = async (query: string, medical: boolean) => {
     }
 
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: plainPrompt,
-        config: {
-          systemInstruction: buildSystemInstruction(medical),
-          tools: isFreshDataLike(query) ? [{ googleSearch: {} }] : undefined,
-          temperature: medical ? 0.15 : 0.2,
-          topP: 0.9,
-          candidateCount: 1,
-          maxOutputTokens: medical ? 900 : 800
-        }
-      });
+      const response = await withAiDeadline(
+        ai.models.generateContent({
+          model,
+          contents: plainPrompt,
+          config: {
+            systemInstruction: buildSystemInstruction(medical),
+            tools: isFreshDataLike(query) ? [{ googleSearch: {} }] : undefined,
+            temperature: medical ? 0.15 : 0.2,
+            topP: 0.9,
+            candidateCount: 1,
+            maxOutputTokens: medical ? 1600 : 1400
+          }
+        })
+      );
       const plainText = cleanAiText(String(response.text || '').trim());
       if (plainText && !isLowValueAiText(plainText)) {
         return textToInsight(plainText, query, medical);

@@ -105,7 +105,7 @@ const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isP
               </div>
               <div className="flex justify-between items-center pt-2">
                 <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {t.community.anonymous}
+                  <CheckCircle2 className="w-4 h-4 text-blue-500" /> {t.community.anonymous}
                 </span>
                 <button onClick={handlePost} className="px-12 py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-primary transition-all shadow-lg">{t.community.postBtn}</button>
               </div>
@@ -134,7 +134,7 @@ const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isP
                     <span className="px-4 py-2 bg-slate-50 text-slate-500 text-[9px] font-black rounded-xl uppercase tracking-widest border border-slate-100">{c.category}</span>
                     <span className="text-[9px] text-slate-300 font-black uppercase tracking-[0.2em] flex items-center gap-2"><UserCircle2 className="w-4 h-4" /> {c.author}</span>
                   </div>
-                  {c.replies.length > 0 && <CheckCircle className="w-6 h-6 text-emerald-500" />}
+                  {c.replies.length > 0 && <CheckCircle className="w-6 h-6 text-blue-500" />}
                 </div>
                 
                 <div>
@@ -173,7 +173,7 @@ const CommunityPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isP
                       </button>
                     </div>
                     <div className="flex items-center justify-center gap-3">
-                       <TrendingUp className="w-4 h-4 text-emerald-500" />
+                       <TrendingUp className="w-4 h-4 text-blue-500" />
                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.community.reputationPoints} [+50 pts]</p>
                     </div>
                   </div>

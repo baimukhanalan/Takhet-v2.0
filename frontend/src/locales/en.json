@@ -1,0 +1,503 @@
+{
+  "nav": {
+    "patients": "Patients",
+    "services": "Services",
+    "takhetAI": "Takhet AI",
+    "doctors": "For Doctors",
+    "partners": "Partners",
+    "mental": "Mental",
+    "labs": "Takhet Labs",
+    "enterprise": "Enterprise",
+    "auth": "Sign in",
+    "reg": "Register"
+  },
+  "auth": {
+    "login": "Sign in",
+    "register": "Register",
+    "account": "Account",
+    "createNew": "Create new",
+    "alreadyHave": "Already have an account",
+    "email": "Email",
+    "password": "Password",
+    "continue": "Continue",
+    "back": "Back",
+    "error": "Invalid email or password",
+    "registerError": "Could not complete registration",
+    "loginSubmit": "Sign in",
+    "confirmEmail": "Confirm your email",
+    "confirmEmailHint": "We sent a confirmation email. You can enter the portal after confirmation.",
+    "roles": {
+      "patient": "Patient",
+      "doctor": "Doctor",
+      "partner": "Partner",
+      "admin": "Admin"
+    }
+  },
+  "language": {
+    "ru": "Russian",
+    "kk": "Kazakh",
+    "en": "English"
+  },
+  "sidebar": {
+    "panel": "Dashboard",
+    "aiAnalysis": "AI analysis",
+    "aiConsultation": "AI consultation",
+    "takhetAI": "Takhet AI",
+    "healthBrowser": "AI browser",
+    "booking": "Book a doctor",
+    "mental": "Mental",
+    "appointments": "My appointments",
+    "chat": "Chat",
+    "archive": "Medical archive",
+    "services": "Services",
+    "settings": "Settings",
+    "logout": "Logout",
+    "billing": "Finances",
+    "reports": "Reports",
+    "doctors": "Doctors",
+    "patients": "Patients",
+    "swarm": "Swarm Medicine",
+    "labs": "Takhet Labs"
+  },
+  "roles": {
+    "patient": "Patient",
+    "doctor": "Doctor",
+    "partner": "Partner",
+    "admin": "Admin"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "logout": "Logout",
+    "loading": "Loading...",
+    "back": "Back",
+    "search": "Search...",
+    "searchPlaceholder": "Search the platform...",
+    "notifications": "Notifications",
+    "emptyNotifications": "No notifications yet",
+    "notificationFallbackTitle": "Notification",
+    "notificationFallbackBody": "Details are not available yet",
+    "recently": "Recently",
+    "open": "Open",
+    "details": "Details",
+    "status": "Status",
+    "price": "Price",
+    "availableSlots": "Available slots",
+    "years": "years",
+    "adminPortal": "Admin portal"
+  },
+  "services": {
+    "title": "Services",
+    "subtitle": "Additional patient services.",
+    "pharmacy": "Medicine ordering",
+    "pharmacyDesc": "This service is temporarily unavailable while we stabilize delivery logistics.",
+    "homeVisit": "Doctor home visit",
+    "homeVisitDesc": "This section is temporarily paused due to logistics issues.",
+    "go": "Open",
+    "safe": "Safe",
+    "safeDesc": "We enable only services that are ready to work reliably and predictably.",
+    "express": "Status",
+    "expressDesc": "New requests are temporarily disabled.",
+    "accessible": "Reason",
+    "accessibleDesc": "The team is refining routes, timing and service quality.",
+    "detail": {
+      "root": "Takhet Services",
+      "status": "Status",
+      "why": "Why it matters",
+      "what": "What it is",
+      "forWhom": "Who it is for",
+      "includes": "What it includes"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "patient": {
+      "profile": "Profile",
+      "aiTitle": "AI review",
+      "aiDesc": "Quick review of symptoms, lab results and next steps.",
+      "aiBtn": "Open",
+      "pharmacy": "Medicines",
+      "pharmacyDesc": "This service is temporarily paused due to logistics.",
+      "homeVisit": "Doctor at home",
+      "homeVisitDesc": "This service is temporarily paused due to logistics.",
+      "go": "Go"
+    },
+    "doctor": {
+      "planned": "appointments",
+      "expertStatus": "Status",
+      "sessions": "Sessions",
+      "patients": "Patients",
+      "revenue": "Revenue",
+      "load": "Load",
+      "weeklyRevenue": "Weekly revenue",
+      "detailReport": "Report",
+      "upcoming": "Upcoming",
+      "fullSchedule": "Schedule",
+      "join": "Join",
+      "openCase": "Open case",
+      "prepare": "Prepare",
+      "noAppts": "No appointments yet",
+      "copilotTitle": "Coordinator",
+      "copilotDesc": "Helps distribute workload, keep important tasks visible and make decisions faster.",
+      "runAssistant": "Open",
+      "swarm": {
+        "title": "Swarm Medicine tasks",
+        "points": "+50 points for consensus",
+        "newCase": "New case",
+        "anonymous": "Anonymous review",
+        "description": "An atypical case requires a second expert opinion for clarification.",
+        "participate": "Participate"
+      }
+    },
+    "partner": {
+      "orgTitle": "Organization",
+      "efficiency": "Efficiency",
+      "export": "Export",
+      "manageDocs": "Management",
+      "activeDocs": "Doctors",
+      "totalConsults": "Consultations",
+      "revenueMTD": "Revenue",
+      "whiteLabel": "White Label",
+      "growth": "Growth",
+      "period": "Period",
+      "verificationStatus": "Status",
+      "verified": "Verified",
+      "complianceDesc": "Current compliance and quality control status.",
+      "viewCompliance": "Open"
+    }
+  },
+  "landing": {
+    "whyTitle": "How Takhet+ helps patients",
+    "whyCards": [
+      {
+        "title": "1. Gather the facts first",
+        "desc": "The complaint, photos, lab results and history are saved into one case.",
+        "items": [
+          "what started and when,",
+          "what has already been checked,",
+          "what data to show the doctor."
+        ],
+        "footer": "The result is a prepared case for a doctor or AI review."
+      },
+      {
+        "title": "2. A clear next step",
+        "desc": "The service separates urgent signs from planned questions and shows action options.",
+        "grid": [
+          "clarify data,",
+          "open AI Browser,",
+          "book a doctor,",
+          "save documents."
+        ],
+        "footer": "No diagnosis promises and no generic advice."
+      },
+      {
+        "title": "3. History is not lost between visits",
+        "desc": "The medical archive stores consultations, lab results and documents in a timeline.",
+        "items": [
+          "you can see what changed,",
+          "repeat visits are easier to prepare,",
+          "the doctor gets context faster."
+        ]
+      }
+    ],
+    "capabilitiesTitle": "What you can do in Takhet+",
+    "capConsultation": {
+      "title": "Online doctor consultations",
+      "desc": "Video, audio or chat with a doctor. The patient chooses the format, and the specialist receives a prepared case.",
+      "btn": "Book"
+    },
+    "capSecondary": [
+      {
+        "title": "Route to the right specialist",
+        "desc": "Based on complaints and documents, the service helps decide where to start: therapist, specialist, psychologist or planned review."
+      },
+      {
+        "title": "Second opinion from doctors (Swarm Medicine)",
+        "desc": "For a complex case, you can request an anonymous review by several specialists. The decision remains with the doctor and patient."
+      }
+    ],
+    "archiveTitle": "Medical archive: documents, lab results, consultations",
+    "archiveDesc": "Visits, prescriptions, lab results and files are kept in one place. Access belongs only to the patient and people they authorize.",
+    "archiveBtn": "Open archive",
+    "logistics": [
+      {
+        "title": "Medicine delivery",
+        "desc": "The service is temporarily paused due to logistics issues and operational rebuilding."
+      },
+      {
+        "title": "Doctor home visit",
+        "desc": "The service is temporarily paused due to logistics and route planning issues."
+      },
+      {
+        "title": "Mental support",
+        "desc": "Specialist consultations and calm AI dialogue for anxiety, stress and overload."
+      },
+      {
+        "title": "Veterinary consultations",
+        "desc": "Online booking with a specialist for a pet when quick situation review is needed."
+      }
+    ],
+    "controlTitle": "Control without noise",
+    "controlSubtitle": "Takhet+ is useful when you need to:",
+    "controlItems": [
+      "structure a complaint,",
+      "prepare for a visit,",
+      "keep lab results and prescriptions,",
+      "send full context to a doctor."
+    ],
+    "philosophy": "Takhet+ connects search, consultations, archive and AI review into one workflow. AI helps prepare questions and documents; medical decisions are made by a doctor.",
+    "faqTitle": "FAQ",
+    "faqItems": [
+      {
+        "q": "What is this service and how is it different from regular clinics?",
+        "a": "Takhet+ is one platform where you can quickly understand your condition,\nget guidance and, if needed, move directly to a doctor.\n\nInstead of ?book first ? understand later?,\nyou understand the situation first and then decide what to do."
+      },
+      {
+        "q": "Is it reliable if I do not know who is behind it?",
+        "a": "The platform is built around real clinical expertise and practicing specialists.\n\nYou are not dealing with random people ?\ndoctors are verified and work within the system."
+      },
+      {
+        "q": "Do I have to pay and see a doctor right away?",
+        "a": "No.\n\nYou can start for free: understand your condition,\nassess the level of the problem and then decide\nwhether a consultation is needed."
+      },
+      {
+        "q": "How accurate and useful is it?",
+        "a": "The service helps structure your condition and reduce uncertainty.\n\nIt does not replace a doctor, but it gives you:\n? an understanding of what is happening\n? possible risks\n? what to do next\n\nFor many people, this is already enough to stop delaying care."
+      },
+      {
+        "q": "What is the real benefit for me?",
+        "a": "You save time, money and stress.\n\nInstead of chaotic searching and waiting:\n? you understand the situation quickly\n? you avoid going to the wrong specialist\n? you act sooner\n\nMost importantly, you are not left alone with the problem."
+      }
+    ],
+    "finalCtaTitle": "Start with a question or consultation.",
+    "finalCtaReg": "Register",
+    "finalCtaConsult": "Get consultation",
+    "footerRights": "© 2026 Takhet+. All rights reserved.",
+    "heroPlaceholders": [
+      "sore throat and fever",
+      "explain a blood test",
+      "find a therapist in Almaty",
+      "what to do after a burn",
+      "vitamin D deficiency symptoms"
+    ]
+  },
+  "mental": {
+    "assistant": {
+      "title": "Soulful assistant",
+      "tag": "Soulful Mode",
+      "aiDefault": "I am here. Tell me what worries you most right now.",
+      "placeholder": "Calm dialogue, support, anxiety, overload, sleep.",
+      "inputPlaceholder": "Write what you feel..."
+    },
+    "specialists": {
+      "title": "Specialists",
+      "desc": "Takhet+ psychologists and mental health specialists",
+      "exp": "Experience",
+      "price": "Price",
+      "cta": "Book"
+    }
+  },
+  "aiBrowser": {
+    "inputPlaceholder": "What is bothering you? For example: sore throat, fever, cough..."
+  },
+  "appointments": {
+    "reviewPlaceholder": "What did you like about this consultation?"
+  },
+  "community": {
+    "title": "Takhet+ Community",
+    "desc": "Patient questions, doctor replies and open professional review",
+    "postTitle": "Ask a question",
+    "postTopic": "Briefly describe the topic",
+    "postBody": "Describe the situation, symptoms or context",
+    "anonymous": "Publish anonymously",
+    "postBtn": "Publish",
+    "filterAll": "All questions",
+    "filterUnanswered": "Unanswered",
+    "doctorReply": "Doctor reply",
+    "doctorPrompt": "Write a reply...",
+    "reputationPoints": "Reputation points",
+    "topDoctors": "Top doctors"
+  },
+  "pharmacy": {
+    "title": "Pharmacy",
+    "subtitle": "This section currently works as a showcase while logistics and stock confirmation are being restored.",
+    "cart": "Cart",
+    "searchPlaceholder": "Search products",
+    "total": "Total",
+    "empty": "Cart is empty",
+    "checkoutDisabled": "Temporarily unavailable",
+    "pausedLine": "Orders are temporarily paused due to logistics and delivery integration issues.",
+    "pausedAlert": "The pharmacy section currently works as a showcase. Checkout is temporarily disabled while logistics and stock confirmation are being reworked.",
+    "pausedError": "Medicine ordering is temporarily paused while delivery logistics and stock confirmation are being rebuilt.",
+    "products": {
+      "multivitamin": "Multivitamin complex",
+      "ibuprofen": "Ibuprofen 400 mg",
+      "vitaminD": "Vitamin D3 (2000 IU)",
+      "throatKit": "Throat care kit"
+    },
+    "categories": {
+      "all": "All",
+      "vitamins": "Vitamins",
+      "painRelief": "Pain relief",
+      "coldFlu": "Cold and flu",
+      "personalCare": "Personal care"
+    }
+  },
+  "settings": {
+    "tabs": {
+      "profile": "Profile",
+      "medical": "Medical",
+      "security": "Security",
+      "notifications": "Notifications",
+      "finance": "Finance",
+      "community": "Community",
+      "organization": "Organization",
+      "integrations": "Integrations",
+      "team": "Team",
+      "legal": "Documents"
+    },
+    "patient": {
+      "fullname": "Full name",
+      "dob": "Date of birth",
+      "gender": "Gender",
+      "phone": "Phone",
+      "address": "Address",
+      "lang": "Language",
+      "archive": "Archive",
+      "export": "Export",
+      "subscription": "Subscription",
+      "family": "Family",
+      "password": "Password",
+      "privacy": "Privacy"
+    },
+    "partner": {
+      "name": "Name",
+      "bin": "BIN",
+      "team": "Team",
+      "status": "Status",
+      "emis": "EMIS",
+      "emr": "EMR",
+      "whiteLabel": "White Label"
+    },
+    "doctor": {
+      "pro": "Profile",
+      "specialty": "Specialty",
+      "exp": "Experience",
+      "edu": "Education",
+      "social": "Public profile",
+      "finance": "Finances",
+      "pricePrimary": "Primary price",
+      "priceSecondary": "Follow-up price",
+      "reputation": "Rating",
+      "complaintsChat": "Cases"
+    }
+  },
+  "ai_consultation": {
+    "heroTag": "AI consultation",
+    "heroTitle": "Why choose AI consultation?",
+    "heroDesc": "Fast start, clear situation review and the next step without unnecessary delay.",
+    "benefits": {
+      "instant": {
+        "title": "Instant",
+        "desc": "No queue. Start in a few seconds."
+      },
+      "analysis": {
+        "title": "Deep review",
+        "desc": "Analysis of symptoms, documents and context."
+      },
+      "confidential": {
+        "title": "Confidential",
+        "desc": "Data is protected and used only for the consultation."
+      },
+      "report": {
+        "title": "Final report",
+        "desc": "Structured summary after the session."
+      }
+    },
+    "whyChoose": {
+      "title": "Why it is convenient",
+      "p1": {
+        "title": "24/7 access",
+        "desc": "You can start a consultation at any time."
+      },
+      "p2": {
+        "title": "Saves time",
+        "desc": "You do not need to wait for an appointment to structure the situation."
+      },
+      "p3": {
+        "title": "Second view",
+        "desc": "AI helps prepare questions for a doctor."
+      },
+      "p4": {
+        "title": "Multimodal",
+        "desc": "You can communicate by text, voice and show documents."
+      }
+    },
+    "disclaimer": "The AI assistant does not diagnose and does not replace a doctor. Medical decisions are made by a licensed specialist.",
+    "payment": {
+      "title": "Consultation payment",
+      "subtitle": "Access to Takhet+ AI consultation",
+      "tariff": "Tariff",
+      "oneTime": "One-time consultation",
+      "price": "Price",
+      "currency": "₸",
+      "allFeatures": "Chat, document review and final report are included",
+      "payKaspi": "Pay",
+      "back": "Back"
+    },
+    "room": {
+      "title": "Takhet+ AI consultation",
+      "connected": "Connection active",
+      "connecting": "Connecting...",
+      "reconnect": "Reconnect",
+      "aiSpeaking": "AI is answering...",
+      "aiListening": "AI is listening...",
+      "finish": "Finish",
+      "chatTab": "Chat and review",
+      "docsTab": "Documents",
+      "docAnalysis": "Document review",
+      "placeholder": "Describe a complaint, question or ask to review lab results...",
+      "thinking": "AI is analyzing...",
+      "deepAnalysis": "Deep review",
+      "fastSearch": "Quick search",
+      "reportBtn": "Create summary",
+      "safePayments": "Secure Takhet+ payment",
+      "aiAssistant": "AI assistant",
+      "initialMessage": "Hello. Start the consultation with a short note that you do not replace a doctor, then ask what worries the patient.",
+      "connectionError": "Connection error. Try refreshing the page.",
+      "accessDenied": "Camera or microphone is unavailable.",
+      "deepAnalysisResult": "I completed a deep review: {result}",
+      "deepAnalysisFail": "Could not complete deep review.",
+      "deepAnalysisError": "Error during deep review.",
+      "searchResult": "I found relevant information: {result}",
+      "searchPrompt": "Find current medical information for this query: {query}",
+      "searchFail": "Information was not found.",
+      "searchError": "Error during search.",
+      "imageAnalysisPrompt": "Analyze this medical document or image. Explain what is visible and what should be clarified with a doctor.",
+      "docAnalysisResult": "I analyzed document {name}: {analysis}",
+      "docAnalysisFail": "Could not analyze the document.",
+      "docAnalysisError": "Error during document analysis.",
+      "reportPrompt": "Based on the consultation and documents, prepare a structured patient report.\n\nCONSULTATION:\n{conversation}\n\nDOCUMENTS:\n{docs}",
+      "reportSystemInstruction": "You are a Takhet+ medical registrar. Create a clear structured report without an AI diagnosis.",
+      "reportFail": "Could not create the report.",
+      "reportError": "Error while creating the report.",
+      "reportFormed": "Report created",
+      "deepAnalysisPlaceholder": "Describe a complex case...",
+      "searchPlaceholder": "What should I find?",
+      "deepAnalysisKeyword": "deep review",
+      "searchKeyword": "find",
+      "searchKeyword2": "search"
+    }
+  },
+  "admin": {
+    "title": "Takhet+ Admin",
+    "subtitle": "System control panel",
+    "emailPlaceholder": "Admin email",
+    "passwordPlaceholder": "Password",
+    "loginBtn": "Sign in",
+    "checking": "Checking...",
+    "backToMain": "To home",
+    "error": "Invalid admin credentials.",
+    "protocol": "Takhet+ control layer"
+  }
+}

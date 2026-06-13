@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Segoe UI", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -19,9 +19,9 @@
   --background: #F5F9FF;
   --foreground: #0D2B45;
   --primary: #0D47A1;
-  --secondary: #E0F2F1;
-  --accent: #00BFA5;
-  --success: #00C853;
+  --secondary: #EAF2FF;
+  --accent: #64B5F6;
+  --success: #1D4ED8;
   --muted: #90A4AE;
   --muted-foreground: #546E7A;
   --border: #CFD8DC;
@@ -34,9 +34,9 @@
     --background: #F5F9FF;
     --foreground: #0D2B45;
     --primary: #0D47A1;
-    --secondary: #E0F2F1;
-    --accent: #00BFA5;
-    --success: #00C853;
+    --secondary: #EAF2FF;
+    --accent: #64B5F6;
+    --success: #1D4ED8;
     --muted: #90A4AE;
     --muted-foreground: #546E7A;
     --border: #CFD8DC;
@@ -45,6 +45,27 @@
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
   html {
     color-scheme: only light;
     background: #F5F9FF;
@@ -52,8 +73,13 @@
 
   body {
     @apply bg-background text-foreground antialiased transition-colors duration-300;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', 'Segoe UI', 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
     color-scheme: only light;
+  }
+
+  :lang(kk) {
+    font-family: 'Segoe UI', 'Noto Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-size-adjust: 0.52;
   }
 
   #root {
@@ -88,6 +114,362 @@
 
 .animate-pulse-soft {
   animation: pulse-soft 3s ease-in-out infinite;
+}
+
+.takhet-patient-hero {
+  --takhet-wave-camera-shift-x: 0px;
+  --takhet-wave-camera-shift-y: 0px;
+  --takhet-wave-camera-tilt-x: 0deg;
+  --takhet-wave-camera-tilt-y: 0deg;
+  --takhet-wave-camera-roll: 0deg;
+  --takhet-wave-camera-depth: 0px;
+  --takhet-wave-camera-focus-x: 50%;
+  --takhet-wave-camera-focus-y: 50%;
+}
+
+.takhet-landing-shell {
+  --takhet-parallax-soft-x: 0px;
+  --takhet-parallax-soft-y: 0px;
+  --takhet-parallax-medium-x: 0px;
+  --takhet-parallax-medium-y: 0px;
+  --takhet-parallax-deep-x: 0px;
+  --takhet-parallax-deep-y: 0px;
+  --takhet-parallax-tilt-x: 0deg;
+  --takhet-parallax-tilt-y: 0deg;
+  --takhet-parallax-medium-rotate: 0deg;
+  --takhet-parallax-deep-rotate: 0deg;
+}
+
+.takhet-custom-cursor {
+  display: none;
+}
+
+.takhet-platform-motion-shell {
+  --takhet-platform-parallax-soft-x: 0px;
+  --takhet-platform-parallax-soft-y: 0px;
+  --takhet-platform-parallax-medium-x: 0px;
+  --takhet-platform-parallax-medium-y: 0px;
+  --takhet-platform-parallax-deep-x: 0px;
+  --takhet-platform-parallax-deep-y: 0px;
+  --takhet-platform-parallax-rotate: 0deg;
+  min-height: inherit;
+}
+
+.takhet-platform-motion-shell--portal {
+  min-height: inherit;
+}
+
+.takhet-platform-cursor {
+  display: none;
+}
+
+[data-takhet-parallax] {
+  translate: 0 0;
+  rotate: 0deg;
+  will-change: translate, rotate;
+  transition:
+    translate 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    rotate 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-takhet-parallax="soft"] {
+  translate: var(--takhet-parallax-soft-x) var(--takhet-parallax-soft-y);
+}
+
+[data-takhet-parallax="medium"] {
+  translate: var(--takhet-parallax-medium-x) var(--takhet-parallax-medium-y);
+  rotate: var(--takhet-parallax-medium-rotate);
+}
+
+[data-takhet-parallax="deep"] {
+  translate: var(--takhet-parallax-deep-x) var(--takhet-parallax-deep-y);
+  rotate: var(--takhet-parallax-deep-rotate);
+}
+
+.takhet-platform-motion-shell--rich [data-takhet-parallax="soft"] {
+  translate: var(--takhet-platform-parallax-soft-x) var(--takhet-platform-parallax-soft-y);
+}
+
+.takhet-platform-motion-shell--rich [data-takhet-parallax] {
+  transform: translateZ(0);
+}
+
+.takhet-platform-motion-shell--rich [data-takhet-parallax="medium"] {
+  translate: var(--takhet-platform-parallax-medium-x) var(--takhet-platform-parallax-medium-y);
+  rotate: var(--takhet-platform-parallax-rotate);
+}
+
+.takhet-platform-motion-shell--rich [data-takhet-parallax="deep"] {
+  translate: var(--takhet-platform-parallax-deep-x) var(--takhet-platform-parallax-deep-y);
+  rotate: var(--takhet-platform-parallax-rotate);
+}
+
+[data-takhet-tilt] {
+  --takhet-tilt-x: 0deg;
+  --takhet-tilt-y: 0deg;
+  --takhet-tilt-lift: 0px;
+  --takhet-tilt-glare-x: 50%;
+  --takhet-tilt-glare-y: 50%;
+  position: relative;
+  overflow: hidden;
+  transform: perspective(900px) translateZ(var(--takhet-tilt-lift)) rotateX(var(--takhet-tilt-x)) rotateY(var(--takhet-tilt-y));
+  transform-style: preserve-3d;
+  transition: transform 620ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 620ms cubic-bezier(0.16, 1, 0.3, 1), border-color 520ms ease, background-color 520ms ease;
+  will-change: transform;
+}
+
+[data-takhet-tilt]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--takhet-tilt-glare-x) var(--takhet-tilt-glare-y), rgba(255, 255, 255, 0.14), transparent 38%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 520ms ease;
+}
+
+[data-takhet-tilt]:hover::after {
+  opacity: 1;
+}
+
+[data-takhet-magnetic-button] {
+  --takhet-magnetic-x: 0px;
+  --takhet-magnetic-y: 0px;
+  translate: var(--takhet-magnetic-x) var(--takhet-magnetic-y);
+  will-change: translate;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .takhet-landing-shell,
+  .takhet-landing-shell *,
+  .takhet-landing-shell a,
+  .takhet-landing-shell button,
+  .takhet-landing-shell input,
+  .takhet-landing-shell textarea {
+    cursor: none !important;
+  }
+
+  .takhet-custom-cursor {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 32px;
+    height: 32px;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 9999;
+    transform: translate3d(-100px, -100px, 0);
+    translate: -4px -4px;
+    will-change: transform, opacity;
+  }
+
+  .takhet-custom-cursor svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .takhet-platform-motion-shell,
+  .takhet-platform-motion-shell *,
+  .takhet-platform-motion-shell a,
+  .takhet-platform-motion-shell button,
+  .takhet-platform-motion-shell input,
+  .takhet-platform-motion-shell textarea {
+    cursor: none !important;
+  }
+
+  .takhet-platform-cursor {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 32px;
+    height: 32px;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 10050;
+    transform: translate3d(-100px, -100px, 0);
+    translate: -5px -5px;
+    will-change: transform, opacity;
+  }
+
+  .takhet-platform-cursor svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+}
+
+.takhet-hero-wave {
+  position: absolute;
+  inset: 0;
+  color: rgba(13, 71, 161, 0.16);
+  pointer-events: none;
+  overflow: hidden;
+  perspective: 760px;
+  perspective-origin: var(--takhet-wave-camera-focus-x) var(--takhet-wave-camera-focus-y);
+  z-index: 0;
+}
+
+.takhet-hero-wave__viewport {
+  position: absolute;
+  left: -18vw;
+  top: 50%;
+  width: 136vw;
+  height: min(34vh, 280px);
+  overflow: hidden;
+  transform: translate3d(var(--takhet-wave-camera-shift-x), calc(-50% + var(--takhet-wave-camera-shift-y)), 0) translateZ(var(--takhet-wave-camera-depth)) rotateX(var(--takhet-wave-camera-tilt-x)) rotateY(var(--takhet-wave-camera-tilt-y)) rotate(calc(-2deg + var(--takhet-wave-camera-roll)));
+  transform-style: preserve-3d;
+  animation: takhet-hero-wave-drift 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+.takhet-hero-wave__track {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  animation: takhet-hero-wave-travel 24s linear infinite;
+  will-change: transform;
+}
+
+.takhet-hero-wave__svg {
+  flex: 0 0 50%;
+  width: 50%;
+  height: 100%;
+  overflow: visible;
+}
+
+.takhet-hero-wave__path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  animation: takhet-hero-wave-swell 7s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.takhet-hero-wave__path--one {
+  stroke-width: 14;
+}
+
+.takhet-hero-wave__path--two {
+  opacity: 0.42;
+  stroke-width: 8;
+  animation-duration: 9s;
+  animation-delay: -2.2s;
+  animation-direction: reverse;
+}
+
+.takhet-hero-wave__path--three {
+  opacity: 0.22;
+  stroke-width: 6;
+  animation-duration: 11s;
+  animation-delay: -4.4s;
+}
+
+@keyframes takhet-hero-wave-travel {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes takhet-hero-wave-swell {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scaleY(0.92);
+  }
+  50% {
+    transform: translate3d(0, -6px, 0) scaleY(1.12);
+  }
+}
+
+@keyframes takhet-hero-wave-drift {
+  0%, 100% {
+    transform: translate3d(var(--takhet-wave-camera-shift-x), calc(-50% + var(--takhet-wave-camera-shift-y)), 0) translateZ(var(--takhet-wave-camera-depth)) rotateX(var(--takhet-wave-camera-tilt-x)) rotateY(var(--takhet-wave-camera-tilt-y)) rotate(calc(-2deg + var(--takhet-wave-camera-roll)));
+  }
+  50% {
+    transform: translate3d(var(--takhet-wave-camera-shift-x), calc(-54% + var(--takhet-wave-camera-shift-y)), 0) translateZ(var(--takhet-wave-camera-depth)) rotateX(var(--takhet-wave-camera-tilt-x)) rotateY(var(--takhet-wave-camera-tilt-y)) rotate(calc(-1.35deg + var(--takhet-wave-camera-roll)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-takhet-parallax] {
+    translate: 0 0;
+    rotate: 0deg;
+    transition: none;
+  }
+
+  [data-takhet-tilt] {
+    transform: none;
+  }
+
+  [data-takhet-tilt]::after {
+    display: none;
+  }
+
+  [data-takhet-magnetic-button] {
+    translate: 0 0;
+  }
+
+  .takhet-custom-cursor {
+    display: none;
+  }
+
+  .takhet-platform-cursor {
+    display: none;
+  }
+
+  .takhet-landing-shell,
+  .takhet-landing-shell a,
+  .takhet-landing-shell button,
+  .takhet-landing-shell input,
+  .takhet-landing-shell textarea {
+    cursor: auto;
+  }
+
+  .takhet-platform-motion-shell,
+  .takhet-platform-motion-shell a,
+  .takhet-platform-motion-shell button,
+  .takhet-platform-motion-shell input,
+  .takhet-platform-motion-shell textarea {
+    cursor: auto;
+  }
+
+  .takhet-hero-wave__viewport,
+  .takhet-hero-wave__track,
+  .takhet-hero-wave__path {
+    animation: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .takhet-hero-wave {
+    color: rgba(13, 71, 161, 0.13);
+  }
+
+  .takhet-hero-wave__viewport {
+    left: -26vw;
+    width: 152vw;
+    height: 28vh;
+  }
+
+  .takhet-hero-wave__path--one {
+    stroke-width: 10;
+  }
+
+  .takhet-hero-wave__path--two {
+    stroke-width: 6;
+  }
+
+  .takhet-hero-wave__path--three {
+    stroke-width: 4;
+  }
 }
 
 @media (min-width: 390px) and (max-width: 767px) {

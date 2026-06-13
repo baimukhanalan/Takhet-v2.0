@@ -44,8 +44,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const state = location.state as { role?: UserRole; mode?: 'login' | 'register' } || {};
   const [mode, setMode] = useState<'login' | 'register'>(state.mode || 'login');
   const [role, setRole] = useState<UserRole>(state.role || UserRole.PATIENT);
-  const [email, setEmail] = useState('baimukhanalan1@gmail.com');
-  const [password, setPassword] = useState('baimukhanalan1@gmail.com');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

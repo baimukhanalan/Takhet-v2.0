@@ -1,4 +1,4 @@
-﻿import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { User } from '../types';
 import { Users, Video, DollarSign, Calendar as CalendarIcon, TrendingUp, Radar, ShieldEllipsis, ChevronRight, Award, Clock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -104,7 +104,7 @@ const DoctorDashboard: React.FC<{ user: User }> = ({ user }) => {
 
   const stats = [
     { icon: Video, color: 'bg-blue-50 text-primary', label: t.dashboard.doctor.sessions, val: dashboard?.earnings?.count ?? 0, action: () => navigate('/consultations') },
-    { icon: Users, color: 'bg-emerald-50 text-emerald-600', label: t.dashboard.doctor.patients, val: new Set(appointments.map((item) => item.patientId)).size, action: () => navigate('/patients') },
+    { icon: Users, color: 'bg-blue-50 text-blue-600', label: t.dashboard.doctor.patients, val: new Set(appointments.map((item) => item.patientId)).size, action: () => navigate('/patients') },
     { icon: DollarSign, color: 'bg-orange-50 text-orange-600', label: t.dashboard.doctor.revenue, val: `₸${Number(dashboard?.earnings?.totalPaid || 0).toLocaleString()}`, action: () => navigate('/finances') }
   ];
 
@@ -137,7 +137,7 @@ const DoctorDashboard: React.FC<{ user: User }> = ({ user }) => {
             <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Отзывы</span>
             <div className="text-slate-900 font-black text-2xl">{dashboard.profile.reviewsCount || 0}</div>
           </div>
-          <div className="flex items-center gap-3 text-emerald-600">
+          <div className="flex items-center gap-3 text-blue-600">
             <ShieldEllipsis className="w-6 h-6" />
             <span className="text-sm font-black uppercase tracking-widest">{dashboard.profile.verified ? 'Подтвержден' : 'На проверке'}</span>
           </div>
@@ -235,4 +235,3 @@ const DoctorDashboard: React.FC<{ user: User }> = ({ user }) => {
 };
 
 export default DoctorDashboard;
-
