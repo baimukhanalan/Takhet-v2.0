@@ -90,7 +90,9 @@ export class PaymentsService {
   async getDoctorEarnings(doctorId: string) {
     const doctorCases = await this.casesRepo.find({ where: { doctorId } });
     const doctorCaseIds = new Set(doctorCases.map((item) => item.id));
-    const paid = (await this.paymentsRepo.find({ where: { status: 'paid' } })).filter((payment) => doctorCaseIds.has(payment.caseId));
+    const paid = (await this.paymentsRepo.find({ where: { status: 'paid' } })).filter(
+      (payment) => doctorCaseIds.has(payment.caseId) && this.isCapturedPaymentForReporting(payment)
+    );
     const total = paid.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     const revenueHistory = this.buildRevenueHistory(paid);
     return { totalPaid: total, currency: 'KZT', count: paid.length, revenueHistory };
@@ -131,10 +133,14 @@ export class PaymentsService {
 
   async revenueSummary() {
     const all = await this.paymentsRepo.find();
-    const paid = all.filter((p) => p.status === 'paid');
+    const paid = all.filter((p) => this.isCapturedPaymentForReporting(p));
     const failed = all.filter((p) => p.status === 'failed');
     const pending = all.filter((p) => p.status === 'pending');
     const paidAmount = paid.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     return { total: all.length, paid: paid.length, failed: failed.length, pending: pending.length, paidAmount, currency: 'KZT' };
+  }
+
+  isCapturedPaymentForReporting(payment: Pick<Payment, 'status' | 'provider' | 'providerPaymentId'>) {
+    return payment.status === 'paid' && payment.provider === 'kaspi' && Boolean(payment.providerPaymentId);
   }
 }

@@ -389,6 +389,9 @@ export class AdminPortalService {
   private buildRevenueHistory(payments: any[]) {
     const byMonth = new Map<string, { month: string; revenue: number; users: number }>();
     for (const payment of payments || []) {
+      if (!this.paymentsService.isCapturedPaymentForReporting(payment)) {
+        continue;
+      }
       const date = new Date(payment.createdAt || Date.now());
       const month = date.toLocaleDateString('ru-RU', { month: 'short' });
       const current = byMonth.get(month) || { month, revenue: 0, users: 0 };

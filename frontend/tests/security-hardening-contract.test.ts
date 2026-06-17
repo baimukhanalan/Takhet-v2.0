@@ -32,7 +32,10 @@ for (const cspDirective of [
   "frame-ancestors 'none'",
   'connect-src',
   'wss://*.livekit.cloud',
-  'https://*.supabase.co'
+  'https://*.supabase.co',
+  'https://static.cloudflareinsights.com',
+  'https://cloudflareinsights.com',
+  'https://kaspi.kz'
 ]) {
   assert(vercel.includes(cspDirective), `CSP must include directive/source: ${cspDirective}`);
 }
