@@ -69,71 +69,75 @@ export class AiService {
   }
 
   async getHealthInsights(query: string) {
-    const response = await this.generateWithFallback('browser', query, {
-      contents: `Patient query: ${query}`,
-      config: {
-        systemInstruction:
-          [
-            'You are Takhet AI Browser. Reply in Russian. Start with the answer, not with context requests.',
-            this.strictAnswerRules,
-            'Use the JSON schema as a useful card: likelyCause=direct answer, urgency=importance, whatToDoNow=actions, whenToTalkToDoctor=doctor/expert/current source condition.',
-            'For medical questions, give recommendations, red flags and next steps, not a final diagnosis.',
-            'For non-medical questions, answer the actual topic inside the same schema. No filler, no markdown asterisks.',
-            this.kazakhstanContext
-          ].join('\n'),
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            query: { type: Type.STRING },
-            summary: {
-              type: Type.OBJECT,
-              properties: {
-                likelyCause: { type: Type.STRING },
-                urgency: { type: Type.STRING, enum: ['Critical', 'High', 'Medium', 'Low'] },
-                whatToDoNow: { type: Type.STRING },
-                whenToTalkToDoctor: { type: Type.STRING }
-              },
-              required: ['likelyCause', 'urgency', 'whatToDoNow', 'whenToTalkToDoctor']
-            },
-            detailedExplanation: {
-              type: Type.OBJECT,
-              properties: {
-                scenarios: { type: Type.ARRAY, items: { type: Type.STRING } },
-                redFlags: { type: Type.ARRAY, items: { type: Type.STRING } },
-                mistakes: { type: Type.ARRAY, items: { type: Type.STRING } },
-                nextSteps: { type: Type.ARRAY, items: { type: Type.STRING } }
-              },
-              required: ['scenarios', 'redFlags', 'mistakes', 'nextSteps']
-            },
-            sources: {
-              type: Type.ARRAY,
-              items: {
+    try {
+      const response = await this.generateWithFallback('browser', query, {
+        contents: `Patient query: ${query}`,
+        config: {
+          systemInstruction:
+            [
+              'You are Takhet AI Browser. Reply in Russian. Start with the answer, not with context requests.',
+              this.strictAnswerRules,
+              'Use the JSON schema as a useful card: likelyCause=direct answer, urgency=importance, whatToDoNow=actions, whenToTalkToDoctor=doctor/expert/current source condition.',
+              'For medical questions, give recommendations, red flags and next steps, not a final diagnosis.',
+              'For non-medical questions, answer the actual topic inside the same schema. No filler, no markdown asterisks.',
+              this.kazakhstanContext
+            ].join('\n'),
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              query: { type: Type.STRING },
+              summary: {
                 type: Type.OBJECT,
                 properties: {
-                  id: { type: Type.STRING },
-                  title: { type: Type.STRING },
-                  url: { type: Type.STRING },
-                  summary: { type: Type.STRING },
-                  trustLevel: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] },
-                  sourceName: { type: Type.STRING }
+                  likelyCause: { type: Type.STRING },
+                  urgency: { type: Type.STRING, enum: ['Critical', 'High', 'Medium', 'Low'] },
+                  whatToDoNow: { type: Type.STRING },
+                  whenToTalkToDoctor: { type: Type.STRING }
                 },
-                required: ['id', 'title', 'url', 'summary', 'trustLevel', 'sourceName']
-              }
+                required: ['likelyCause', 'urgency', 'whatToDoNow', 'whenToTalkToDoctor']
+              },
+              detailedExplanation: {
+                type: Type.OBJECT,
+                properties: {
+                  scenarios: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  redFlags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  mistakes: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  nextSteps: { type: Type.ARRAY, items: { type: Type.STRING } }
+                },
+                required: ['scenarios', 'redFlags', 'mistakes', 'nextSteps']
+              },
+              sources: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    url: { type: Type.STRING },
+                    summary: { type: Type.STRING },
+                    trustLevel: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] },
+                    sourceName: { type: Type.STRING }
+                  },
+                  required: ['id', 'title', 'url', 'summary', 'trustLevel', 'sourceName']
+                }
+              },
+              suggestedQuestions: { type: Type.ARRAY, items: { type: Type.STRING } }
             },
-            suggestedQuestions: { type: Type.ARRAY, items: { type: Type.STRING } }
-          },
-          required: ['query', 'summary', 'detailedExplanation', 'sources', 'suggestedQuestions']
+            required: ['query', 'summary', 'detailedExplanation', 'sources', 'suggestedQuestions']
+          }
         }
+      });
+
+      const text = response.text;
+      if (!text) {
+        return this.buildHealthInsightsFallback(query);
       }
-    });
 
-    const text = response.text;
-    if (!text) {
-      throw new InternalServerErrorException('EMPTY_GEMINI_RESPONSE');
+      return JSON.parse(text);
+    } catch (error) {
+      return this.buildHealthInsightsFallback(query);
     }
-
-    return JSON.parse(text);
   }
 
   async chat(message: string, config: { systemInstruction?: string; useSearch?: boolean }) {
@@ -286,6 +290,75 @@ export class AiService {
     if (task === 'browser') return 1600;
     if (['analysis', 'image', 'file', 'pdf', 'archive', 'consultation-report'].includes(task)) return 1800;
     return 1400;
+  }
+
+  private buildHealthInsightsFallback(query: string) {
+    const medical = this.looksMedical(query);
+    return {
+      query,
+      summary: {
+        likelyCause: medical
+          ? 'Запрос похож на медицинский. Сейчас безопаснее дать ориентир по симптомам, красным флагам и следующему шагу без постановки диагноза.'
+          : 'Запрос требует прямого ответа и проверки актуальных источников, если тема зависит от свежих данных.',
+        urgency: medical ? 'Medium' : 'Low',
+        whatToDoNow: medical
+          ? 'Опишите главный симптом, когда он начался, силу по шкале 0-10, температуру, лекарства, хронические болезни и что ухудшает или облегчает состояние.'
+          : 'Сверьте дату, регион и источник. Если вопрос связан с деньгами, правом, расписанием или новостями, используйте свежий первоисточник.',
+        whenToTalkToDoctor: medical
+          ? 'Срочно обращайтесь за помощью при боли в груди, одышке, потере сознания, нарушении речи, сильном кровотечении, судорогах или быстром ухудшении. В Казахстане ориентируйтесь на 103 или 112.'
+          : 'Врач нужен только если вопрос связан со здоровьем; для других тем лучше использовать профильный официальный источник.'
+      },
+      detailedExplanation: {
+        scenarios: medical
+          ? ['Легкие симптомы можно сначала структурировать и наблюдать, но ухудшение или красные флаги требуют врача.']
+          : ['Для актуальных тем важны дата, регион, первоисточник и подтверждение минимум из двух независимых источников.'],
+        redFlags: medical
+          ? ['Боль в груди', 'Одышка', 'Потеря сознания', 'Нарушение речи', 'Сильное кровотечение', 'Судороги', 'Быстрое ухудшение']
+          : ['Нет даты публикации', 'Неизвестный источник', 'Один источник без подтверждения', 'Тема влияет на деньги, документы или безопасность'],
+        mistakes: medical
+          ? ['Не начинайте антибиотики, гормоны или сильные препараты без врача.', 'Не игнорируйте резкое ухудшение состояния.']
+          : ['Не принимайте решение по одному непроверенному источнику.', 'Не используйте устаревшую информацию для текущих цен, законов и расписаний.'],
+        nextSteps: medical
+          ? ['Проверьте красные флаги.', 'Подготовьте симптомы и сроки.', 'Запишитесь к профильному врачу при сохранении или усилении симптомов.']
+          : ['Проверьте первоисточник.', 'Сверьте дату и регион.', 'Сформулируйте уточняющий вопрос, если нужен прикладной вывод.']
+      },
+      sources: medical
+        ? [
+            {
+              id: 'who-primary-care',
+              title: 'WHO health advice',
+              url: 'https://www.who.int/',
+              summary: 'Международный источник базовых ориентиров по безопасному обращению за медицинской помощью.',
+              trustLevel: 'High',
+              sourceName: 'WHO'
+            },
+            {
+              id: 'medlineplus-symptoms',
+              title: 'MedlinePlus symptoms',
+              url: 'https://medlineplus.gov/symptoms.html',
+              summary: 'Справочник симптомов для первичной ориентации и решения, когда обращаться к врачу.',
+              trustLevel: 'High',
+              sourceName: 'MedlinePlus'
+            }
+          ]
+        : [
+            {
+              id: 'official-source-check',
+              title: 'Official source check',
+              url: 'https://www.google.com/search',
+              summary: 'Используйте актуальный первоисточник для тем, где факты быстро меняются.',
+              trustLevel: 'Medium',
+              sourceName: 'Reference'
+            }
+          ],
+      suggestedQuestions: medical
+        ? ['Какие красные флаги опасны?', 'К какому врачу обратиться?', 'Что можно сделать до консультации?', 'Какие анализы подготовить?']
+        : ['Объясни проще', 'Сравни варианты', 'Что важно проверить?', 'Дай короткий вывод']
+    };
+  }
+
+  private looksMedical(query: string) {
+    return /(боль|температур|каш|горл|давлен|сердц|груд|одыш|тошнот|рвот|понос|диаре|живот|голов|сып|кров|травм|симптом|анализ|лекар|врач|диагноз|лечен|здоров|fever|pain|cough|doctor|health|medicine|symptom)/i.test(query);
   }
 
   private extractRisk(text: string) {

@@ -370,8 +370,8 @@ export class AdminPortalService {
        union all
        select user_id, entry->>'id' as key, entry as value
        from settings
-       cross join lateral jsonb_array_elements(value) as entry
-       where user_id = $1 and key = 'public_feedback_entries' and jsonb_typeof(value) = 'array'`,
+       cross join lateral jsonb_array_elements(case when jsonb_typeof(value) = 'array' then value else '[]'::jsonb end) as entry
+       where user_id = $1 and key = 'public_feedback_entries'`,
       [ADMIN_OWNER_ID]
     );
 
