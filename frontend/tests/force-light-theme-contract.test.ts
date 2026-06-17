@@ -9,10 +9,25 @@ const main = read('src/main.tsx');
 const indexCss = read('src/index.css');
 const indexHtml = read('index.html');
 const adminDashboard = read('src/pages/AdminDashboard.tsx');
+const forceLightTheme = read('src/services/forceLightTheme.ts');
 
 assert(
   main.includes('installLightThemeLock()'),
   'main.tsx must install the global light-theme lock at startup'
+);
+
+assert(
+  !main.includes("document.documentElement.setAttribute('data-theme', 'light')") &&
+    !main.includes('document.documentElement.style.colorScheme') &&
+    !main.includes('document.body.style.colorScheme'),
+  'main.tsx must not mutate theme attributes after installing the MutationObserver-based light-theme lock'
+);
+
+assert(
+  forceLightTheme.includes('let isApplyingLightTheme = false') &&
+    forceLightTheme.includes('if (isApplyingLightTheme) return;') &&
+    forceLightTheme.includes("if (html.getAttribute('data-theme') !== 'light')"),
+  'forceLightTheme must be idempotent and guarded against MutationObserver self-trigger loops'
 );
 
 assert(

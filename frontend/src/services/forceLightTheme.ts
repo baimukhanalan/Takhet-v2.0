@@ -1,4 +1,5 @@
 const THEME_STORAGE_KEYS = ['theme', 'takhet_theme', 'color-theme', 'vite-ui-theme'];
+let isApplyingLightTheme = false;
 
 const setMetaContent = (name: string, value: string) => {
   if (typeof document === 'undefined') return;
@@ -6,29 +7,41 @@ const setMetaContent = (name: string, value: string) => {
   if (meta && meta.content !== value) meta.content = value;
 };
 
+const setColorScheme = (element: HTMLElement) => {
+  if (element.style.colorScheme !== 'only light') {
+    element.style.colorScheme = 'only light';
+  }
+};
+
 export const enforceLightTheme = () => {
   if (typeof document === 'undefined') return;
+  if (isApplyingLightTheme) return;
 
-  const html = document.documentElement;
-  html.classList.remove('dark');
-  html.setAttribute('data-theme', 'light');
-  html.style.colorScheme = 'only light';
-
-  if (document.body) {
-    document.body.classList.remove('dark');
-    document.body.setAttribute('data-theme', 'light');
-    document.body.style.colorScheme = 'only light';
-  }
-
-  setMetaContent('color-scheme', 'light');
-  setMetaContent('supported-color-schemes', 'light');
-
+  isApplyingLightTheme = true;
   try {
-    THEME_STORAGE_KEYS.forEach((key) => {
-      if (localStorage.getItem(key) !== 'light') localStorage.setItem(key, 'light');
-    });
-  } catch {
-    // Storage can be unavailable in private windows; DOM-level lock is still enough.
+    const html = document.documentElement;
+    if (html.classList.contains('dark')) html.classList.remove('dark');
+    if (html.getAttribute('data-theme') !== 'light') html.setAttribute('data-theme', 'light');
+    setColorScheme(html);
+
+    if (document.body) {
+      if (document.body.classList.contains('dark')) document.body.classList.remove('dark');
+      if (document.body.getAttribute('data-theme') !== 'light') document.body.setAttribute('data-theme', 'light');
+      setColorScheme(document.body);
+    }
+
+    setMetaContent('color-scheme', 'light');
+    setMetaContent('supported-color-schemes', 'light');
+
+    try {
+      THEME_STORAGE_KEYS.forEach((key) => {
+        if (localStorage.getItem(key) !== 'light') localStorage.setItem(key, 'light');
+      });
+    } catch {
+      // Storage can be unavailable in private windows; DOM-level lock is still enough.
+    }
+  } finally {
+    isApplyingLightTheme = false;
   }
 };
 
