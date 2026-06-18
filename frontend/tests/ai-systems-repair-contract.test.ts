@@ -8,11 +8,12 @@ const assert = (condition: unknown, message: string) => {
 };
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
+const normalizeNewlines = (source: string) => source.replace(/\r\n/g, '\n');
 
 const chatSource = read('api/ai/chat.ts');
 const chatStreamSource = read('api/ai/chat-stream.ts');
 const browserSource = read('api/ai/health-insights.ts');
-const liveRoomSource = read('src/pages/AIConsultationRoom.tsx');
+const liveRoomSource = normalizeNewlines(read('src/pages/AIConsultationRoom.tsx'));
 const geminiClientSource = read('src/services/gemini.ts');
 const mentalPageSource = read('src/pages/MentalPage.tsx');
 const coordinatorSource = read('src/components/AIChatOverlay.tsx');
@@ -47,7 +48,7 @@ assert(liveRoomSource.includes('LIVE_VIDEO_FRAME_INTERVAL_MS = 900'), 'AI consul
 assert(liveRoomSource.includes('stopAssistantAudioForUserSpeech'), 'AI consultation must locally stop assistant audio when the user starts talking');
 assert(liveRoomSource.includes('lastUserSpeechInterruptAtRef'), 'AI consultation interruption must be debounced');
 assert(liveRoomSource.includes('LIVE_BASE_SYSTEM_INSTRUCTION'), 'AI consultation must use a local low-latency Live prompt instead of a generic translated prompt');
-assert(liveRoomSource.includes('[\n        LIVE_BASE_SYSTEM_INSTRUCTION,\n        LIVE_AI_BEHAVIOR_INSTRUCTION'), 'AI consultation Live prompt must combine base and behavior instructions');
+assert(/const liveSystemInstruction = \[\n\s+LIVE_BASE_SYSTEM_INSTRUCTION,\n\s+LIVE_AI_BEHAVIOR_INSTRUCTION\n\s+\]\.join\('\\n'\);/.test(liveRoomSource), 'AI consultation Live prompt must combine base and behavior instructions');
 assert(!liveRoomSource.includes('t.ai_consultation.room.systemInstruction,\n        LIVE_AI_BEHAVIOR_INSTRUCTION'), 'AI consultation Live prompt must not reintroduce the old talk-over prompt');
 assert(!liveRoomSource.includes('systemInstruction: `${t.ai_consultation.room.systemInstruction}'), 'AI consultation advanced/search prompts must not use the old generic prompt');
 assert(liveRoomSource.includes('Ask one concise question, then stop and let the patient answer.'), 'AI consultation prompt must prevent the assistant from talking over the patient');
@@ -58,6 +59,9 @@ assert(coordinatorSource.includes('first give the exact route/action'), 'Coordin
 assert(siteCoordinatorSource.includes('give the exact route first'), 'Site coordinator must keep route-first instruction');
 assert(siteCoordinatorApiSource.includes('route the user to the exact platform action'), 'Coordinator API must use route-first instructions');
 assert(siteCoordinatorApiSource.includes('Do not ask the user to choose a format'), 'Coordinator API must prevent vague format requests');
+assert(!siteCoordinatorApiSource.includes('../src/content/siteContent'), 'Coordinator API must not import the heavy legacy siteContent bundle');
 assert(siteCoordinatorApiSource.includes('Не удалось сформировать ответ.'), 'Coordinator API fallback must be readable UTF-8');
+assert(siteCoordinatorApiSource.includes('Самал-3, дом 15'), 'Coordinator API must keep the readable address');
+assert(chatStreamSource.includes('Новый вопрос пациента:'), 'Streaming chat must extract the readable Russian patient-question marker');
 
 console.log('AI systems repair contract passed');
