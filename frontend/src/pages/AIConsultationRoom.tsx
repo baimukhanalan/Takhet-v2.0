@@ -124,6 +124,7 @@ const AIConsultationRoom: React.FC = () => {
   const sessionEndedRef = useRef(false);
   const isLiveConnectedRef = useRef(false);
   const isMicOnRef = useRef(true);
+  const activeLiveConnectionIdRef = useRef(0);
   const lastUserSpeechInterruptAtRef = useRef(0);
   const draftSyncTimerRef = useRef<number | null>(null);
   const lastDraftSignatureRef = useRef('');
@@ -209,9 +210,12 @@ const AIConsultationRoom: React.FC = () => {
     };
   }, []);
 
-  const cleanupLive = (options: { preserveMediaStream?: boolean } = {}) => {
+  const cleanupLive = (options: { preserveMediaStream?: boolean; invalidateSession?: boolean } = {}) => {
     if (isCleaningUpRef.current) return;
-    const { preserveMediaStream = false } = options;
+    const { preserveMediaStream = false, invalidateSession = true } = options;
+    if (invalidateSession) {
+      activeLiveConnectionIdRef.current += 1;
+    }
     isCleaningUpRef.current = true;
     isConnectingRef.current = false;
     isLiveConnectedRef.current = false;
@@ -240,6 +244,9 @@ const AIConsultationRoom: React.FC = () => {
 
     const activeSessions = [liveSessionRef.current, sessionRef.current].filter(Boolean);
     for (const activeSession of [...new Set(activeSessions)]) {
+      try {
+        activeSession.sendRealtimeInput?.({ audioStreamEnd: true });
+      } catch (e) {}
       try {
         activeSession.close?.();
       } catch (e) {}
@@ -369,6 +376,8 @@ const AIConsultationRoom: React.FC = () => {
       cleanupLive({ preserveMediaStream: true });
     }
 
+    const connectionId = activeLiveConnectionIdRef.current + 1;
+    activeLiveConnectionIdRef.current = connectionId;
     sessionEndedRef.current = false;
     isConnectingRef.current = true;
     setConnectionError(null);
@@ -443,7 +452,7 @@ const AIConsultationRoom: React.FC = () => {
         },
         callbacks: {
           onopen: () => {
-            if (sessionEndedRef.current) {
+            if (activeLiveConnectionIdRef.current !== connectionId || sessionEndedRef.current) {
               sessionPromise.then((session) => session.close?.()).catch(() => undefined);
               return;
             }
@@ -451,26 +460,28 @@ const AIConsultationRoom: React.FC = () => {
             setIsLiveConnected(true);
             isConnectingRef.current = false;
             sessionPromise.then(session => {
-              if (sessionEndedRef.current) {
+              if (activeLiveConnectionIdRef.current !== connectionId || sessionEndedRef.current) {
                 session.close?.();
                 return;
               }
               sessionRef.current = session;
               setupAudioInput(session);
               startVideoFrameStreaming(session);
-              sendLiveTextTurn(session, t.ai_consultation.room.initialMessage);
             });
           },
           onmessage: (message: LiveServerMessage) => {
-            if (!sessionEndedRef.current) handleLiveMessage(message);
+            if (activeLiveConnectionIdRef.current !== connectionId || sessionEndedRef.current) return;
+            handleLiveMessage(message);
           },
           onclose: () => {
+            if (activeLiveConnectionIdRef.current !== connectionId) return;
             isLiveConnectedRef.current = false;
             setIsLiveConnected(false);
             isConnectingRef.current = false;
-            cleanupLive();
+            cleanupLive({ invalidateSession: false });
           },
           onerror: (err) => {
+            if (activeLiveConnectionIdRef.current !== connectionId) return;
             console.error("Live API Error:", err);
             setConnectionError(isLiveConfigurationError(err) ? t('ai_consultation.room.liveConfigError') : t.ai_consultation.room.connectionError);
             isConnectingRef.current = false;

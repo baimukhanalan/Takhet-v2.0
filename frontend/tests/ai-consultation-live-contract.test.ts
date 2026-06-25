@@ -18,6 +18,10 @@ assert(source.includes('LIVE_AI_BEHAVIOR_INSTRUCTION'), 'AI consultation must ke
 assert(source.includes('LIVE_BASE_SYSTEM_INSTRUCTION'), 'AI consultation must use a Live-specific base prompt');
 assert(source.includes('sendLiveTextTurn('), 'AI consultation text messages must be sent as explicit live turns');
 assert(source.includes('turnComplete: true'), 'AI consultation live text turns must be marked complete');
+assert(
+  !source.includes('sendLiveTextTurn(session, t.ai_consultation.room.initialMessage)'),
+  'AI consultation must not send a synthetic initial patient message that can make the model talk to itself'
+);
 assert(source.includes("audio: { data: base64Data, mimeType: 'audio/pcm;rate=16000' }"), 'AI consultation must send microphone PCM as Gemini Live audio input');
 assert(source.includes("video: { data: frame, mimeType: 'image/jpeg' }"), 'AI consultation must send camera frames as Gemini Live video input');
 assert(source.includes('const LIVE_VIDEO_FRAME_INTERVAL_MS = 1000'), 'AI consultation must stream video at the Gemini Live supported 1 FPS cadence');
@@ -25,6 +29,9 @@ assert(source.includes('const LIVE_AUDIO_PROCESSOR_BUFFER_SIZE = 512'), 'AI cons
 assert(source.includes('const LIVE_BARGE_IN_RMS_THRESHOLD = 0.025'), 'AI consultation must interrupt assistant speech on clear user speech');
 assert(source.includes('stopAssistantAudioForUserSpeech'), 'AI consultation must stop assistant audio when the user starts speaking');
 assert(source.includes('lastUserSpeechInterruptAtRef'), 'AI consultation local interruption must be debounced');
+assert(source.includes('activeLiveConnectionIdRef'), 'AI consultation must guard callbacks against stale duplicate Live sessions');
+assert(source.includes('if (activeLiveConnectionIdRef.current !== connectionId)'), 'AI consultation Live callbacks must ignore stale session events');
+assert(source.includes('activeSession.sendRealtimeInput?.({ audioStreamEnd: true })'), 'AI consultation cleanup must end the Gemini audio stream before closing');
 assert(!source.includes('t.ai_consultation.room.systemInstruction,\n        LIVE_AI_BEHAVIOR_INSTRUCTION'), 'AI consultation must not mix old generic prompt with Live behavior prompt');
 assert(source.includes('thinkingLevel: ThinkingLevel.LOW'), 'AI consultation Live API should use low thinking latency');
 
