@@ -88,6 +88,7 @@ async function bootstrap() {
         '/community',
         '/enterprise',
         '/labs',
+        '/academy',
         '/guest',
         '/triage',
         '/ai'

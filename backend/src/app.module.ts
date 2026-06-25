@@ -25,6 +25,7 @@ import { TelemetryModule } from './telemetry/telemetry.module';
 import { EnterpriseModule } from './enterprise/enterprise.module';
 import { LabsModule } from './labs/labs.module';
 import { GuestModule } from './guest/guest.module';
+import { AcademyModule } from './academy/academy.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { GuestModule } from './guest/guest.module';
     TelemetryModule,
     EnterpriseModule,
     LabsModule,
+    AcademyModule,
     GuestModule,
     DoctorModule,
     PartnerModule,

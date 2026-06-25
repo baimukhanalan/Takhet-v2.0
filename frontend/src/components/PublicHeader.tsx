@@ -37,6 +37,7 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ activePath }) => {
     { name: t.nav.takhetAI, path: '/takhet-ai/try' },
     { name: t.nav.doctors, path: '/doctors' },
     { name: t.nav.partners, path: '/partners' },
+    { name: t.nav.academy, path: '/academy' },
     { name: t.nav.mental, path: '/mental' },
     { name: t.nav.labs, path: '/takhet-labs' },
     { name: t.nav.enterprise, path: '/enterprise' },
@@ -80,7 +81,7 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ activePath }) => {
             )}
           </div>
 
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden 2xl:flex items-center gap-3">
             <button onClick={() => navigate('/auth', { state: { mode: 'login', from: location, forcePublicAuth: true } })} className="text-xs font-black uppercase tracking-widest text-muted-foreground px-5 xl:px-6 py-3 hover:bg-secondary rounded-2xl transition-all whitespace-nowrap">
               {t.nav.auth}
             </button>
@@ -89,7 +90,7 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ activePath }) => {
             </button>
           </div>
 
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-3 rounded-2xl transition-all active:scale-90 ${isMenuOpen ? 'bg-background text-primary rotate-90' : 'bg-secondary text-foreground xl:hidden'}`}>
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-3 rounded-2xl transition-all active:scale-90 ${isMenuOpen ? 'bg-background text-primary rotate-90' : 'bg-secondary text-foreground 2xl:hidden'}`}>
             {isMenuOpen ? <X className="w-7 h-7 sm:w-8 sm:h-8" /> : <Menu className="w-6 h-6 sm:w-7 sm:h-7" />}
           </button>
         </div>

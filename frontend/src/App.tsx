@@ -12,6 +12,8 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const DoctorsPage = lazy(() => import('./pages/DoctorsPage'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage'));
 const MentalPage = lazy(() => import('./pages/MentalPage'));
+const AcademyPage = lazy(() => import('./pages/AcademyPage'));
+const AcademyArticlePage = lazy(() => import('./pages/AcademyArticlePage'));
 const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const AuthConfirmEmailPage = lazy(() => import('./pages/AuthConfirmEmailPage'));
@@ -89,6 +91,7 @@ const PUBLIC_MOTION_ROUTES = new Set([
   '/takhet-ai/try',
   '/doctors',
   '/partners',
+  '/academy',
   '/mental',
   '/takhet-labs',
   '/enterprise'
@@ -161,7 +164,7 @@ const AppShell: React.FC<{ user: User | null; onLogout: () => void; children: Re
   const location = useLocation();
 
   const publicRoutes = useMemo(
-    () => new Set(['/', '/doctors', '/partners', '/mental', '/community', '/services', '/takhet-labs', '/guest-consultation', '/offer', '/privacy', '/refund', '/terms', '/contacts', '/auth', '/patient-auth', '/admin-auth', '/ai-consultation', '/takhet-ai/try']),
+    () => new Set(['/', '/doctors', '/partners', '/academy', '/mental', '/community', '/services', '/takhet-labs', '/guest-consultation', '/offer', '/privacy', '/refund', '/terms', '/contacts', '/auth', '/patient-auth', '/admin-auth', '/ai-consultation', '/takhet-ai/try']),
     []
   );
   const pathname = location.pathname;
@@ -344,6 +347,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/enterprise/*" element={<EnterpriseApp />} />
         <Route path="/doctors" element={<DoctorsPage />} />
         <Route path="/partners" element={<PartnersPage />} />
+        <Route path="/academy" element={<AcademyPage user={user || undefined} />} />
+        <Route path="/academy/:slug" element={<AcademyArticlePage user={user || undefined} />} />
         <Route path="/mental" element={<MentalPage isPortal={false} user={user || undefined} />} />
         <Route path="/community" element={<CommunityPage isPortal={false} user={user || undefined} />} />
         <Route path="/takhet-labs" element={<TakhetLabsPage user={user || undefined} />} />
@@ -389,6 +394,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/takhet-ai/partner" element={<PrivateRoute user={user} allowed={[UserRole.PARTNER]}><TakhetAIChat user={user!} /></PrivateRoute>} />
 
         <Route path="/portal/mental" element={<PrivateRoute user={user}><MentalPage isPortal={true} user={user!} /></PrivateRoute>} />
+        <Route path="/portal/academy" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT, UserRole.DOCTOR]} redirectTo="/patient-auth"><AcademyPage user={user!} portal /></PrivateRoute>} />
+        <Route path="/portal/academy/:slug" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT, UserRole.DOCTOR]} redirectTo="/patient-auth"><AcademyArticlePage user={user!} portal /></PrivateRoute>} />
         <Route path="/chat" element={<PrivateRoute user={user}><ChatPage user={user!} /></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute user={user}><SettingsPage user={user!} /></PrivateRoute>} />
         <Route path="/labs" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT]} redirectTo="/patient-auth"><TakhetLabsPage user={user!} portal /></PrivateRoute>} />

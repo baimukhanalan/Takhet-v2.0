@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { LayoutDashboard, BrainCircuit, Truck, MessageSquare, Settings, CalendarCheck2, Wallet, LogOut, Archive, Users, Stethoscope, BarChart3, Menu, X, Heart, Search, Microscope } from 'lucide-react';
+import { LayoutDashboard, BrainCircuit, Truck, MessageSquare, Settings, CalendarCheck2, Wallet, LogOut, Archive, Users, Stethoscope, BarChart3, Menu, X, Heart, Search, Microscope, GraduationCap } from 'lucide-react';
 import { UserRole } from '../types';
 import TakhetLogo from './Logo';
 import { useLanguage } from '../services/useLanguage';
@@ -26,6 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, onLogout }) => {
     { to: '/ai-consultation', icon: BrainCircuit, label: t.sidebar.aiConsultation },
     { to: takhetAiRoute, icon: MessageSquare, label: t.sidebar.takhetAI },
     { to: '/health-browser', icon: Search, label: t.sidebar.healthBrowser },
+    { to: '/portal/academy', icon: GraduationCap, label: t.sidebar.academy },
     { to: '/portal/mental', icon: Heart, label: t.sidebar.mental },
     { to: '/doctors-search', icon: Stethoscope, label: t.sidebar.booking },
     { to: '/appointments', icon: CalendarCheck2, label: t.sidebar.appointments },
@@ -40,6 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, onLogout }) => {
     { to: '/dashboard', icon: LayoutDashboard, label: t.sidebar.panel },
     { to: takhetAiRoute, icon: MessageSquare, label: t.sidebar.takhetAI },
     { to: '/health-browser', icon: Search, label: t.sidebar.healthBrowser },
+    { to: '/portal/academy', icon: GraduationCap, label: t.sidebar.academy },
     { to: '/ai-lab', icon: BrainCircuit, label: t.sidebar.aiAnalysis },
     { to: '/patients', icon: Users, label: t.sidebar.patients },
     { to: '/consultations', icon: CalendarCheck2, label: t.sidebar.appointments },
