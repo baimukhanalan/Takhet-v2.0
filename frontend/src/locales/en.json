@@ -445,7 +445,10 @@
       "currency": "₸",
       "allFeatures": "Chat, document review and final report are included",
       "payKaspi": "Pay",
-      "back": "Back"
+      "back": "Back",
+      "completedTitle": "Payment completed",
+      "completedDesc": "Press the button below to allow camera and microphone access and start the consultation.",
+      "enterRoom": "Enter room"
     },
     "room": {
       "title": "Takhet+ AI consultation",
@@ -468,6 +471,8 @@
       "initialMessage": "Hello. Start the consultation with a short note that you do not replace a doctor, then ask what worries the patient.",
       "connectionError": "Connection error. Try refreshing the page.",
       "accessDenied": "Camera or microphone is unavailable.",
+      "mediaAccessError": "Could not access the camera or microphone. Check browser permissions.",
+      "liveConfigError": "AI video is currently unavailable. Check Live AI configuration and reconnect.",
       "deepAnalysisResult": "I completed a deep review: {result}",
       "deepAnalysisFail": "Could not complete deep review.",
       "deepAnalysisError": "Error during deep review.",

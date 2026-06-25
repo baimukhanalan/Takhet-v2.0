@@ -38,6 +38,18 @@ const getGeminiLiveModel = () => (
   DEFAULT_GEMINI_LIVE_MODEL
 ).trim();
 
+const isLiveConfigurationError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String((error as any)?.message || error || '');
+  const hasApiPermissionMismatch = message.includes('permission') && message.includes('API');
+
+  return (
+    message.includes('Gemini Live API key') ||
+    message.includes('API key') ||
+    message.includes('Requested entity was not found') ||
+    hasApiPermissionMismatch
+  );
+};
+
 const cleanAIText = (text: string) =>
   text
     .replace(/\*\*/g, '')
@@ -463,12 +475,7 @@ const AIConsultationRoom: React.FC = () => {
           },
           onerror: (err) => {
             console.error("Live API Error:", err);
-            // If key error, we might need to prompt for key
-            if (err?.message?.includes("Requested entity was not found")) {
-               setConnectionError("API Key Error. Please re-select your key.");
-            } else {
-               setConnectionError(t.ai_consultation.room.connectionError);
-            }
+            setConnectionError(isLiveConfigurationError(err) ? t('ai_consultation.room.liveConfigError') : t.ai_consultation.room.connectionError);
             isConnectingRef.current = false;
           }
         }
@@ -477,7 +484,7 @@ const AIConsultationRoom: React.FC = () => {
 
     } catch (err) {
       console.error("Consultation start error:", err);
-      setConnectionError(t.ai_consultation.room.accessDenied);
+      setConnectionError(isLiveConfigurationError(err) ? t('ai_consultation.room.liveConfigError') : t.ai_consultation.room.accessDenied);
       isConnectingRef.current = false;
     }
   };
@@ -1276,8 +1283,8 @@ const AIConsultationRoom: React.FC = () => {
                 <BrainCircuit className="w-16 h-16 text-primary animate-pulse" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Payment completed</h2>
-                <p className="text-slate-400 font-medium">Press the button below to activate microphone access and start the consultation.</p>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter">{t('ai_consultation.payment.completedTitle')}</h2>
+                <p className="text-slate-400 font-medium">{t('ai_consultation.payment.completedDesc')}</p>
               </div>
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -1305,12 +1312,12 @@ const AIConsultationRoom: React.FC = () => {
                     setStep('consultation');
                   } catch (err) {
                     console.error("Failed to initialize media on click:", err);
-                    alert("Could not access the microphone. Please check browser permissions.");
+                    alert(t('ai_consultation.room.mediaAccessError'));
                   }
                 }}
                 className="px-12 py-6 bg-primary text-white rounded-[2rem] font-black uppercase tracking-widest shadow-2xl shadow-primary/30"
               >
-                Enter room
+                {t('ai_consultation.payment.enterRoom')}
               </motion.button>
             </motion.div>
           )}

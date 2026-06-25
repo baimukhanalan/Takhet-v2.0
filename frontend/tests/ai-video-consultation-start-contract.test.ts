@@ -39,6 +39,38 @@ assert(
   'AI video consultation must actively start the local video element before streaming frames'
 );
 
+for (const hardcodedCopy of [
+  'Payment completed',
+  'Press the button below to activate microphone access and start the consultation.',
+  'Enter room',
+  'Could not access the microphone. Please check browser permissions.',
+  'API Key Error. Please re-select your key.'
+]) {
+  assert(
+    !source.includes(hardcodedCopy),
+    `AI video consultation start UI must not use hardcoded English copy: ${hardcodedCopy}`
+  );
+}
+
+for (const translationKey of [
+  'payment.completedTitle',
+  'payment.completedDesc',
+  'payment.enterRoom',
+  'room.mediaAccessError',
+  'room.liveConfigError'
+]) {
+  assert(
+    source.includes(`t('ai_consultation.${translationKey}')`) ||
+      source.includes(`t.ai_consultation.${translationKey.split('.').join('.')}`),
+    `AI video consultation start UI must use localized key: ai_consultation.${translationKey}`
+  );
+}
+
+assert(
+  source.includes('isLiveConfigurationError'),
+  'AI video consultation must distinguish Live configuration errors from camera/microphone permission errors'
+);
+
 assert(
   source.includes('sendVideoFrame();'),
   'AI video consultation must send the first video frame immediately instead of waiting for the interval'
