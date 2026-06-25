@@ -6,6 +6,31 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://www.takhet.com/academy</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.takhet.com/academy/golovnaya-bol-prichiny-i-kogda-obrashchatsya-k-vrachu</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.takhet.com/academy/alt-v-analize-krovi-chto-pokazyvaet-i-kak-bezopasno-ponimat-rezultat</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.takhet.com/academy/mrt-golovnogo-mozga-kogda-naznachayut-i-chto-pokazyvaet</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.takhet.com/academy/kogda-onlain-konsultatsiya-podkhodit-a-kogda-nuzhna-ochnaya-pomoshch</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.takhet.com/mental</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
