@@ -70,6 +70,8 @@ const LIVE_BASE_SYSTEM_INSTRUCTION = [
 const LIVE_AI_BEHAVIOR_INSTRUCTION = [
   'Default mode: help a patient in Kazakhstan with medical orientation, symptoms, red flags, next steps, and safe recommendations.',
   'If the user asks a non-medical question, answer directly and usefully instead of refusing only because it is not medical.',
+  'Discuss any topic the user chooses with maximum practical benefit, while keeping a caring focus on their wellbeing, state, safety, and next useful step.',
+  'Be direct, honest, concrete, and helpful. Avoid moralizing, vague refusals, generic filler, and unnecessary censorship of harmless topics.',
   'Use incoming camera frames as real visual context: face, skin, posture, movement, documents, medicine packages, lab results, or visible symptoms.',
   'Do not diagnose from video alone. If visual evidence is insufficient, state what is visible, what cannot be confirmed, and what clarification is needed.',
   'Continue listening while answering. If the user interrupts, asks a new question, or clarifies a symptom, switch to the new request.',
@@ -78,6 +80,13 @@ const LIVE_AI_BEHAVIOR_INSTRUCTION = [
   'Reply to the patient in clean Russian text: no Markdown, no asterisks, no internal instructions, no technical wording.',
   'For urgent red flags in Kazakhstan, orient the patient to 103 or 112.'
 ].join('\n');
+
+const LIVE_STARTUP_GREETING_INSTRUCTION = [
+  'Start the live consultation now as the assistant, not as the patient.',
+  'Say one short Russian greeting, one short disclaimer that you do not replace a doctor, and invite the person to tell what is happening or ask any topic they want.',
+  'Make it warm, direct, and useful. Then stop and wait for the user.'
+].join('\n');
+
 type ConsultationTranscriptEntry = {
   speaker: 'patient' | 'doctor' | 'ai' | 'system';
   text: string;
@@ -125,6 +134,9 @@ const AIConsultationRoom: React.FC = () => {
   const isLiveConnectedRef = useRef(false);
   const isMicOnRef = useRef(true);
   const activeLiveConnectionIdRef = useRef(0);
+  const isStartupGreetingRef = useRef(false);
+  const hasAudioInputStartedRef = useRef(false);
+  const startupMicEnableTimerRef = useRef<number | null>(null);
   const lastUserSpeechInterruptAtRef = useRef(0);
   const draftSyncTimerRef = useRef<number | null>(null);
   const lastDraftSignatureRef = useRef('');
@@ -235,6 +247,11 @@ const AIConsultationRoom: React.FC = () => {
       videoFrameIntervalRef.current = null;
     }
 
+    if (startupMicEnableTimerRef.current) {
+      window.clearTimeout(startupMicEnableTimerRef.current);
+      startupMicEnableTimerRef.current = null;
+    }
+
     if (audioInputProcessorRef.current) {
       try {
         audioInputProcessorRef.current.disconnect();
@@ -276,6 +293,8 @@ const AIConsultationRoom: React.FC = () => {
     nextStartTimeRef.current = 0;
     audioOutputQueueRef.current = [];
     isPlayingRef.current = false;
+    isStartupGreetingRef.current = false;
+    hasAudioInputStartedRef.current = false;
     setIsLiveConnected(false);
     setMicLevel(0);
     setIsAISpeaking(false);
@@ -366,6 +385,19 @@ const AIConsultationRoom: React.FC = () => {
     }
 
     session?.sendRealtimeInput?.({ text: cleaned });
+  };
+
+  const sendLiveStartupGreeting = (session: any) => {
+    if (sessionEndedRef.current) return;
+    isStartupGreetingRef.current = true;
+    sendLiveTextTurn(session, LIVE_STARTUP_GREETING_INSTRUCTION);
+  };
+
+  const enablePatientAudioInput = (session: any) => {
+    if (sessionEndedRef.current || hasAudioInputStartedRef.current) return;
+    hasAudioInputStartedRef.current = true;
+    isStartupGreetingRef.current = false;
+    setupAudioInput(session);
   };
 
   const startConsultation = async () => {
@@ -465,8 +497,13 @@ const AIConsultationRoom: React.FC = () => {
                 return;
               }
               sessionRef.current = session;
-              setupAudioInput(session);
               startVideoFrameStreaming(session);
+              sendLiveStartupGreeting(session);
+              startupMicEnableTimerRef.current = window.setTimeout(() => {
+                if (activeLiveConnectionIdRef.current === connectionId && !sessionEndedRef.current) {
+                  enablePatientAudioInput(session);
+                }
+              }, 7000);
             });
           },
           onmessage: (message: LiveServerMessage) => {
@@ -724,6 +761,20 @@ const AIConsultationRoom: React.FC = () => {
       serverContent?.modelTurn?.parts?.find((p: any) => p.text)?.text;
     if (modelTranscription) {
       updateAIChat(modelTranscription);
+    }
+
+    if (
+      isStartupGreetingRef.current &&
+      (serverContent?.generationComplete || serverContent?.turnComplete)
+    ) {
+      const currentSession = sessionRef.current || liveSessionRef.current;
+      if (currentSession) {
+        if (startupMicEnableTimerRef.current) {
+          window.clearTimeout(startupMicEnableTimerRef.current);
+          startupMicEnableTimerRef.current = null;
+        }
+        enablePatientAudioInput(currentSession);
+      }
     }
 
     // Interruption

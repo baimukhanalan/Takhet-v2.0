@@ -22,6 +22,10 @@ assert(
   !source.includes('sendLiveTextTurn(session, t.ai_consultation.room.initialMessage)'),
   'AI consultation must not send a synthetic initial patient message that can make the model talk to itself'
 );
+assert(source.includes('LIVE_STARTUP_GREETING_INSTRUCTION'), 'AI consultation must keep a dedicated startup greeting instruction');
+assert(source.includes('sendLiveStartupGreeting(session)'), 'AI consultation must start with one assistant greeting/disclaimer after connection');
+assert(source.includes('isStartupGreetingRef'), 'AI consultation must suppress microphone streaming while startup greeting is playing');
+assert(source.includes('enablePatientAudioInput(session)'), 'AI consultation must enable patient audio input after the startup greeting');
 assert(source.includes("audio: { data: base64Data, mimeType: 'audio/pcm;rate=16000' }"), 'AI consultation must send microphone PCM as Gemini Live audio input');
 assert(source.includes("video: { data: frame, mimeType: 'image/jpeg' }"), 'AI consultation must send camera frames as Gemini Live video input');
 assert(source.includes('const LIVE_VIDEO_FRAME_INTERVAL_MS = 1000'), 'AI consultation must stream video at the Gemini Live supported 1 FPS cadence');

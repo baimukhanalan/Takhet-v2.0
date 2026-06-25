@@ -47,6 +47,8 @@ assert(liveRoomSource.includes('LIVE_AUDIO_PROCESSOR_BUFFER_SIZE = 512'), 'AI co
 assert(liveRoomSource.includes('LIVE_VIDEO_FRAME_INTERVAL_MS = 1000'), 'AI consultation should send visual context at the Gemini Live supported 1 FPS cadence');
 assert(liveRoomSource.includes('source.connect(processor)'), 'AI consultation microphone MediaStreamSource must feed the Gemini audio processor');
 assert(!liveRoomSource.includes('sendLiveTextTurn(session, t.ai_consultation.room.initialMessage)'), 'AI consultation must listen first instead of sending a synthetic first patient turn');
+assert(liveRoomSource.includes('sendLiveStartupGreeting(session)'), 'AI consultation must start with one assistant greeting and disclaimer');
+assert(liveRoomSource.includes('isStartupGreetingRef'), 'AI consultation startup greeting must not be fed back into microphone input');
 assert(liveRoomSource.includes('activeLiveConnectionIdRef'), 'AI consultation must prevent duplicate Live sessions from speaking at the same time');
 assert(liveRoomSource.includes('stopAssistantAudioForUserSpeech'), 'AI consultation must locally stop assistant audio when the user starts talking');
 assert(liveRoomSource.includes('lastUserSpeechInterruptAtRef'), 'AI consultation interruption must be debounced');
