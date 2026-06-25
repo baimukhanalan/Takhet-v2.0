@@ -46,6 +46,24 @@ const createLandingParallaxValues = (): LandingParallaxValues => ({
   y: 0,
 });
 
+type HeroActionPreview = {
+  interfaceKind: 'guest-booking' | 'ai-video-room' | 'takhet-ai-chat' | 'ai-analysis-lab' | 'medical-archive';
+  eyebrow: string;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  windowTitle: string;
+  screenPreview: string;
+  previewRows: Array<{
+    title: string;
+    meta: string;
+    value: string;
+  }>;
+  chips: string[];
+  footerLeft: string;
+  footerRight: string;
+  portalFrame?: boolean;
+};
+
 const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
   const navigate = useNavigate();
   const { t, tArray } = useLanguage();
@@ -60,6 +78,7 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
   const [feedbackSending, setFeedbackSending] = useState(false);
   const [heroQuery, setHeroQuery] = useState('');
   const [isHeroVoiceListening, setIsHeroVoiceListening] = useState(false);
+  const [activeHeroActionPreview, setActiveHeroActionPreview] = useState<string | null>(null);
   const heroWaveCameraRef = useRef<{
     element: HTMLElement | null;
     frame: number;
@@ -88,6 +107,99 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
 
   const faqItems = tArray<{ q: string; a: string }>('landing.faqItems');
   const placeholders = tArray<string>('landing.heroPlaceholders');
+  const guestPreviewDays = React.useMemo(() => {
+    const formatter = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', weekday: 'short' });
+    const slots = [['10:30', '12:00'], ['14:15', '16:45'], ['09:40', '18:10']];
+
+    return Array.from({ length: 3 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() + index + 1);
+      return {
+        label: formatter.format(date).replace('.', ''),
+        slots: slots[index]
+      };
+    });
+  }, []);
+
+  const actionPreviewByPath = React.useMemo<Record<string, HeroActionPreview>>(() => ({
+    '/guest-consultation': {
+      interfaceKind: 'guest-booking',
+      eyebrow: 'Guest booking',
+      title: 'Врач онлайн без аккаунта',
+      icon: Stethoscope,
+      windowTitle: 'Консультация без регистрации',
+      screenPreview: 'guest doctor catalog',
+      previewRows: [
+        { title: 'Арман Сулейменов', meta: 'Терапевт • 12 лет', value: '14 000 ₸' },
+        { title: 'Айдана Касымова', meta: 'Психолог • 8 лет', value: '12 000 ₸' },
+      ],
+      chips: guestPreviewDays.map((day) => `${day.label} ${day.slots[0]}`),
+      footerLeft: 'SMS перед оплатой',
+      footerRight: 'PDF один раз',
+    },
+    '/ai-consultation': {
+      interfaceKind: 'ai-video-room',
+      eyebrow: 'AI consultation',
+      title: 'Видео-консультация',
+      icon: Video,
+      windowTitle: 'AI видео-комната',
+      screenPreview: 'live camera consultation room',
+      previewRows: [
+        { title: 'Камера', meta: 'лицо, документы, упаковки', value: 'vision' },
+        { title: 'Микрофон', meta: 'речь без перебивания', value: 'live' },
+      ],
+      chips: ['первые слова сразу', 'без ожидания формы', 'контекст врачу'],
+      footerLeft: 'Streaming',
+      footerRight: 'Передача врачу',
+    },
+    '/takhet-ai': {
+      interfaceKind: 'takhet-ai-chat',
+      eyebrow: 'Takhet AI',
+      title: 'Медицинский навигатор',
+      icon: Activity,
+      windowTitle: 'Takhet AI',
+      screenPreview: 'chat assistant interface',
+      previewRows: [
+        { title: 'Мед режим', meta: 'симптомы и маршрут', value: 'active' },
+        { title: 'Mental режим', meta: 'стресс и поддержка', value: '24/7' },
+      ],
+      chips: ['мед режим', 'mental режим', 'гостевой доступ'],
+      footerLeft: 'Без диагноза AI',
+      footerRight: 'С маршрутом',
+    },
+    '/ai-lab': {
+      interfaceKind: 'ai-analysis-lab',
+      eyebrow: 'AI analysis',
+      title: 'Лаборатория ИИ',
+      icon: FileText,
+      windowTitle: 'Лаборатория ИИ',
+      screenPreview: 'analysis upload workspace',
+      previewRows: [
+        { title: 'ОАК.pdf', meta: 'Hb, WBC, PLT распознаны', value: '92%' },
+        { title: 'Биохимия', meta: 'ALT, AST, глюкоза, ферритин', value: 'готово' },
+      ],
+      chips: ['PDF upload', 'OCR', 'AI summary'],
+      footerLeft: 'Портал пациента',
+      footerRight: 'После входа',
+      portalFrame: true,
+    },
+    '/archive': {
+      interfaceKind: 'medical-archive',
+      eyebrow: 'Medical archive',
+      title: 'Медицинский архив',
+      icon: Archive,
+      windowTitle: 'Медицинский архив',
+      screenPreview: 'patient archive workspace',
+      previewRows: [
+        { title: 'Заключение врача', meta: 'PDF и рекомендации', value: 'новое' },
+        { title: 'История консультаций', meta: 'Кейсы, анализы, файлы', value: '12' },
+      ],
+      chips: ['кейсы', 'PDF', 'контекст врачу'],
+      footerLeft: 'Портал пациента',
+      footerRight: 'После входа',
+      portalFrame: true,
+    },
+  }), [guestPreviewDays]);
 
   React.useEffect(() => {
     const currentText = placeholders[placeholderIndex % Math.max(placeholders.length, 1)];
@@ -403,6 +515,161 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
     handleCommonLogin(path);
   };
 
+  const renderHeroActionInterfacePreview = (preview: HeroActionPreview) => {
+    const PreviewIcon = preview.icon;
+    const isDark = preview.interfaceKind === 'ai-video-room' || preview.interfaceKind === 'takhet-ai-chat';
+    const chromeClass = isDark
+      ? 'border-white/10 bg-slate-950 text-white'
+      : 'border-slate-100 bg-white text-slate-950';
+
+    return (
+      <div
+        data-hero-action-interface-preview={preview.interfaceKind}
+        data-screen-preview={preview.screenPreview}
+        data-portal-frame={preview.portalFrame ? 'true' : undefined}
+        className={`overflow-hidden rounded-[1.75rem] border shadow-inner ${chromeClass}`}
+      >
+        <div className={`flex items-center justify-between border-b px-3 py-2 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-red-300" />
+            <span className="h-2 w-2 rounded-full bg-amber-300" />
+            <span className="h-2 w-2 rounded-full bg-primary/70" />
+          </div>
+          <p className={`text-[8px] font-black uppercase tracking-[0.22em] ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>{preview.windowTitle}</p>
+          <PreviewIcon className={`h-3 w-3 ${isDark ? 'text-primary' : 'text-primary'}`} />
+        </div>
+
+        {preview.interfaceKind === 'guest-booking' ? (
+          <div className="grid gap-3 bg-slate-50 p-3">
+            <div className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-400 shadow-sm">
+              <Search className="h-3.5 w-3.5 text-primary" />
+              Найти врача, цену и ближайшее время
+            </div>
+            <div className="grid grid-cols-[1.08fr_0.92fr] gap-2">
+              <div className="space-y-2">
+                {preview.previewRows.map((row, index) => (
+                  <div key={row.title} className={`rounded-2xl bg-white p-3 shadow-sm ${index === 0 ? 'ring-2 ring-primary/20' : ''}`}>
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-[10px] font-black text-primary">
+                        {row.title.slice(0, 1)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-[10px] font-black text-slate-950">{row.title}</p>
+                        <p className="text-[8px] font-bold text-slate-400">{row.meta}</p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[9px] font-black text-primary">{row.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-2xl bg-slate-950 p-3 text-white">
+                <p className="text-[8px] font-black uppercase tracking-[0.22em] text-slate-400">Дата и время</p>
+                <div className="mt-2 space-y-1.5">
+                  {preview.chips.map((chip) => (
+                    <div key={chip} className="rounded-xl bg-white/10 px-2.5 py-2 text-[9px] font-black text-white">
+                      {chip}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {preview.interfaceKind === 'ai-video-room' ? (
+          <div className="grid grid-cols-[1.15fr_0.85fr] gap-3 bg-slate-950 p-3">
+            <div className="relative min-h-36 overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-white/10">
+              <div className="absolute inset-3 rounded-2xl bg-gradient-to-br from-primary/25 via-slate-800 to-slate-950" />
+              <div className="absolute left-3 top-3 rounded-full bg-red-500 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-white">live</div>
+              <div className="absolute bottom-3 left-3 right-3 rounded-2xl bg-black/30 p-2 text-[9px] font-bold text-white backdrop-blur">
+                AI врач видит и слышит пациента
+              </div>
+            </div>
+            <div className="space-y-2">
+              {preview.previewRows.map((row) => (
+                <div key={row.title} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-white">{row.title}</p>
+                  <p className="mt-1 text-[8px] font-bold text-slate-400">{row.meta}</p>
+                  <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-primary">{row.value}</p>
+                </div>
+              ))}
+              <div className="rounded-2xl bg-primary/15 p-3 text-[9px] font-black uppercase tracking-widest text-primary">Видео-консультация</div>
+            </div>
+          </div>
+        ) : null}
+
+        {preview.interfaceKind === 'takhet-ai-chat' ? (
+          <div className="space-y-3 bg-slate-950 p-3">
+            <div className="flex gap-1 rounded-2xl border border-white/10 bg-white/5 p-1">
+              {preview.previewRows.map((row, index) => (
+                <div key={row.title} className={`flex-1 rounded-xl px-2 py-2 text-center text-[8px] font-black uppercase tracking-widest ${index === 0 ? 'bg-white text-slate-950' : 'text-slate-400'}`}>
+                  {row.title}
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <div className="max-w-[82%] rounded-2xl bg-white/10 p-3 text-[10px] font-bold text-slate-200">Что значит высокий ферритин?</div>
+              <div className="ml-auto max-w-[88%] rounded-2xl bg-primary p-3 text-[10px] font-bold text-white">Сначала объясню простыми словами, затем дам план следующих шагов.</div>
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+              <span className="flex-1 text-[9px] font-bold text-slate-500">Сообщение Takhet AI...</span>
+              <Send className="h-3.5 w-3.5 text-primary" />
+            </div>
+          </div>
+        ) : null}
+
+        {preview.interfaceKind === 'ai-analysis-lab' ? (
+          <div className="grid grid-cols-[1fr_0.9fr] gap-3 bg-white p-3">
+            <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-3 text-center">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
+                <FileText className="h-4 w-4" />
+              </div>
+              <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-slate-900">Лаборатория ИИ</p>
+              <p className="mt-1 text-[8px] font-bold text-slate-400">Загрузите анализы</p>
+            </div>
+            <div className="space-y-2">
+              {preview.previewRows.map((row) => (
+                <div key={row.title} className="rounded-2xl border border-blue-100 bg-blue-50/60 p-2.5">
+                  <p className="text-[9px] font-black text-slate-950">{row.title}</p>
+                  <p className="mt-1 text-[8px] font-bold text-slate-500">{row.meta}</p>
+                  <p className="mt-1 text-[8px] font-black uppercase tracking-widest text-primary">{row.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {preview.interfaceKind === 'medical-archive' ? (
+          <div className="bg-white p-3">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-950">Медицинский архив</p>
+              <span className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-widest text-white">PDF</span>
+            </div>
+            <div className="space-y-2">
+              {preview.previewRows.map((row, index) => (
+                <div key={row.title} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${index === 0 ? 'bg-blue-50 text-primary' : 'bg-white text-slate-400'}`}>
+                    <Archive className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[10px] font-black text-slate-950">{row.title}</p>
+                    <p className="mt-1 text-[8px] font-bold text-slate-500">{row.meta}</p>
+                  </div>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-primary">{row.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className={`flex items-center justify-between gap-3 border-t px-3 py-2 ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-primary/5'}`}>
+          <span className="text-[8px] font-black uppercase tracking-widest text-primary">{preview.footerLeft}</span>
+          <span className={`text-[8px] font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{preview.footerRight}</span>
+        </div>
+      </div>
+    );
+  };
+
   const handleFeedbackSubmit = async () => {
     const name = feedbackName.trim();
     const review = feedbackText.trim();
@@ -560,17 +827,48 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
                   { label: 'Takhet AI', icon: Activity, path: '/takhet-ai' },
                   { label: 'Разобрать анализы', icon: FileText, path: '/ai-lab' },
                   { label: 'Мед архив', icon: Archive, path: '/archive' },
-                ].map((action, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleQuickAction(action.path)}
-                    data-takhet-magnetic-button
-                    className="takhet-patient-hero-action px-4 md:px-6 py-2 md:py-3 bg-slate-50 hover:bg-white border border-slate-100 hover:border-primary/20 rounded-xl md:rounded-2xl text-[9px] md:text-xs font-black uppercase tracking-widest text-slate-500 hover:text-primary transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 whitespace-nowrap"
-                  >
-                    <action.icon className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                    {action.label}
-                  </button>
-                ))}
+                ].map((action, i) => {
+                  const preview = actionPreviewByPath[action.path];
+                  const isPreviewOpen = activeHeroActionPreview === action.path;
+
+                  return (
+                    <div
+                      key={i}
+                      className={preview ? 'relative inline-flex group' : 'inline-flex'}
+                      onPointerEnter={preview ? () => setActiveHeroActionPreview(action.path) : undefined}
+                      onPointerLeave={preview ? () => setActiveHeroActionPreview(null) : undefined}
+                      onFocusCapture={preview ? () => setActiveHeroActionPreview(action.path) : undefined}
+                      onBlurCapture={preview ? (event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                          setActiveHeroActionPreview(null);
+                        }
+                      } : undefined}
+                    >
+                      <button
+                        onClick={() => handleQuickAction(action.path)}
+                        data-takhet-magnetic-button
+                        data-hero-action-hover-trigger={preview ? action.path : undefined}
+                        className="takhet-patient-hero-action px-4 md:px-6 py-2 md:py-3 bg-slate-50 hover:bg-white border border-slate-100 hover:border-primary/20 rounded-xl md:rounded-2xl text-[9px] md:text-xs font-black uppercase tracking-widest text-slate-500 hover:text-primary transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                      >
+                        <action.icon className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                        {action.label}
+                      </button>
+
+                      {preview ? (
+                        <div
+                          data-hero-action-hover-preview={action.path}
+                          data-hero-action-preview-state={isPreviewOpen ? 'open' : 'closed'}
+                          data-hero-action-preview-mode={preview.portalFrame ? 'portal-frame' : preview.interfaceKind}
+                          className={`pointer-events-none absolute bottom-full left-1/2 z-40 mb-4 hidden w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 rounded-[2rem] border border-white/80 bg-white/95 p-2 text-left shadow-2xl shadow-slate-900/12 ring-1 ring-slate-900/5 backdrop-blur-xl transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:scale-100 group-focus-within:opacity-100 md:block ${
+                            isPreviewOpen ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-[0.98] opacity-0'
+                          }`}
+                        >
+                          {renderHeroActionInterfacePreview(preview)}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </FadeIn>
