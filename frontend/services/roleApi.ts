@@ -206,6 +206,7 @@ export const roleApi = {
     }),
   patientConsultationReport: (caseId: string) => api<any>(`/patient/case/${caseId}/consultation-report`),
   consultationSignals: (caseId: string, since = 0) => api<any[]>(`/cases/${caseId}/signals?since=${since}`),
+  consultationIceServers: () => api<{ iceServers: RTCIceServer[]; relayConfigured: boolean }>('/cases/ice-servers'),
   consultationSignal: (
     caseId: string,
     payload: { type: 'offer' | 'answer' | 'ice' | 'leave'; payload?: any }
@@ -224,10 +225,10 @@ export const roleApi = {
       method: 'PATCH',
       body: JSON.stringify(payload)
     }),
-  createPaymentIntent: (amount: number, caseId: string) =>
+  createPaymentIntent: (caseId: string) =>
     api<any>('/payments/create-intent', {
       method: 'POST',
-      body: JSON.stringify({ amount, caseId })
+      body: JSON.stringify({ caseId })
     }),
 
   uploadMedicalFile: (payload: { fileName: string; mimeType: string; base64: string }) =>
@@ -344,5 +345,17 @@ export const roleApi = {
     api<any>('/admin/notifications/broadcast', {
       method: 'POST',
       body: JSON.stringify({ title, body })
+    }),
+  academyImports: (status?: string) => api<any>(`/academy/imports${status ? `?status=${encodeURIComponent(status)}` : ''}`),
+  academyCreateImport: (payload: any) =>
+    api<any>('/academy/imports', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+  academyApproveImport: (id: string) => api<any>(`/academy/imports/${id}/approve`, { method: 'PATCH' }),
+  academyRejectImport: (id: string, reason?: string) =>
+    api<any>(`/academy/imports/${id}/reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason })
     })
 };

@@ -179,6 +179,9 @@ export class DoctorController {
   @Patch('case/:id/status')
   async status(@Req() req: any, @Param('id') id: string, @Body() dto: SetCaseStatusDto) {
     const doctorId = await this.resolveDoctorId(req.user.id);
+    if (dto.status === 'closed') {
+      await this.profilesService.finalizeConsultationReportOnClose(id, doctorId);
+    }
     return this.casesService.setDoctorCaseStatus(id, doctorId, dto.status);
   }
 

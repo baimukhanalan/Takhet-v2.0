@@ -1,3 +1,8 @@
+const DEFAULT_CONSULTATION_ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }];
+
+export const getConfiguredIceServers = (iceServers: RTCIceServer[] = []) =>
+  iceServers.length > 0 ? iceServers : DEFAULT_CONSULTATION_ICE_SERVERS;
+
 export class WebRTCService {
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
@@ -12,7 +17,7 @@ export class WebRTCService {
     this.onRemoteStream = onRemoteStream;
     this.onIceCandidate = onIceCandidate;
     this.peerConnection = new RTCPeerConnection({
-      iceServers: iceServers.length > 0 ? iceServers : [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: getConfiguredIceServers(iceServers)
     });
 
     this.peerConnection.onicecandidate = (event) => {

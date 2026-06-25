@@ -10,6 +10,11 @@ export class DoctorsController {
     return this.doctorsService.listActive();
   }
 
+  @Get('catalog')
+  catalog() {
+    return this.doctorsService.listActive();
+  }
+
   @Get(':id')
   profile(@Param('id') id: string) {
     return this.doctorsService.getPublicDoctorProfile(id);

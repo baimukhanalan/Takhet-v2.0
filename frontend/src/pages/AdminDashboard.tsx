@@ -10,7 +10,7 @@ import {
   ShieldAlert, ToggleLeft, ToggleRight, DollarSign, Percent, Zap, Sun,
   Send, Sparkles, Briefcase, FileSearch, Mail, Archive, ShoppingBag, Eye, Menu,
   ShieldEllipsis, History, BarChartHorizontal, LineChart as LineChartIcon, Radar, Layers,
-  UserCheck, ArrowRight
+  UserCheck, ArrowRight, GraduationCap
 } from 'lucide-react';
 import type { PlatformRequest, PharmacyProduct, PartnerClinic, PartnerContract, SystemConfig, AIChatMessage } from '../services/db';
 import TakhetLogo from '../components/Logo';
@@ -63,6 +63,109 @@ type AdminSystemHealth = {
   uptimeSeconds: number;
   activeRequestsPerMinute: number;
   status: 'stable' | 'attention';
+};
+
+type AcademyImportRow = {
+  id: string;
+  slug: string;
+  categorySlug: string;
+  title: string;
+  summary: string;
+  status: string;
+  sourceFile?: string;
+  sourceTool?: string;
+  automationRunId?: string;
+  createdBy?: string;
+  medicalReviewRequired?: boolean;
+  rejectedReason?: string;
+  createdAt?: string;
+};
+
+type AdminModalField = {
+  name: string;
+  label: string;
+  type?: 'text' | 'number' | 'textarea';
+  placeholder?: string;
+  defaultValue?: string | number;
+};
+
+type AdminModalState = {
+  title: string;
+  description: string;
+  submitLabel: string;
+  fields: AdminModalField[];
+  onSubmit: (values: Record<string, string>) => Promise<void>;
+};
+
+const AdminFormModal: React.FC<{ modal: AdminModalState; onClose: () => void }> = ({ modal, onClose }) => {
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(modal.fields.map((field) => [field.name, String(field.defaultValue ?? '')]))
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await modal.onSubmit(values);
+      onClose();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Не удалось сохранить изменения');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[400] flex items-center justify-center bg-slate-950/50 px-4 backdrop-blur-sm">
+      <form onSubmit={submit} className="w-full max-w-xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-2xl font-black uppercase tracking-tight text-slate-950">{modal.title}</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">{modal.description}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-xl bg-slate-100 p-2 text-slate-500 hover:text-slate-900">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          {modal.fields.map((field) => (
+            <label key={field.name} className="block">
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{field.label}</span>
+              {field.type === 'textarea' ? (
+                <textarea
+                  value={values[field.name] || ''}
+                  placeholder={field.placeholder}
+                  rows={6}
+                  onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
+                  className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-950 outline-none focus:border-primary"
+                />
+              ) : (
+                <input
+                  type={field.type || 'text'}
+                  value={values[field.name] || ''}
+                  placeholder={field.placeholder}
+                  onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-950 outline-none focus:border-primary"
+                />
+              )}
+            </label>
+          ))}
+        </div>
+        {error ? <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button type="button" onClick={onClose} className="rounded-2xl bg-slate-100 px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-500">
+            Отмена
+          </button>
+          <button disabled={isSubmitting} className="rounded-2xl bg-primary px-6 py-3 text-xs font-black uppercase tracking-widest text-white shadow-xl disabled:opacity-60">
+            {isSubmitting ? 'Сохранение...' : modal.submitLabel}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 };
 
 const formatRequestType = (type: string) => (type === 'DoctorOnboarding' ? 'Врач' : 'Партнер');
@@ -118,7 +221,7 @@ const buildVerificationRequests = (apiDoctors: any[] = [], partnerRows: PartnerC
   return [...doctorRequests, ...partnerRequests];
 };
 
-type AdminTab = 'overview' | 'requests' | 'doctors' | 'partners' | 'contracts' | 'qa' | 'reviews' | 'medicines' | 'analytics' | 'settings' | 'assistant';
+type AdminTab = 'overview' | 'requests' | 'doctors' | 'partners' | 'contracts' | 'qa' | 'reviews' | 'medicines' | 'academy' | 'analytics' | 'settings' | 'assistant';
 
 const NAV_ITEMS: { id: AdminTab, icon: any, label: string }[] = [
   { id: 'overview', icon: BarChart3, label: 'Дашборд' },
@@ -130,6 +233,7 @@ const NAV_ITEMS: { id: AdminTab, icon: any, label: string }[] = [
   { id: 'qa', icon: MessageSquare, label: 'Вопросы' },
   { id: 'reviews', icon: Star, label: 'Отзывы' },
   { id: 'medicines', icon: Pill, label: 'Аптека' },
+  { id: 'academy', icon: GraduationCap, label: 'Academy' },
   { id: 'analytics', icon: TrendingUp, label: 'Аналитика' },
   { id: 'settings', icon: Settings, label: 'Настройки' },
 ];
@@ -178,12 +282,15 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   const [partners, setPartners] = useState<PartnerClinic[]>([]);
   const [contracts, setContracts] = useState<PartnerContract[]>([]);
   const [medicines, setMedicines] = useState<PharmacyProduct[]>([]);
+  const [academyImports, setAcademyImports] = useState<AcademyImportRow[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
   const [revenueHistory, setRevenueHistory] = useState<any[]>([]);
   const [adminStats, setAdminStats] = useState<any | null>(null);
   const [systemHealth, setSystemHealth] = useState<AdminSystemHealth | null>(null);
   const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminNotice, setAdminNotice] = useState<string | null>(null);
+  const [adminModal, setAdminModal] = useState<AdminModalState | null>(null);
   const [sysConfig, setSysConfig] = useState<SystemConfig>({
     theme: 'light',
     maintenanceMode: false,
@@ -202,12 +309,13 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
   useEffect(() => {
     const load = async () => {
       try {
-        const [dashboard, apiDoctors, apiUsers, portalState, health] = await Promise.all([
+        const [dashboard, apiDoctors, apiUsers, portalState, health, academyQueue] = await Promise.all([
           roleApi.adminDashboard(),
           roleApi.adminDoctors(),
           roleApi.adminUsers(),
           roleApi.adminPortalState(),
-          roleApi.adminSystemHealth()
+          roleApi.adminSystemHealth(),
+          roleApi.academyImports().catch(() => ({ items: [] }))
         ]);
 
         const partnerRows = normalizePartnerRows(portalState.partners || []);
@@ -248,6 +356,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
         }))
         );
         setRevenueHistory(portalState.revenueHistory || []);
+        setAcademyImports(academyQueue.items || []);
         setSysConfig(portalState.config || sysConfig);
         setAiMessages(portalState.aiChatHistory || []);
         setSystemHealth(health);
@@ -285,7 +394,7 @@ const AdminDashboard: React.FC<{ user: User; onLogout: () => void }> = ({ user, 
 
   useLiveRefresh(
     async () => {
-      if (activeTab === 'assistant' || activeTab === 'settings' || activeTab === 'medicines' || activeTab === 'reviews' || activeTab === 'qa') {
+      if (activeTab === 'assistant' || activeTab === 'settings' || activeTab === 'medicines' || activeTab === 'reviews' || activeTab === 'qa' || activeTab === 'academy') {
         return;
       }
 
@@ -561,34 +670,35 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
   };
 
   const handleAddDoctorDraft = async () => {
-    try {
-      const nextIndex = doctors.length + 1;
-      const fullName = window.prompt('ФИО врача', `Новый врач ${nextIndex}`);
-      if (fullName === null) return;
-      const specialty = window.prompt('Специализация', 'Общая практика');
-      if (specialty === null) return;
-      const catalogAudience = normalizeCatalogAudience(
-        window.prompt('Каталог: doctor = врачи, mental = Mental, both = оба', 'doctor')
-      );
-      const temporaryLogin = window.prompt('Временный логин врача (оставьте пустым для автогенерации)', '');
-      const created = await roleApi.adminCreateDoctor(
-        fullName.trim() || `Новый врач ${nextIndex}`,
-        specialty.trim() || 'Общая практика',
-        {
-          catalogAudience,
-          temporaryLogin: temporaryLogin?.trim() || undefined
-        }
-      );
-      await refreshAdminData();
-      if (created?.temporaryLogin && created?.temporaryPassword) {
-        window.alert(`Врач добавлен.\nВременный логин: ${created.temporaryLogin}\nВременный пароль: ${created.temporaryPassword}`);
+    const nextIndex = doctors.length + 1;
+    setAdminModal({
+      title: 'Новый врач',
+      description: 'Создайте карточку врача и выберите, где она будет отображаться.',
+      submitLabel: 'Создать врача',
+      fields: [
+        { name: 'fullName', label: 'ФИО врача', defaultValue: `Новый врач ${nextIndex}` },
+        { name: 'specialty', label: 'Специализация', defaultValue: 'Общая практика' },
+        { name: 'catalogAudience', label: 'Каталог', defaultValue: 'doctor', placeholder: 'doctor, mental или both' },
+        { name: 'temporaryLogin', label: 'Временный логин', placeholder: 'Оставьте пустым для автогенерации' }
+      ],
+      onSubmit: async (values) => {
+        const created = await roleApi.adminCreateDoctor(
+          values.fullName.trim() || `Новый врач ${nextIndex}`,
+          values.specialty.trim() || 'Общая практика',
+          {
+            catalogAudience: normalizeCatalogAudience(values.catalogAudience),
+            temporaryLogin: values.temporaryLogin?.trim() || undefined
+          }
+        );
+        await refreshAdminData();
+        setAdminError(null);
+        setAdminNotice(
+          created?.temporaryLogin && created?.temporaryPassword
+            ? `Врач добавлен. Временный логин: ${created.temporaryLogin}. Временный пароль: ${created.temporaryPassword}.`
+            : 'Врач добавлен.'
+        );
       }
-      setAdminError(null);
-      return;
-    } catch (error) {
-      setAdminError(error instanceof Error ? error.message : 'Не удалось создать карточку врача');
-      return;
-    }
+    });
   };
 
   const handleAddPartnerDraft = async () => {
@@ -710,20 +820,27 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
   };
 
   const handleMedicineEdit = async (medicine: PharmacyProduct) => {
-    const name = window.prompt('Название препарата', medicine.name);
-    if (name === null) return;
-    const price = window.prompt('Цена в тенге', String(medicine.price));
-    if (price === null) return;
-    const stock = window.prompt('Количество на складе', String(medicine.stock));
-    if (stock === null) return;
-    await roleApi.adminUpdateMedicine(medicine.id, {
-      name,
-      price: Number(price),
-      stock: Number(stock),
-      category: medicine.category,
-      img: medicine.img
+    setAdminModal({
+      title: 'Редактировать препарат',
+      description: 'Обновите название, цену и остаток на складе.',
+      submitLabel: 'Сохранить',
+      fields: [
+        { name: 'name', label: 'Название препарата', defaultValue: medicine.name },
+        { name: 'price', label: 'Цена в тенге', type: 'number', defaultValue: medicine.price },
+        { name: 'stock', label: 'Количество на складе', type: 'number', defaultValue: medicine.stock }
+      ],
+      onSubmit: async (values) => {
+        await roleApi.adminUpdateMedicine(medicine.id, {
+          name: values.name.trim() || medicine.name,
+          price: Number(values.price) || medicine.price,
+          stock: Number(values.stock) || 0,
+          category: medicine.category,
+          img: medicine.img
+        });
+        await reloadPortalState();
+        setAdminNotice('Препарат обновлен.');
+      }
     });
-    await reloadPortalState();
   };
 
   const handleMedicineDelete = async (medicineId: string) => {
@@ -732,18 +849,25 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
   };
 
   const handlePartnerEdit = async (partner: PartnerClinic) => {
-    const name = window.prompt('Название партнера', partner.name);
-    if (name === null) return;
-    const bin = window.prompt('БИН', partner.bin);
-    if (bin === null) return;
-    const commission = window.prompt('Комиссия (%)', String(partner.commission));
-    if (commission === null) return;
-    await roleApi.adminUpdatePartner(partner.id, {
-      name,
-      bin,
-      commission: Number(commission)
+    setAdminModal({
+      title: 'Редактировать партнера',
+      description: 'Обновите юридическое название, БИН и комиссию партнера.',
+      submitLabel: 'Сохранить',
+      fields: [
+        { name: 'name', label: 'Название партнера', defaultValue: partner.name },
+        { name: 'bin', label: 'БИН', defaultValue: partner.bin },
+        { name: 'commission', label: 'Комиссия (%)', type: 'number', defaultValue: partner.commission }
+      ],
+      onSubmit: async (values) => {
+        await roleApi.adminUpdatePartner(partner.id, {
+          name: values.name.trim() || partner.name,
+          bin: values.bin.trim() || partner.bin,
+          commission: Number(values.commission) || partner.commission
+        });
+        await reloadPortalState();
+        setAdminNotice('Партнер обновлен.');
+      }
     });
-    await reloadPortalState();
   };
 
   const handlePartnerDelete = async (partnerId: string) => {
@@ -752,26 +876,91 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
   };
 
   const handleContractEdit = async (contract: PartnerContract) => {
-    const contractNumber = window.prompt('Номер договора', contract.contractNumber);
-    if (contractNumber === null) return;
-    const partnerName = window.prompt('Партнер', contract.partnerName);
-    if (partnerName === null) return;
-    const expiresAt = window.prompt('Действует до', contract.expiresAt);
-    if (expiresAt === null) return;
-    const commission = window.prompt('Комиссия (%)', String(contract.commission));
-    if (commission === null) return;
-    await roleApi.adminUpdateContract(contract.id, {
-      contractNumber,
-      partnerName,
-      expiresAt,
-      commission: Number(commission)
+    setAdminModal({
+      title: 'Редактировать договор',
+      description: 'Обновите реквизиты договора и срок действия.',
+      submitLabel: 'Сохранить',
+      fields: [
+        { name: 'contractNumber', label: 'Номер договора', defaultValue: contract.contractNumber },
+        { name: 'partnerName', label: 'Партнер', defaultValue: contract.partnerName },
+        { name: 'expiresAt', label: 'Действует до', defaultValue: contract.expiresAt },
+        { name: 'commission', label: 'Комиссия (%)', type: 'number', defaultValue: contract.commission }
+      ],
+      onSubmit: async (values) => {
+        await roleApi.adminUpdateContract(contract.id, {
+          contractNumber: values.contractNumber.trim() || contract.contractNumber,
+          partnerName: values.partnerName.trim() || contract.partnerName,
+          expiresAt: values.expiresAt.trim() || contract.expiresAt,
+          commission: Number(values.commission) || contract.commission
+        });
+        await reloadPortalState();
+        setAdminNotice('Договор обновлен.');
+      }
     });
-    await reloadPortalState();
   };
 
   const handleContractDelete = async (contractId: string) => {
     await roleApi.adminDeleteContract(contractId);
     await reloadPortalState();
+  };
+
+  const refreshAcademyImports = async () => {
+    const queue = await roleApi.academyImports();
+    setAcademyImports(queue.items || []);
+  };
+
+  const handleCreateAcademyImport = () => {
+    setAdminModal({
+      title: 'Черновик Academy',
+      description: 'Добавьте материал из автоматизации или вручную. Публикация произойдет только после медицинского review.',
+      submitLabel: 'Создать черновик',
+      fields: [
+        { name: 'title', label: 'Заголовок', placeholder: 'Когда нужен анализ ферритина' },
+        { name: 'slug', label: 'Slug', placeholder: 'ferritin-when-to-test' },
+        { name: 'categorySlug', label: 'Категория', defaultValue: 'blood-tests' },
+        { name: 'summary', label: 'Краткое описание', type: 'textarea' },
+        {
+          name: 'body',
+          label: 'Текст материала',
+          type: 'textarea',
+          placeholder: 'Материал не заменяет врача. Обратитесь к врачу при симптомах или сомнениях.'
+        },
+        { name: 'tags', label: 'Теги через запятую', placeholder: 'ферритин, анализ крови, железо' },
+        { name: 'sourceFile', label: 'Источник', placeholder: 'Automatization/academy/outbox/pending/article.json' },
+        { name: 'automationRunId', label: 'Automation run ID', placeholder: 'run-2026-06-25-001' }
+      ],
+      onSubmit: async (values) => {
+        await roleApi.academyCreateImport({
+          title: values.title,
+          slug: values.slug,
+          categorySlug: values.categorySlug,
+          summary: values.summary,
+          body: values.body,
+          tags: values.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+          sourceFile: values.sourceFile,
+          sourceTool: 'automation',
+          automationRunId: values.automationRunId,
+          createdBy: user.email || 'admin',
+          status: 'review',
+          seoTitle: values.title,
+          seoDescription: values.summary
+        });
+        await refreshAcademyImports();
+        setAdminNotice('Черновик Academy создан и отправлен на review.');
+      }
+    });
+  };
+
+  const handleApproveAcademyImport = async (id: string) => {
+    await roleApi.academyApproveImport(id);
+    await refreshAcademyImports();
+    setAdminNotice('Материал Academy опубликован.');
+  };
+
+  const handleRejectAcademyImport = async (id: string) => {
+    await roleApi.academyRejectImport(id, 'Отклонено после review');
+    await refreshAcademyImports();
+    setAdminNotice('Материал Academy отклонен.');
   };
 
   const renderSection = () => {
@@ -1341,6 +1530,88 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
              </div>
           </div>
         );
+      case 'academy':
+        return (
+          <div className="space-y-6 lg:space-y-8 animate-in slide-in-from-right-4 duration-500">
+             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.24em] ${styles.textSub}`}>Automation intake</p>
+                  <h2 className={`text-2xl lg:text-3xl font-black ${styles.textMain} uppercase tracking-tighter`}>Academy imports</h2>
+                </div>
+                <button onClick={handleCreateAcademyImport} className="px-6 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">
+                  Новый черновик
+                </button>
+             </div>
+
+             <div className={`${styles.card} rounded-[2rem] lg:rounded-[3rem] border overflow-hidden`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left min-w-[980px]">
+                    <thead className="bg-slate-400/5 border-b border-white/5">
+                      <tr>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Материал</th>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Категория</th>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Источник</th>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub}`}>Review</th>
+                        <th className={`p-6 text-[10px] font-black uppercase ${styles.textSub} text-right`}>Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${styles.border}`}>
+                      {academyImports.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className={`p-10 text-center text-sm font-bold ${styles.textSub}`}>
+                            Очередь Academy пуста. Автоматизация может отправлять JSON через API, либо черновик можно создать вручную.
+                          </td>
+                        </tr>
+                      ) : (
+                        academyImports.map((item) => (
+                          <tr key={item.id} className="hover:bg-primary/5 transition-colors">
+                            <td className="p-6">
+                              <p className={`font-black ${styles.textMain}`}>{item.title}</p>
+                              <p className={`mt-1 max-w-md text-xs font-semibold leading-5 ${styles.textSub}`}>{item.summary}</p>
+                              <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-primary">{item.slug}</p>
+                            </td>
+                            <td className={`p-6 text-sm font-bold ${styles.textMain}`}>{item.categorySlug}</td>
+                            <td className="p-6">
+                              <p className={`text-xs font-black ${styles.textMain}`}>{item.sourceTool || 'automation'}</p>
+                              <p className={`mt-1 max-w-xs break-all text-[10px] font-bold ${styles.textSub}`}>{item.sourceFile || 'source_file_required'}</p>
+                              <p className={`mt-1 text-[10px] font-bold ${styles.textSub}`}>{item.automationRunId || 'automation_run_id_required'}</p>
+                            </td>
+                            <td className="p-6">
+                              <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
+                                item.status === 'published'
+                                  ? 'bg-blue-500/10 text-blue-500'
+                                  : item.status === 'rejected'
+                                    ? 'bg-red-500/10 text-red-500'
+                                    : 'bg-amber-500/10 text-amber-500'
+                              }`}>
+                                {item.status}
+                              </span>
+                              {item.medicalReviewRequired ? <p className={`mt-2 text-[10px] font-bold ${styles.textSub}`}>medical review required</p> : null}
+                              {item.rejectedReason ? <p className="mt-2 text-[10px] font-bold text-red-500">{item.rejectedReason}</p> : null}
+                            </td>
+                            <td className="p-6 text-right">
+                              {item.status === 'draft' || item.status === 'review' ? (
+                                <div className="flex justify-end gap-2">
+                                  <button onClick={() => void handleApproveAcademyImport(item.id)} className="rounded-xl bg-blue-500 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white">
+                                    Publish
+                                  </button>
+                                  <button onClick={() => void handleRejectAcademyImport(item.id)} className="rounded-xl bg-red-500 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white">
+                                    Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${styles.textSub}`}>finalized</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+             </div>
+          </div>
+        );
       case 'analytics':
         return (
           <div className="space-y-6 lg:space-y-10 animate-in slide-in-from-right-4 duration-500">
@@ -1455,9 +1726,20 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
          </header>
 
          <main className={`flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 lg:p-10 scrollbar-hide flex flex-col ${styles.mainBg}`}>
+            {adminNotice ? (
+              <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">
+                <div className="flex items-start justify-between gap-4">
+                  <span>{adminNotice}</span>
+                  <button type="button" onClick={() => setAdminNotice(null)} className="text-blue-400 hover:text-blue-700">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : null}
             {renderSection()}
          </main>
       </div>
+      {adminModal ? <AdminFormModal modal={adminModal} onClose={() => setAdminModal(null)} /> : null}
     </div>
   );
 };

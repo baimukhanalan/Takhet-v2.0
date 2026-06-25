@@ -706,16 +706,155 @@ const PortalHeader: React.FC<{ eyebrow: string; title: string; text?: string }> 
   </div>
 );
 
-const GenericDataPage: React.FC<{ title: string; eyebrow: string; text?: string; loader: () => Promise<any> }> = ({ title, eyebrow, text, loader }) => {
+type EnterpriseWorkflowField = {
+  name: string;
+  label: string;
+  type?: 'text' | 'email';
+  placeholder?: string;
+};
+
+type EnterpriseWorkflowAction = {
+  title: string;
+  submitLabel: string;
+  fields: EnterpriseWorkflowField[];
+  onSubmit: (values: Record<string, string>) => Promise<void>;
+};
+
+const GenericDataPage: React.FC<{
+  title: string;
+  eyebrow: string;
+  text?: string;
+  loader: () => Promise<any>;
+  action?: EnterpriseWorkflowAction;
+}> = ({ title, eyebrow, text, loader, action }) => {
   const [data, setData] = useState<any>(null);
-  useEffect(() => void loader().then(setData).catch(() => setData([])), [loader]);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [actionStatus, setActionStatus] = useState('');
+  const [isActionRunning, setIsActionRunning] = useState(false);
+  const reload = () => loader().then(setData).catch(() => setData([]));
+
+  useEffect(() => void reload(), [loader]);
+
   if (data === null) return <LoadingState />;
   const rows = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [data];
+
+  const submitAction = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!action) return;
+    setIsActionRunning(true);
+    setActionStatus('');
+    try {
+      await action.onSubmit(values);
+      setValues({});
+      await reload();
+      setActionStatus('Действие выполнено.');
+    } catch (error) {
+      setActionStatus(error instanceof Error ? error.message : 'Не удалось выполнить действие.');
+    } finally {
+      setIsActionRunning(false);
+    }
+  };
+
   return (
     <div>
       <PortalHeader eyebrow={eyebrow} title={title} text={text} />
+      {action ? (
+        <form onSubmit={submitAction} className="mb-5 rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">{action.title}</p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {action.fields.map((field) => (
+                  <label key={field.name} className="block">
+                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{field.label}</span>
+                    <input
+                      type={field.type || 'text'}
+                      value={values[field.name] || ''}
+                      placeholder={field.placeholder}
+                      onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-950 outline-none focus:border-primary"
+                    />
+                  </label>
+                ))}
+              </div>
+              {actionStatus ? <p className="mt-3 text-sm font-bold text-slate-500">{actionStatus}</p> : null}
+            </div>
+            <button disabled={isActionRunning} className="rounded-2xl bg-primary px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white shadow-lg disabled:opacity-60">
+              {isActionRunning ? 'Выполняется...' : action.submitLabel}
+            </button>
+          </div>
+        </form>
+      ) : null}
       <div className={cardClass}>
         <SafeTable rows={rows} />
+      </div>
+    </div>
+  );
+};
+
+const EmployeeActionPage: React.FC<{
+  title: string;
+  eyebrow: string;
+  text: string;
+  action: string;
+  run: () => Promise<any>;
+}> = ({ title, eyebrow, text, action, run }) => {
+  const [context, setContext] = useState<any>(null);
+  const [result, setResult] = useState<any>(null);
+  const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+
+  useEffect(() => void enterpriseApi.employeeBenefits().then(setContext).catch(() => setContext({})), []);
+
+  const handleEmployeeAction = async () => {
+    setStatus('running');
+    setResult(null);
+    try {
+      const nextResult = await run();
+      setResult(nextResult);
+      setStatus('done');
+    } catch (error) {
+      setResult({ error: error instanceof Error ? error.message : 'Action failed' });
+      setStatus('error');
+    }
+  };
+
+  if (context === null) return <LoadingState />;
+
+  return (
+    <div>
+      <PortalHeader eyebrow={eyebrow} title={title} text={text} />
+      <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
+        <div className={cardClass}>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Included access</p>
+          <div className="mt-5 grid gap-3">
+            <MetricCard title="Duty doctor" value={context?.dutyDoctorRemaining ?? context?.benefits?.dutyDoctorRemaining ?? 0} icon={HeartPulse} />
+            <MetricCard title="Psychology" value={context?.psychologyCredits ?? context?.benefits?.psychologyCredits ?? 0} icon={Brain} />
+            <MetricCard title="Co-pay" value={context?.copayRequired || context?.benefits?.copayRequired ? 'Да' : 'Нет'} icon={CreditCard} />
+          </div>
+        </div>
+        <div className={cardClass}>
+          <p className="text-sm font-semibold leading-7 text-slate-500">{text}</p>
+          <button
+            type="button"
+            onClick={handleEmployeeAction}
+            disabled={status === 'running'}
+            className="mt-6 inline-flex items-center gap-3 rounded-[2rem] bg-primary px-6 py-4 text-xs font-black uppercase tracking-[0.18em] text-white shadow-lg shadow-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {status === 'running' ? 'Выполняется...' : action}
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <div className="mt-6">
+            {status === 'idle' ? <EmptyState /> : null}
+            {status === 'done' || status === 'error' ? (
+              <pre className={cx('max-h-80 overflow-auto whitespace-pre-wrap rounded-2xl p-4 text-xs font-bold', status === 'error' ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-600')}>
+                {JSON.stringify(result, null, 2)}
+              </pre>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="mt-8">
+        <LegalNotice />
       </div>
     </div>
   );
@@ -746,15 +885,30 @@ const EmployeeDashboard = () => {
   );
 };
 
-const ActionCard: React.FC<{ title: string; text: string; action: string; onClick: () => void }> = ({ title, text, action, onClick }) => (
-  <button onClick={onClick} className="rounded-[2rem] border border-slate-100 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-    <p className="text-lg font-black text-slate-950">{title}</p>
-    <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">{text}</p>
-    <span className="mt-6 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
-      {action} <ChevronRight className="h-4 w-4" />
-    </span>
-  </button>
-);
+const ActionCard: React.FC<{ title: string; text: string; action: string; onClick: () => void }> = ({ title, text, action, onClick }) => {
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+
+  const handleClick = () => {
+    if (!awaitingConfirmation) {
+      setAwaitingConfirmation(true);
+      window.setTimeout(() => setAwaitingConfirmation(false), 6000);
+      return;
+    }
+
+    setAwaitingConfirmation(false);
+    onClick();
+  };
+
+  return (
+    <button onClick={handleClick} className="rounded-[2rem] border border-slate-100 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+      <p className="text-lg font-black text-slate-950">{title}</p>
+      <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">{text}</p>
+      <span className="mt-6 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+        {awaitingConfirmation ? 'Подтвердить действие' : action} <ChevronRight className="h-4 w-4" />
+      </span>
+    </button>
+  );
+};
 
 const EmployerDashboard = () => {
   const [data, setData] = useState<any>(null);
@@ -842,17 +996,41 @@ const EnterpriseApp: React.FC<{ loginOnly?: boolean }> = ({ loginOnly }) => {
     navigate('/', { replace: true });
   };
 
-  const genericPages: Record<string, { title: string; eyebrow: string; loader: () => Promise<any>; text?: string }> = {
-    '/enterprise/employee/ai-support': { title: 'AI поддержка 24/7', eyebrow: 'Employee Portal', loader: () => enterpriseApi.startAiSession({ mode: 'mental_support' }).then((data) => [data]), text: 'Приватная поддержка тревоги, стресса и маршрутизация к специалисту.' },
-    '/enterprise/employee/duty-doctor': { title: 'Срочно к врачу', eyebrow: 'Employee Portal', loader: () => enterpriseApi.requestConsultation({ serviceType: 'duty_doctor' }).then((data) => [data]), text: 'Запрос дежурному врачу в рамках корпоративного пакета.' },
-    '/enterprise/employee/specialist': { title: 'Записаться к специалисту', eyebrow: 'Employee Portal', loader: () => enterpriseApi.requestConsultation({ serviceType: 'specialist', specialty: 'терапевт' }).then((data) => [data]), text: 'Узкие специалисты доступны по лимитам, triage и premium/co-pay правилам.' },
-    '/enterprise/employee/psychology': { title: 'Психологическая поддержка', eyebrow: 'Employee Portal', loader: () => enterpriseApi.requestConsultation({ serviceType: 'psychologist' }).then((data) => [data]), text: 'Психологи и AI mental support в рамках корпоративного доступа.' },
+  const employeeActionPages: Record<string, { title: string; eyebrow: string; text: string; action: string; run: () => Promise<any> }> = {
+    '/enterprise/employee/ai-support': { title: 'AI поддержка 24/7', eyebrow: 'Employee Portal', text: 'Приватная поддержка тревоги, стресса и маршрутизация к специалисту. Сессия создается только после нажатия кнопки.', action: 'Начать AI-сессию', run: () => enterpriseApi.startAiSession({ mode: 'mental_support' }) },
+    '/enterprise/employee/duty-doctor': { title: 'Срочно к врачу', eyebrow: 'Employee Portal', text: 'Запрос дежурному врачу в рамках корпоративного пакета. Заявка создается только после подтверждения сотрудником.', action: 'Запросить врача', run: () => enterpriseApi.requestConsultation({ serviceType: 'duty_doctor' }) },
+    '/enterprise/employee/specialist': { title: 'Записаться к специалисту', eyebrow: 'Employee Portal', text: 'Узкие специалисты доступны по лимитам, triage и premium/co-pay правилам. Внутренние тарифы врачей сотруднику не показываются.', action: 'Создать запрос', run: () => enterpriseApi.requestConsultation({ serviceType: 'specialist', specialty: 'терапевт' }) },
+    '/enterprise/employee/psychology': { title: 'Психологическая поддержка', eyebrow: 'Employee Portal', text: 'Психологи и AI mental support доступны в рамках корпоративного доступа. Запись создается только явным действием.', action: 'Записаться', run: () => enterpriseApi.requestConsultation({ serviceType: 'psychologist' }) }
+  };
+
+  const genericPages: Record<string, { title: string; eyebrow: string; loader: () => Promise<any>; text?: string; action?: EnterpriseWorkflowAction }> = {
     '/enterprise/employee/limits': { title: 'Мои лимиты', eyebrow: 'Employee Portal', loader: enterpriseApi.employeeBenefits },
     '/enterprise/employee/history': { title: 'История консультаций', eyebrow: 'Employee Portal', loader: enterpriseApi.employeeHistory },
     '/enterprise/employee/recommendations': { title: 'Рекомендации', eyebrow: 'Employee Portal', loader: enterpriseApi.employeeRecommendations },
     '/enterprise/employee/profile': { title: 'Профиль', eyebrow: 'Employee Portal', loader: enterpriseApi.employeeProfile },
     '/enterprise/employee/help': { title: 'Помощь', eyebrow: 'Employee Portal', loader: enterpriseApi.employeeNotifications },
-    '/enterprise/employer/employees': { title: 'Сотрудники', eyebrow: 'Employer / HR Portal', loader: enterpriseApi.employerEmployees },
+    '/enterprise/employer/employees': {
+      title: 'Сотрудники',
+      eyebrow: 'Employer / HR Portal',
+      loader: enterpriseApi.employerEmployees,
+      action: {
+        title: 'Пригласить сотрудника',
+        submitLabel: 'Отправить invite',
+        fields: [
+          { name: 'email', label: 'Email', type: 'email', placeholder: 'employee@company.kz' },
+          { name: 'fullName', label: 'ФИО', placeholder: 'Имя сотрудника' },
+          { name: 'department', label: 'Подразделение', placeholder: 'Например: Operations' },
+          { name: 'employeeId', label: 'Employee ID', placeholder: 'EMP-1002' }
+        ],
+        onSubmit: (values: Record<string, string>) =>
+          enterpriseApi.inviteEmployee({
+            email: values.email,
+            fullName: values.fullName,
+            department: values.department,
+            employeeId: values.employeeId
+          })
+      }
+    },
     '/enterprise/employer/departments': { title: 'Подразделения', eyebrow: 'Employer / HR Portal', loader: enterpriseApi.employerDepartments },
     '/enterprise/employer/activation': { title: 'Активация', eyebrow: 'Employer / HR Portal', loader: enterpriseApi.employerActivation },
     '/enterprise/employer/utilization': { title: 'Использование сервиса', eyebrow: 'Employer / HR Portal', loader: enterpriseApi.employerUtilization },
@@ -866,14 +1044,40 @@ const EnterpriseApp: React.FC<{ loginOnly?: boolean }> = ({ loginOnly }) => {
     '/enterprise/provider/patients': { title: 'Пациенты', eyebrow: 'Doctor Portal', loader: enterpriseApi.providerPatients },
     '/enterprise/provider/consultations': { title: 'Консультации', eyebrow: 'Doctor Portal', loader: enterpriseApi.providerConsultations },
     '/enterprise/provider/triage-summary': { title: 'Triage Summary', eyebrow: 'Doctor Portal', loader: enterpriseApi.providerTriageSummary },
-    '/enterprise/provider/notes': { title: 'Медицинские записи', eyebrow: 'Doctor Portal', loader: enterpriseApi.providerNotes },
+    '/enterprise/provider/notes': {
+      title: 'Медицинские записи',
+      eyebrow: 'Doctor Portal',
+      loader: enterpriseApi.providerNotes,
+      action: {
+        title: 'Добавить заметку',
+        submitLabel: 'Сохранить заметку',
+        fields: [
+          { name: 'caseId', label: 'Case ID', placeholder: 'ID консультации' },
+          { name: 'note', label: 'Заметка', placeholder: 'Краткая клиническая заметка' }
+        ],
+        onSubmit: (values: Record<string, string>) => enterpriseApi.addProviderNote({ caseId: values.caseId, note: values.note })
+      }
+    },
     '/enterprise/provider/payouts': { title: 'Выплаты', eyebrow: 'Doctor Portal', loader: enterpriseApi.providerPayouts },
     '/enterprise/provider/training': { title: 'Обучение', eyebrow: 'Doctor Portal', loader: enterpriseApi.providerTraining },
     '/enterprise/provider/profile': { title: 'Профиль', eyebrow: 'Doctor Portal', loader: enterpriseApi.providerProfile },
     '/enterprise/psychologist/schedule': { title: 'Расписание', eyebrow: 'Psychologist Portal', loader: enterpriseApi.providerSchedule },
     '/enterprise/psychologist/clients': { title: 'Клиенты', eyebrow: 'Psychologist Portal', loader: enterpriseApi.providerPatients },
     '/enterprise/psychologist/risk-flags': { title: 'Risk Flags', eyebrow: 'Psychologist Portal', loader: enterpriseApi.providerTriageSummary },
-    '/enterprise/psychologist/notes': { title: 'Заметки', eyebrow: 'Psychologist Portal', loader: enterpriseApi.providerNotes },
+    '/enterprise/psychologist/notes': {
+      title: 'Заметки',
+      eyebrow: 'Psychologist Portal',
+      loader: enterpriseApi.providerNotes,
+      action: {
+        title: 'Добавить заметку',
+        submitLabel: 'Сохранить заметку',
+        fields: [
+          { name: 'caseId', label: 'Case ID', placeholder: 'ID сессии' },
+          { name: 'note', label: 'Заметка', placeholder: 'Краткая заметка по сессии' }
+        ],
+        onSubmit: (values: Record<string, string>) => enterpriseApi.addProviderNote({ caseId: values.caseId, note: values.note })
+      }
+    },
     '/enterprise/psychologist/escalations': { title: 'Эскалации', eyebrow: 'Psychologist Portal', loader: enterpriseApi.supervisorEscalations },
     '/enterprise/psychologist/payouts': { title: 'Выплаты', eyebrow: 'Psychologist Portal', loader: enterpriseApi.providerPayouts },
     '/enterprise/psychologist/training': { title: 'Обучение', eyebrow: 'Psychologist Portal', loader: enterpriseApi.providerTraining },
@@ -911,6 +1115,8 @@ const EnterpriseApp: React.FC<{ loginOnly?: boolean }> = ({ loginOnly }) => {
     if (path === '/enterprise/takhet-admin') return <TakhetAdminDashboard />;
     if (path === '/enterprise/supervisor') return <SupervisorDashboard />;
     if (path === '/enterprise/employee/risk-precheck') return <RiskPrecheckPage />;
+    const employeeAction = employeeActionPages[path];
+    if (employeeAction) return <EmployeeActionPage {...employeeAction} />;
     const generic = genericPages[path];
     if (generic) return <GenericDataPage {...generic} />;
     return <Navigate to={roleHome[session.user.role]} replace />;

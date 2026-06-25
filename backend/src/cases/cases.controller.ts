@@ -4,6 +4,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { CasesService } from './cases.service';
+import { env } from '../config/env.config';
 
 class CreateCaseDto {
   @IsString()
@@ -28,6 +29,34 @@ class ConsultationSignalDto {
 export class CasesController {
   constructor(private readonly casesService: CasesService) {}
 
+  private parseIceServers() {
+    if (!env.turnIceServersJson.trim()) {
+      return {
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        relayConfigured: false,
+        warning: 'TURN/relay is not configured; calls can fail on restrictive networks'
+      };
+    }
+
+    try {
+      const parsed = JSON.parse(env.turnIceServersJson);
+      if (!Array.isArray(parsed)) {
+        throw new Error('TURN_ICE_SERVERS_JSON must be an array');
+      }
+      const iceServers = parsed.filter((item) => item && typeof item === 'object' && item.urls);
+      return {
+        iceServers,
+        relayConfigured: iceServers.some((item: any) => String(Array.isArray(item.urls) ? item.urls.join(',') : item.urls).startsWith('turn:'))
+      };
+    } catch {
+      return {
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        relayConfigured: false,
+        warning: 'TURN/relay configuration is invalid; using STUN fallback only'
+      };
+    }
+  }
+
   @UseGuards(AuthGuard)
   @Post()
   create(@Req() req: any, @Body() dto: CreateCaseDto) {
@@ -38,6 +67,12 @@ export class CasesController {
   @Get('my')
   my(@Req() req: any) {
     return this.casesService.findMy(req.user.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('ice-servers')
+  iceServers() {
+    return this.parseIceServers();
   }
 
   @UseGuards(AuthGuard)

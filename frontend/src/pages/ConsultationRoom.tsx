@@ -166,8 +166,9 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
 
   const setupLocalMedia = async () => {
     stopLocalMedia();
+    const iceConfig = await roleApi.consultationIceServers().catch(() => ({ iceServers: [] as RTCIceServer[] }));
     rtcRef.current = new WebRTCService(
-      [],
+      iceConfig.iceServers || [],
       (remoteStream) => {
         setRemoteStream(remoteStream);
       },
@@ -349,9 +350,35 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     }
   };
 
+  const syncConsultationReport = async () => {
+    if (!caseItem) return;
+    const report = isDoctor ? await roleApi.doctorCaseReport(caseItem.id) : await roleApi.patientConsultationReport(caseItem.id);
+    setReportItem(report);
+    if (Array.isArray(report?.transcript)) {
+      setMessages(report.transcript);
+    }
+    if (Array.isArray(report?.uploadedDocs)) {
+      setUploadedDocs(report.uploadedDocs);
+    }
+    if (!doctorRecommendationsEditedRef.current) {
+      setDoctorNotes((prev) => ({
+        complaints: report?.aiSummary || report?.finalReport || prev.complaints,
+        recommendations: report?.doctorRecommendations || prev.recommendations
+      }));
+    }
+  };
+
   useEffect(() => {
     void load();
   }, [id, isDoctor]);
+
+  useEffect(() => {
+    if (!caseItem?.id || isCallEnded) return;
+    const reportSyncTimer = window.setInterval(() => {
+      void syncConsultationReport().catch(() => undefined);
+    }, 10000);
+    return () => window.clearInterval(reportSyncTimer);
+  }, [caseItem?.id, isDoctor, isCallEnded]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -638,13 +665,36 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     });
   };
 
-  const handleEndCall = () => {
-    stopLocalMedia();
-    setIsCallEnded(true);
-    if (!isDoctor) {
-      window.setTimeout(() => {
-        navigate('/archive', { replace: true });
-      }, 250);
+  const handleEndCall = async () => {
+    if (caseItem) {
+      void roleApi.consultationSignal(caseItem.id, { type: 'leave', payload: { sessionId: localSignalSessionRef.current } }).catch(() => undefined);
+    }
+    setBusy(true);
+    try {
+      if (caseItem && isDoctor) {
+        await roleApi.doctorSaveConsultationReportDraft(caseItem.id, {
+          aiSummary: doctorNotes.complaints || aiSummary || undefined,
+          doctorRecommendations: doctorNotes.recommendations || undefined
+        }).catch(() => undefined);
+        const finalRecommendations = (doctorNotes.recommendations || 'Консультация завершена врачом.').trim();
+        await roleApi.doctorConfirmCaseReport(caseItem.id, finalRecommendations).catch(() => undefined);
+        await roleApi.doctorUpdateCaseStatus(caseItem.id, 'closed');
+      } else if (caseItem) {
+        await roleApi.patientSaveConsultationDraft(caseItem.id, {
+          transcript: messages,
+          uploadedDocs,
+          aiSummary: aiSummary || undefined
+        }).catch(() => undefined);
+      }
+    } finally {
+      stopLocalMedia();
+      setBusy(false);
+      setIsCallEnded(true);
+      if (!isDoctor) {
+        window.setTimeout(() => {
+          navigate('/archive', { replace: true });
+        }, 250);
+      }
     }
   };
 

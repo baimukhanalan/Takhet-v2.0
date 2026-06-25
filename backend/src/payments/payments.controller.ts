@@ -1,14 +1,10 @@
 import { Body, Controller, Headers, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 import { AuthGuard } from '../auth/auth.guard';
 import { PaymentsService } from './payments.service';
 import { KaspiService } from './kaspi.service';
 
 class CreateIntentDto {
-  @IsInt()
-  @Min(100)
-  amount!: number;
-
   @IsString()
   caseId!: string;
 }
@@ -35,7 +31,7 @@ export class PaymentsController {
   @UseGuards(AuthGuard)
   @Post('create-intent')
   createIntent(@Req() req: any, @Body() dto: CreateIntentDto) {
-    return this.paymentsService.createIntent(req.user.id, dto.amount, dto.caseId);
+    return this.paymentsService.createIntent(req.user.id, dto.caseId);
   }
 
   @Post('webhook')

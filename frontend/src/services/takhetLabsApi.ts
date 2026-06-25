@@ -84,6 +84,11 @@ export const takhetLabsApi = {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
+  createPhysicianReview: (payload: { labResultId: string; status: 'approved' | 'edited' | 'needs_follow_up'; comment?: string }) =>
+    api<any>('/labs/physician-reviews', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
   physicianReviewQueue: () => api<any[]>('/labs/physician/review-queue'),
   adminOverview: () => api<any>('/labs/admin/overview'),
   labsLogin: (payload: { identifier: string; password: string; role: LabsRole }) =>

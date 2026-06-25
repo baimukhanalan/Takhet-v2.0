@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Truck, ShoppingBag, ArrowUpRight, Shield, Clock, MapPin, AlertTriangle } from 'lucide-react';
+import { Truck, ShoppingBag, ArrowUpRight, Shield, Clock, MapPin } from 'lucide-react';
 import { FadeIn, FadeInStagger } from '../components/FadeIn';
 import { useLanguage } from '../services/useLanguage';
 import PublicHeader from '../components/PublicHeader';
@@ -37,14 +37,14 @@ const ServicesPage: React.FC<{ isPortal?: boolean }> = ({ isPortal = false }) =>
         </FadeIn>
 
         <FadeIn direction="up" delay={0.2}>
-          <div className="bg-amber-50 border-2 border-amber-100 p-6 md:p-10 rounded-3xl md:rounded-[4rem] flex flex-col md:flex-row items-center gap-6 md:gap-8 shadow-xl shadow-amber-500/5">
+          <div className="bg-blue-50 border-2 border-blue-100 p-6 md:p-10 rounded-3xl md:rounded-[4rem] flex flex-col md:flex-row items-center gap-6 md:gap-8 shadow-xl shadow-blue-500/5">
             <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-100 rounded-2xl md:rounded-3xl flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-8 h-8 md:w-10 md:h-10 text-amber-600" />
+              <Shield className="w-8 h-8 md:w-10 md:h-10 text-primary" />
             </div>
             <div className="space-y-1 md:space-y-2 text-center md:text-left">
-              <h3 className="text-amber-900 font-black uppercase tracking-tight text-xl md:text-2xl">Сервисы временно работают в ограниченном режиме</h3>
-              <p className="text-amber-800 font-medium text-sm md:text-lg leading-relaxed">
-                Сейчас вызов врача на дом и заказ лекарств временно приостановлены из-за вопросов логистики. Информация по услугам сохранена, чтобы пациенту было понятно, кому и в каких случаях они будут полезны после возобновления.
+              <h3 className="text-slate-900 font-black uppercase tracking-tight text-xl md:text-2xl">Сервисы Takhet+ для домашней поддержки</h3>
+              <p className="text-slate-600 font-medium text-sm md:text-lg leading-relaxed">
+                Раздел показывает сценарии, требования и порядок подключения дополнительных услуг. Заявки проходят через проверку доступности, чтобы пациент заранее понимал условия, сроки и формат оказания сервиса.
               </p>
             </div>
           </div>

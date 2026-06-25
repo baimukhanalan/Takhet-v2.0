@@ -130,7 +130,7 @@ const PatientAppointments: React.FC = () => {
   const handlePay = async (caseId: string) => {
     setPayingCaseId(caseId);
     try {
-      const intent = await roleApi.createPaymentIntent(15000, caseId);
+      const intent = await roleApi.createPaymentIntent(caseId);
       if (intent?.paymentUrl) {
         window.open(intent.paymentUrl, '_blank', 'noopener,noreferrer');
       } else {

@@ -272,14 +272,41 @@ export class GuestService {
   }
 
   private async sendSms(phone: string, message: string) {
-    if (env.smsProvider === 'none' || !env.smsApiKey) {
+    const provider = env.smsProvider;
+    if (provider === 'mock') {
       if (process.env.NODE_ENV === 'production') {
-        throw new BadRequestException('SMS_PROVIDER and SMS_API_KEY are required for phone confirmation');
+        throw new BadRequestException('Mock SMS provider is not allowed in production');
       }
-      return 'SMS_PROVIDER pending; development code returned';
+      return 'SMS_PROVIDER mock; development code returned';
     }
 
-    return `SMS_PROVIDER ${env.smsProvider} queued by ${env.smsSender}: ${message.length} chars to ${this.maskPhone(phone)}`;
+    if (provider === 'none' || !env.smsApiKey || !env.smsApiUrl) {
+      throw new BadRequestException('SMS_PROVIDER, SMS_API_URL and SMS_API_KEY are required for phone confirmation');
+    }
+
+    return this.sendSmsViaProvider(phone, message);
+  }
+
+  private async sendSmsViaProvider(phone: string, message: string) {
+    const response = await fetch(env.smsApiUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.smsApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        provider: env.smsProvider,
+        sender: env.smsSender,
+        to: phone,
+        text: message
+      })
+    });
+
+    if (!response.ok) {
+      throw new BadRequestException(`SMS provider failed with status ${response.status}`);
+    }
+
+    return `SMS_PROVIDER ${env.smsProvider} accepted ${message.length} chars to ${this.maskPhone(phone)}`;
   }
 
   private encryptSensitiveValue(value: string) {

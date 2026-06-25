@@ -759,6 +759,59 @@ export class ProfilesService {
     return next;
   }
 
+  async finalizeConsultationReportOnClose(caseId: string, doctorUserId: string) {
+    const caseRow = await this.lookupCase(caseId);
+    if (!caseRow) {
+      throw new NotFoundException('Case not found');
+    }
+    if (caseRow.doctorId && caseRow.doctorId !== doctorUserId) {
+      throw new BadRequestException('Case is assigned to another doctor');
+    }
+
+    const key = `consultation_report:${caseId}`;
+    const existing = await this.getSettingsValue<StoredConsultationReport>(caseRow.patientId, key);
+    if (existing?.status === 'confirmed' && existing.pdfBase64) {
+      return existing;
+    }
+
+    const doctorRecommendations =
+      existing?.doctorRecommendations?.trim() ||
+      'Консультация завершена. Итоговые рекомендации врача сохранены в медицинском архиве.';
+    const baseReport: StoredConsultationReport = existing || {
+      caseId,
+      patientUserId: caseRow.patientId,
+      doctorId: doctorUserId,
+      status: 'awaiting_doctor',
+      transcript: [],
+      uploadedDocs: [],
+      aiSummary: caseRow.summary || 'Онлайн-консультация завершена врачом.',
+      doctorRecommendations: '',
+      finalReport: '',
+      pdfBase64: null,
+      updatedAt: new Date().toISOString(),
+      confirmedAt: null
+    };
+    const finalReport = await this.composeFinalConsultationReport(baseReport, doctorRecommendations);
+    const pdfBase64 = await this.generateConsultationPdfBase64(caseId, finalReport);
+    const next: StoredConsultationReport = {
+      ...baseReport,
+      doctorId: doctorUserId,
+      status: 'confirmed',
+      doctorRecommendations,
+      finalReport,
+      pdfBase64,
+      confirmedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.upsertSettingsValue(caseRow.patientId, key, next);
+    await this.auditService.log('consultation.report.auto_confirmed_on_close', doctorUserId, { caseId });
+    this.realtimeService.publishToUsers([caseRow.patientId, doctorUserId], 'doctor', 'consultation.report.confirmed');
+    this.realtimeService.publishToRoles(['admin', 'partner'], 'admin', 'consultation.report.confirmed');
+
+    return next;
+  }
+
   async finalizeAiConsultationReport(
     caseId: string,
     patientUserId: string,

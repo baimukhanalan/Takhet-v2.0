@@ -92,6 +92,114 @@ const navByRole: Record<LabsRole, Array<{ label: string; path: string; icon: Rea
 const loginRoleOptions: LabsRole[] = ['member', 'physician', 'admin'];
 
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
+const labsCardClass = 'rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm';
+
+const formatLabsCell = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (Array.isArray(value)) return `${value.length} items`;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+};
+
+const LabsPageHeader: React.FC<{ eyebrow?: string; title: string; text?: string }> = ({ eyebrow = 'Takhet Labs', title, text }) => (
+  <div className="mb-8">
+    <p className="text-[10px] font-black uppercase tracking-[0.28em] text-primary">{eyebrow}</p>
+    <h1 className="mt-3 text-4xl font-black uppercase leading-[0.9] tracking-tighter text-slate-950 sm:text-5xl">{title}</h1>
+    {text ? <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-500">{text}</p> : null}
+  </div>
+);
+
+const LabsTable: React.FC<{ rows: any[]; columns?: string[] }> = ({ rows, columns }) => {
+  const resolvedColumns = columns || Object.keys(rows[0] || {}).slice(0, 5);
+
+  if (!rows.length) {
+    return <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm font-bold text-slate-500">Данных пока нет.</div>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] text-left">
+        <thead>
+          <tr className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-600">
+            {resolvedColumns.map((column) => <th key={column} className="px-4 py-3">{column}</th>)}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {rows.map((row, index) => (
+            <tr key={row.id || row.code || row.title || index} className="text-sm font-bold text-slate-600">
+              {resolvedColumns.map((column) => <td key={column} className="px-4 py-4">{formatLabsCell(row[column])}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const LabsLoading = () => <div className="py-20 text-center text-xs font-black uppercase tracking-[0.3em] text-slate-500">Загрузка Labs</div>;
+
+const LabsDataPage: React.FC<{
+  title: string;
+  text: string;
+  loader: () => Promise<any>;
+  columns?: string[];
+  transform?: (data: any) => any[];
+  action?: {
+    label: string;
+    onRun: (rows: any[]) => Promise<void>;
+  };
+}> = ({ title, text, loader, columns, transform, action }) => {
+  const [data, setData] = useState<any>(null);
+  const [actionStatus, setActionStatus] = useState('');
+  const [isActionRunning, setIsActionRunning] = useState(false);
+
+  const reload = () => loader().then(setData).catch(() => setData([]));
+
+  useEffect(() => void reload(), [loader]);
+
+  if (data === null) return <LabsLoading />;
+
+  const rows = transform ? transform(data) : Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [data];
+
+  const runAction = async () => {
+    if (!action) return;
+    setActionStatus('');
+    setIsActionRunning(true);
+    try {
+      await action.onRun(rows);
+      await reload();
+      setActionStatus('Действие выполнено.');
+    } catch (error) {
+      setActionStatus(error instanceof Error ? error.message : 'Не удалось выполнить действие.');
+    } finally {
+      setIsActionRunning(false);
+    }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      <LabsPageHeader title={title} text={text} />
+      {action ? (
+        <div className="mb-5 flex flex-col gap-3 rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-bold text-slate-500">
+            {actionStatus || 'Выберите действие для текущего раздела Takhet Labs.'}
+          </p>
+          <button
+            type="button"
+            onClick={runAction}
+            disabled={isActionRunning}
+            className="rounded-2xl bg-primary px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-lg disabled:opacity-60"
+          >
+            {isActionRunning ? 'Выполняется...' : action.label}
+          </button>
+        </div>
+      ) : null}
+      <div className={labsCardClass}>
+        <LabsTable rows={rows} columns={columns} />
+      </div>
+    </div>
+  );
+};
 
 const fallbackDashboard = (role: LabsRole): LabsPortalDashboard => ({
   role,
@@ -302,6 +410,215 @@ const LabsPortalPage: React.FC<{ role: LabsRole }> = ({ role }) => {
   );
 };
 
+const LabsMemberBiomarkersPage = () => (
+  <LabsDataPage
+    title="Biomarkers"
+    text="Все biomarkers, референсные диапазоны, статус и объяснения AI health intelligence layer."
+    loader={takhetLabsApi.biomarkers}
+    columns={['code', 'name', 'value', 'range', 'status']}
+  />
+);
+
+const LabsMemberScoresPage = () => (
+  <LabsDataPage
+    title="Health Scores"
+    text="Оценки по системам здоровья: metabolic, cardiovascular, hormones, liver, kidney, inflammation, stress и sleep."
+    loader={takhetLabsApi.healthSystems}
+    columns={['system', 'score', 'trend', 'recommendation']}
+  />
+);
+
+const LabsMemberInsightsPage = () => (
+  <LabsDataPage
+    title="AI Insights"
+    text="Корреляции и preventive insights без диагностики: только объяснения, риск-awareness и рекомендации для обсуждения с врачом."
+    loader={takhetLabsApi.insights}
+    columns={['title', 'category', 'severity', 'text']}
+  />
+);
+
+const LabsMemberProtocolPage = () => (
+  <LabsDataPage
+    title="Personalized Protocol"
+    text="Питание, сон, добавки, нагрузка, stress optimization и график повторного тестирования."
+    loader={takhetLabsApi.protocol}
+    transform={(data) =>
+      Object.entries(data || {}).map(([area, value]) => ({
+        area,
+        protocol: Array.isArray(value) ? value.join(', ') : formatLabsCell(value)
+      }))
+    }
+  />
+);
+
+const handleGenerateReport = async (rows: any[]) => {
+  const source = rows.find((row) => row?.labResultId || row?.id) || {};
+  await takhetLabsApi.generateReport({
+    labResultId: source.labResultId || source.id,
+    reportType: 'ai_summary'
+  });
+};
+
+const LabsMemberReportsPage = () => (
+  <LabsDataPage
+    title="Reports & PDFs"
+    text="AI summaries, physician-approved reports и история PDF-отчетов по лабораторным данным."
+    loader={takhetLabsApi.reports}
+    columns={['id', 'type', 'status', 'createdAt']}
+    action={{ label: 'Сформировать отчет', onRun: handleGenerateReport }}
+  />
+);
+
+const LabsMemberSettingsPage = () => (
+  <LabsDataPage
+    title="Settings"
+    text="Membership, уведомления, семейные профили и настройки доступа Takhet Labs."
+    loader={takhetLabsApi.family}
+    columns={['id', 'fullName', 'relation', 'createdAt']}
+  />
+);
+
+const handleCreatePhysicianReview = async (rows: any[]) => {
+  const source = rows.find((row) => row?.labResultId || row?.id);
+  if (!source) {
+    throw new Error('В очереди пока нет lab result для review.');
+  }
+  await takhetLabsApi.createPhysicianReview({
+    labResultId: source.labResultId || source.id,
+    status: 'approved',
+    comment: 'Physician review completed from Takhet Labs portal.'
+  });
+};
+
+const LabsPhysicianReviewQueuePage = () => (
+  <LabsDataPage
+    title="Review Queue"
+    text="Очередь biomarker review, AI insight review, protocol approval и physician comments."
+    loader={takhetLabsApi.physicianReviewQueue}
+    columns={['id', 'patientName', 'status', 'priority', 'createdAt']}
+    action={{ label: 'Подтвердить review', onRun: handleCreatePhysicianReview }}
+  />
+);
+
+const LabsPhysicianBiomarkerReviewPage = () => (
+  <LabsDataPage
+    title="Biomarker Review"
+    text="Подробный врачебный просмотр biomarker panels перед публикацией финального отчета пациенту."
+    loader={takhetLabsApi.physicianReviewQueue}
+    columns={['id', 'biomarkers', 'aiSummary', 'status']}
+  />
+);
+
+const LabsPhysicianProtocolPage = () => (
+  <LabsDataPage
+    title="Protocol Approval"
+    text="Проверка и корректировка protocol recommendations до отправки пациенту."
+    loader={takhetLabsApi.physicianReviewQueue}
+    columns={['id', 'protocol', 'comments', 'status']}
+  />
+);
+
+const LabsPhysicianCommentsPage = () => (
+  <LabsDataPage
+    title="Comments"
+    text="Комментарии врача, follow-up recommendations и review history."
+    loader={takhetLabsApi.physicianReviewQueue}
+    columns={['id', 'comments', 'reviewer', 'updatedAt']}
+  />
+);
+
+const LabsAdminOverviewPage = () => <LabsPortalPage role="admin" />;
+
+const LabsAdminMembershipsPage = () => (
+  <LabsDataPage
+    title="Memberships"
+    text="CORE, PLUS, EXECUTIVE, заказы, QR, lab workflow и status management."
+    loader={takhetLabsApi.memberships}
+    columns={['code', 'title', 'priceLabel', 'features']}
+  />
+);
+
+const handleManualLabResult = async () => {
+  await takhetLabsApi.uploadLabResult({
+    source: 'manual',
+    fileName: `manual-lab-result-${new Date().toISOString().slice(0, 10)}.json`,
+    biomarkers: {
+      glucose: 'pending manual entry',
+      hba1c: 'pending manual entry',
+      ferritin: 'pending manual entry'
+    }
+  });
+};
+
+const LabsAdminLabManagementPage = () => (
+  <LabsDataPage
+    title="Lab Management"
+    text="Lab results ingestion, PDF/manual/API intake, normalization status and physician approval readiness."
+    loader={takhetLabsApi.adminOverview}
+    transform={(data) => data?.labResults || data?.recentLabResults || data?.rows || [data]}
+    action={{ label: 'Добавить manual result', onRun: handleManualLabResult }}
+  />
+);
+
+const LabsAdminBiomarkersPage = () => (
+  <LabsDataPage
+    title="Biomarkers"
+    text="Справочник biomarkers, ranges, normalization mapping and health-system grouping."
+    loader={takhetLabsApi.biomarkers}
+    columns={['code', 'name', 'range', 'status', 'explanation']}
+  />
+);
+
+const LabsAdminBillingPage = () => (
+  <LabsDataPage
+    title="Billing"
+    text="Membership orders, payment status and executive health billing overview."
+    loader={takhetLabsApi.adminOverview}
+    transform={(data) => data?.billing || data?.payments || data?.memberships || [data]}
+  />
+);
+
+const LabsFamilyPage = () => (
+  <LabsDataPage
+    title="Family Health"
+    text="Family profiles, parent/child monitoring and family health insights."
+    loader={takhetLabsApi.family}
+    columns={['id', 'fullName', 'relation', 'createdAt']}
+  />
+);
+
+const resolveLabsPortalPage = (role: LabsRole, path: string) => {
+  if (role === 'member') {
+    if (path.endsWith('/biomarkers')) return <LabsMemberBiomarkersPage />;
+    if (path.endsWith('/scores')) return <LabsMemberScoresPage />;
+    if (path.endsWith('/insights')) return <LabsMemberInsightsPage />;
+    if (path.endsWith('/protocol')) return <LabsMemberProtocolPage />;
+    if (path.endsWith('/reports')) return <LabsMemberReportsPage />;
+    if (path.endsWith('/settings')) return <LabsMemberSettingsPage />;
+    return <LabsPortalPage role="member" />;
+  }
+
+  if (role === 'physician') {
+    if (path.endsWith('/biomarkers')) return <LabsPhysicianBiomarkerReviewPage />;
+    if (path.endsWith('/protocols')) return <LabsPhysicianProtocolPage />;
+    if (path.endsWith('/comments')) return <LabsPhysicianCommentsPage />;
+    return <LabsPhysicianReviewQueuePage />;
+  }
+
+  if (role === 'admin') {
+    if (path.endsWith('/memberships')) return <LabsAdminMembershipsPage />;
+    if (path.endsWith('/labs')) return <LabsAdminLabManagementPage />;
+    if (path.endsWith('/biomarkers')) return <LabsAdminBiomarkersPage />;
+    if (path.endsWith('/billing')) return <LabsAdminBillingPage />;
+    return <LabsAdminOverviewPage />;
+  }
+
+  if (path.endsWith('/profiles') || path.endsWith('/insights') || path.endsWith('/reports')) {
+    return <LabsFamilyPage />;
+  }
+  return <LabsFamilyPage />;
+};
+
 const TakhetLabsApp: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -346,7 +663,7 @@ const TakhetLabsApp: React.FC = () => {
 
   return (
     <LabsShell session={session} onLogout={logout}>
-      <LabsPortalPage role={role} />
+      {resolveLabsPortalPage(role, location.pathname)}
     </LabsShell>
   );
 };

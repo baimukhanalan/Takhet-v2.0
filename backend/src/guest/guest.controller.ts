@@ -1,6 +1,7 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { IsEmail, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 import { GuestService } from './guest.service';
+import { DoctorsService } from '../doctors/doctors.service';
 
 class RequestGuestPhoneOtpDto {
   @IsString()
@@ -49,7 +50,15 @@ class CreateGuestConsultationDto {
 
 @Controller('guest')
 export class GuestController {
-  constructor(private readonly guestService: GuestService) {}
+  constructor(
+    private readonly guestService: GuestService,
+    private readonly doctorsService: DoctorsService
+  ) {}
+
+  @Get('doctors')
+  doctors() {
+    return this.doctorsService.listActive();
+  }
 
   @Post('phone-otp/request')
   requestPhoneOtp(@Body() dto: RequestGuestPhoneOtpDto) {

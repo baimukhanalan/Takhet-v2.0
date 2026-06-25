@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { KaspiService } from './kaspi.service';
@@ -8,6 +8,7 @@ import { CasesService } from '../cases/cases.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CaseEntity } from '../cases/case.entity';
 import { RealtimeService } from '../realtime/realtime.service';
+import { DoctorsService } from '../doctors/doctors.service';
 
 @Injectable()
 export class PaymentsService {
@@ -17,11 +18,13 @@ export class PaymentsService {
     private readonly casesService: CasesService,
     private readonly notificationsService: NotificationsService,
     private readonly realtimeService: RealtimeService,
+    private readonly doctorsService: DoctorsService,
     @InjectRepository(Payment) private readonly paymentsRepo: Repository<Payment>,
     @InjectRepository(CaseEntity) private readonly casesRepo: Repository<CaseEntity>
   ) {}
 
-  async createIntent(userId: string, amount: number, caseId: string) {
+  async createIntent(userId: string, caseId: string) {
+    const amount = await this.resolveCasePaymentAmount(userId, caseId);
     const payment = await this.paymentsRepo.save(
       this.paymentsRepo.create({ userId, amount, caseId, currency: 'KZT', provider: 'kaspi', status: 'pending', providerId: null, providerPaymentId: null })
     );
@@ -52,6 +55,31 @@ export class PaymentsService {
       this.realtimeService.publishToRoles(['admin', 'partner'], 'admin', 'payment.intent.failed');
 
       throw new ServiceUnavailableException('Payment provider is unavailable or not configured. Payment was not captured.');
+    }
+  }
+
+  private async resolveCasePaymentAmount(userId: string, caseId: string) {
+    const found = await this.casesRepo.findOne({ where: { id: caseId, patientId: userId } });
+    if (!found) {
+      throw new NotFoundException('Case not found');
+    }
+
+    if (!found.doctorId) {
+      throw new BadRequestException('Unable to determine consultation price: case has no assigned doctor');
+    }
+
+    try {
+      const doctorProfile = await this.doctorsService.getDoctorProfile(found.doctorId);
+      const profileAmount = Number(doctorProfile?.pricePrimary || 0);
+      if (Number.isFinite(profileAmount) && profileAmount >= 100) {
+        return Math.round(profileAmount);
+      }
+      throw new BadRequestException('Unable to determine consultation price: doctor price is not configured');
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Unable to determine consultation price: doctor profile is unavailable');
     }
   }
 
