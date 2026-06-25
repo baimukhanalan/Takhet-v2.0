@@ -44,7 +44,8 @@ assert(!geminiClientSource.includes('Нужный формат ответа'), '
 assert(!geminiClientSource.includes('Коротко по запросу'), 'Client fallback must not use template filler');
 
 assert(liveRoomSource.includes('LIVE_AUDIO_PROCESSOR_BUFFER_SIZE = 512'), 'AI consultation should stream smaller audio chunks for lower latency');
-assert(liveRoomSource.includes('LIVE_VIDEO_FRAME_INTERVAL_MS = 900'), 'AI consultation should send visual context frequently enough');
+assert(liveRoomSource.includes('LIVE_VIDEO_FRAME_INTERVAL_MS = 1000'), 'AI consultation should send visual context at the Gemini Live supported 1 FPS cadence');
+assert(liveRoomSource.includes('source.connect(processor)'), 'AI consultation microphone MediaStreamSource must feed the Gemini audio processor');
 assert(liveRoomSource.includes('stopAssistantAudioForUserSpeech'), 'AI consultation must locally stop assistant audio when the user starts talking');
 assert(liveRoomSource.includes('lastUserSpeechInterruptAtRef'), 'AI consultation interruption must be debounced');
 assert(liveRoomSource.includes('LIVE_BASE_SYSTEM_INSTRUCTION'), 'AI consultation must use a local low-latency Live prompt instead of a generic translated prompt');
