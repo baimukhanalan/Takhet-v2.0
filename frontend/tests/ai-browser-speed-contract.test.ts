@@ -19,6 +19,13 @@ assert(
 );
 
 assert(
+  geminiClient.includes('buildTakhetNavigationInsight') &&
+    geminiClient.includes('isTakhetNavigationQuery') &&
+    geminiClient.includes('guest-consultation'),
+  'AI Browser must answer Takhet navigation and booking questions locally instead of waiting for a slow general AI call'
+);
+
+assert(
   browserPage.includes('getHealthInsightsFast') &&
     browserPage.includes('streamingPreview') &&
     browserPage.includes('onDelta'),

@@ -191,6 +191,62 @@ const fastBrowserSources = (medical: boolean): TrustedSource[] =>
         }
       ];
 
+const isTakhetNavigationQuery = (query: string) =>
+  /(запис|запись|консультац|консульт|каталог|найти врача|подобрать врача|онлайн[-\s]?при[её]м|стоимость приема|цена приема|слот|расписан)/i.test(
+    query
+  );
+
+const buildTakhetNavigationInsight = (query: string): AISearchResult => ({
+  query,
+  summary: {
+    likelyCause:
+      'Чтобы записаться к врачу в Takhet+, откройте гостевой каталог врачей, выберите карточку специалиста, дату и свободное время. После выбора слота система попросит подтвердить номер телефона по SMS перед оплатой и созданием записи.',
+    urgency: 'Low',
+    whatToDoNow:
+      'Нажмите “Поговорить с врачом” или перейдите на /guest-consultation. В карточке врача проверьте специализацию, опыт, формат приема, цену и ближайшие слоты.',
+    whenToTalkToDoctor:
+      'Если есть сильная боль, одышка, боль в груди, потеря сознания, кровотечение или резкое ухудшение состояния, не ждите онлайн-записи и обращайтесь в 103 или 112.'
+  },
+  detailedExplanation: {
+    scenarios: [
+      'Без регистрации: можно выбрать врача в гостевом каталоге и получить консультацию, но итоговое PDF-заключение доступно один раз, а саммари не сохраняется в медархив.',
+      'С аккаунтом пациента: консультации, заключения и файлы сохраняются в личном кабинете и медархиве.',
+      'Если нужный слот занят, выберите другую дату или другого специалиста.'
+    ],
+    redFlags: ['Сильная боль', 'Одышка', 'Боль в груди', 'Потеря сознания', 'Кровотечение', 'Резкое ухудшение состояния'],
+    mistakes: [
+      'Не выбирайте врача только по цене: проверьте специализацию, опыт и ближайшее доступное время.',
+      'Не откладывайте срочную помощь, если есть красные флаги.',
+      'Не закрывайте страницу гостевой записи до подтверждения телефона и оплаты.'
+    ],
+    nextSteps: [
+      'Откройте /guest-consultation.',
+      'Выберите карточку врача и подходящий слот.',
+      'Подтвердите номер телефона по SMS.',
+      'Перейдите к оплате и дождитесь подтверждения записи.'
+    ]
+  },
+  sources: [
+    {
+      id: 'takhet-guest-consultation',
+      title: 'Takhet+ guest consultation',
+      url: '/guest-consultation',
+      summary: 'Гостевой каталог врачей, карточка специалиста, календарь и запись на онлайн-консультацию.',
+      trustLevel: 'High',
+      sourceName: 'Takhet+'
+    },
+    {
+      id: 'takhet-patient-portal',
+      title: 'Takhet+ patient portal',
+      url: '/patient-auth',
+      summary: 'Вход пациента для сохранения консультаций, PDF-заключений и медархива.',
+      trustLevel: 'High',
+      sourceName: 'Takhet+'
+    }
+  ],
+  suggestedQuestions: ['Как выбрать врача?', 'Что будет без регистрации?', 'Как подтвердить номер?', 'Где будет PDF-заключение?']
+});
+
 const buildHealthInsightFromStreamText = (query: string, text: string): AISearchResult => {
   const cleaned = cleanLocalText(text) || buildLocalFallback(query);
   const medical = medicalQueryPattern.test(query);
@@ -227,6 +283,12 @@ const buildHealthInsightFromStreamText = (query: string, text: string): AISearch
 };
 
 export async function getHealthInsightsFast(query: string, options: HealthInsightStreamOptions = {}): Promise<AISearchResult> {
+  if (isTakhetNavigationQuery(query)) {
+    const localInsight = buildTakhetNavigationInsight(query);
+    options.onDelta?.(localInsight.summary.likelyCause, localInsight.summary.likelyCause);
+    return localInsight;
+  }
+
   const systemInstruction = [
     'You are Takhet AI Browser. Reply in Russian.',
     'Answer immediately from the first sentence, like a fast search assistant.',

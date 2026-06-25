@@ -538,7 +538,6 @@ const AIConsultationRoom: React.FC = () => {
     const ensureRunning = async () => {
       if (ctx.state === 'suspended') {
         await ctx.resume();
-        console.log("AudioContext resumed");
       }
     };
     ensureRunning();
