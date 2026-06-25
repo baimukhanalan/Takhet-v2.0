@@ -16,25 +16,17 @@ import { FadeIn, FadeInStagger } from '../components/FadeIn';
 
 const DEFAULT_GEMINI_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
 
-const getRuntimeEnvValue = (key: string) => {
-  try {
-    return typeof process !== 'undefined' ? process.env?.[key] || '' : '';
-  } catch {
-    return '';
-  }
-};
-
 const getGeminiBrowserApiKey = () => (
   import.meta.env.VITE_GEMINI_API_KEY ||
   import.meta.env.VITE_API_KEY ||
-  getRuntimeEnvValue('GEMINI_API_KEY') ||
-  getRuntimeEnvValue('API_KEY') ||
+  process.env.GEMINI_API_KEY ||
+  process.env.API_KEY ||
   ''
 ).trim();
 
 const getGeminiLiveModel = () => (
   import.meta.env.VITE_GEMINI_LIVE_MODEL ||
-  getRuntimeEnvValue('GEMINI_LIVE_MODEL') ||
+  process.env.GEMINI_LIVE_MODEL ||
   DEFAULT_GEMINI_LIVE_MODEL
 ).trim();
 
@@ -352,6 +344,11 @@ const AIConsultationRoom: React.FC = () => {
   const sendLiveTextTurn = (session: any, text: string) => {
     const cleaned = cleanAIText(text).trim();
     if (!cleaned || sessionEndedRef.current) return;
+
+    if (typeof session?.sendRealtimeInput === 'function') {
+      session.sendRealtimeInput({ text: cleaned });
+      return;
+    }
 
     if (typeof session?.sendClientContent === 'function') {
       session.sendClientContent({

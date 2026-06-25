@@ -8,11 +8,30 @@ const assert = (condition: unknown, message: string) => {
 };
 
 const source = readFileSync(resolve(process.cwd(), 'src/pages/AIConsultationRoom.tsx'), 'utf8');
+const viteConfig = readFileSync(resolve(process.cwd(), 'vite.config.ts'), 'utf8');
 
 assert(
   source.includes('import.meta.env.VITE_GEMINI_API_KEY'),
   'AI video consultation must read Gemini key from Vite public env in browser builds'
 );
+
+assert(
+  source.includes('process.env.GEMINI_API_KEY') &&
+    source.includes('process.env.API_KEY') &&
+    !source.includes('getRuntimeEnvValue('),
+  'AI video consultation browser build must read statically replaced Vite process.env keys, not dynamic process.env lookups'
+);
+
+for (const defineKey of [
+  "'process.env.GEMINI_API_KEY'",
+  "'process.env.API_KEY'",
+  "'process.env.GEMINI_LIVE_MODEL'"
+]) {
+  assert(
+    viteConfig.includes(defineKey),
+    `Vite production build must statically define ${defineKey} for AI video consultation`
+  );
+}
 
 assert(
   source.includes('import.meta.env.VITE_GEMINI_LIVE_MODEL'),
@@ -74,6 +93,11 @@ assert(
 assert(
   source.includes('sendVideoFrame();'),
   'AI video consultation must send the first video frame immediately instead of waiting for the interval'
+);
+
+assert(
+  source.indexOf("sendRealtimeInput({ text: cleaned })") < source.indexOf('sendClientContent({'),
+  'AI video consultation must prefer realtime text input for current Gemini Live sessions before falling back to sendClientContent'
 );
 
 assert(
