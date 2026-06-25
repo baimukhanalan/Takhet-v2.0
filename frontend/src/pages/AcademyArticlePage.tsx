@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, BrainCircuit, CalendarDays, Clock, ShieldCheck, Stethoscope } from 'lucide-react';
 import PublicHeader from '../components/PublicHeader';
 import { academyApi, AcademyArticleDetail } from '../services/academyApi';
@@ -93,8 +93,6 @@ const AcademyArticlePage: React.FC<{ user?: User; portal?: boolean }> = ({ user,
     navigate(user ? '/doctors-search' : '/guest-consultation');
   };
 
-  const backToAcademy = portal ? '/portal/academy' : '/academy';
-
   return (
     <div className="min-h-screen bg-white text-slate-950">
       {!portal && <PublicHeader activePath="/academy" />}
@@ -102,10 +100,10 @@ const AcademyArticlePage: React.FC<{ user?: User; portal?: boolean }> = ({ user,
       <main className={`${portal ? 'pt-4' : 'pt-28 sm:pt-32 md:pt-40'} px-4 pb-20 sm:px-6 lg:px-10 xl:px-20`}>
         <article className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_0.42fr]">
           <section className="rounded-[3rem] border border-slate-100 bg-white p-6 shadow-sm md:p-10">
-            <Link to={backToAcademy} className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500 transition-colors hover:bg-primary hover:text-white">
+            <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500 transition-colors hover:bg-primary hover:text-white">
               <ArrowLeft className="h-4 w-4" />
-              Academy
-            </Link>
+              Назад
+            </button>
 
             {loading ? (
               <div className="mt-8 grid gap-4">

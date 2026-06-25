@@ -713,7 +713,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
           <div className="flex min-w-0 flex-1 flex-col bg-[#0A0F1A]">
             <div className="flex items-center justify-between px-4 py-4 sm:px-6">
               <button
-                onClick={() => navigate('/appointments')}
+                onClick={() => navigate(-1)}
                 className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-widest text-white"
               >
                 <ChevronLeft className="h-4 w-4" />

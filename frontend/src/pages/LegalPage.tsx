@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, FileText, Mail, RotateCcw, ShieldCheck } from 'lucide-react';
 import PublicHeader from '../components/PublicHeader';
 import ComplianceFooter from '../components/ComplianceFooter';
@@ -224,6 +224,7 @@ const pageCopy: Record<LegalKind, { title: string; eyebrow: string; description:
 
 const LegalPage: React.FC<{ kind: LegalKind }> = ({ kind }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const copy = pageCopy[kind];
   const Icon = copy.icon;
 
@@ -259,10 +260,10 @@ const LegalPage: React.FC<{ kind: LegalKind }> = ({ kind }) => {
       <main className="px-4 pb-20 pt-32 sm:px-6 lg:px-10 xl:px-20">
         <section className="mx-auto max-w-6xl">
           <FadeIn direction="up">
-            <Link to="/" className="mb-10 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.25em] text-muted-foreground transition-colors hover:text-primary">
+            <button type="button" onClick={() => navigate(-1)} className="mb-10 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.25em] text-muted-foreground transition-colors hover:text-primary">
               <ArrowLeft className="h-4 w-4" />
               Назад
-            </Link>
+            </button>
           </FadeIn>
 
           <FadeIn direction="up" delay={0.1}>
