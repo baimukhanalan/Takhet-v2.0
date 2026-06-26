@@ -24,5 +24,10 @@ assert(
 
 assert(aiService.includes('buildHealthInsightsFallback'), 'Backend AI Browser must have a local fallback response shape');
 assert(aiService.includes('catch (error)') && aiService.includes('return this.buildHealthInsightsFallback(query);'), 'Backend AI Browser must return fallback instead of 500 on AI provider failure');
+assert(aiService.includes('isTakhetNavigationQuery'), 'Backend AI Browser must detect Takhet booking/navigation questions locally');
+assert(aiService.includes('buildTakhetNavigationInsight'), 'Backend AI Browser must answer Takhet booking/navigation questions with a product-specific local response');
+assert(aiService.includes('return this.buildTakhetNavigationInsight(query);'), 'Backend AI Browser must not send Takhet booking/navigation questions to a generic model first');
+assert(aiService.includes('/guest-consultation'), 'Backend Takhet navigation answer must point users to guest consultation');
+assert(!aiService.includes('Takhet является ИИ-браузером и не предоставляет прямую запись к врачу'), 'Backend AI Browser must not deny Takhet doctor booking capability');
 
 console.log('Userflow critical regression contract passed');

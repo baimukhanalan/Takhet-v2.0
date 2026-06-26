@@ -26,6 +26,13 @@ assert(
 );
 
 assert(
+  healthInsightsApi.includes('buildTakhetNavigationInsight') &&
+    healthInsightsApi.includes('isTakhetNavigationQuery') &&
+    healthInsightsApi.includes('return buildTakhetNavigationInsight(query);'),
+  'AI Browser Vercel endpoint must answer Takhet booking/navigation questions locally instead of using generic medical fallback'
+);
+
+assert(
   browserPage.includes('getHealthInsightsFast') &&
     browserPage.includes('streamingPreview') &&
     browserPage.includes('onDelta'),
