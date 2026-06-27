@@ -58,8 +58,12 @@ for (const file of files) {
 }
 
 const css = readFileSync(resolve(root, 'src/index.css'), 'utf8');
-assert(css.includes('--accent: #64B5F6;'), 'Accent token must use Takhet+ blue, not green/teal');
+assert(css.includes('--foreground: #0E1F44;'), 'Foreground token must match the new hero navy');
+assert(css.includes('--primary: #1D4ED8;'), 'Primary token must match the new hero cobalt');
+assert(css.includes('--accent: #7C8EE0;'), 'Accent token must match the new hero periwinkle');
 assert(css.includes('--success: #1D4ED8;'), 'Success token must be blue-aligned to avoid green shades');
-assert(css.includes('--secondary: #EAF2FF;'), 'Secondary token must use a blue-tinted neutral');
+assert(css.includes('--secondary: #EEF2FE;'), 'Secondary token must use the new blue-tinted neutral');
+assert(css.includes('--muted-foreground: #5D6B86;'), 'Muted text must match the hero copy color');
+assert(css.includes('--border: #E7EBF4;'), 'Border token must match the hero controls');
 
 console.log('Platform palette contract tests passed');

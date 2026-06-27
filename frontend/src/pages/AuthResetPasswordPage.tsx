@@ -4,6 +4,9 @@ import { AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, Lock } from 'lucide
 import { motion } from 'motion/react';
 import { FadeIn } from '../components/FadeIn';
 import { roleApi } from '../../services/roleApi';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { TextField } from '../components/ui/TextField';
 
 const AuthResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -73,7 +76,7 @@ const AuthResetPasswordPage: React.FC = () => {
         <div className="max-w-md w-full mx-auto space-y-10">
           <FadeIn direction="up">
             <div className="space-y-2">
-              <h2 className="text-5xl font-black text-foreground tracking-tighter">Восстановление доступа</h2>
+              <h2 className="text-3xl sm:text-5xl font-black text-foreground tracking-tighter">Восстановление доступа</h2>
               <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">
                 {passwordResetCompleted ? 'Пароль обновлён. Теперь можно войти.' : 'Введите новый пароль для аккаунта'}
               </p>
@@ -82,38 +85,34 @@ const AuthResetPasswordPage: React.FC = () => {
 
           {passwordResetCompleted ? (
             <FadeIn direction="up" delay={0.1}>
-              <button
-                type="button"
+              <Button
                 onClick={() => navigate('/auth')}
+                size="none"
                 className="w-full py-5 rounded-[2rem] font-black text-lg shadow-2xl transition-all flex items-center justify-center gap-3 bg-primary text-white shadow-primary/30 hover:shadow-primary/50"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 Вернуться ко входу
-              </button>
+              </Button>
             </FadeIn>
           ) : (
             <FadeIn direction="up" delay={0.1}>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="group relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary transition-colors" />
-                  <input
-                    required
-                    type="password"
-                    placeholder="Новый пароль"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-primary focus:bg-white transition-all font-bold"
-                  />
-                </div>
+                <TextField
+                  required
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Новый пароль"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  leading={<Lock className="h-5 w-5" />}
+                />
 
                 <p className="text-xs font-bold text-slate-400">
                   Пароль должен быть не короче 10 символов и содержать буквы и цифры.
                 </p>
 
                 {error && (
-                  <div className="flex items-center gap-2 text-red-600 bg-red-50 p-4 rounded-xl text-xs font-bold overflow-hidden">
-                    <AlertCircle className="w-4 h-4" /> {error}
-                  </div>
+                  <Alert tone="error" icon={<AlertCircle className="h-4 w-4" />}>{error}</Alert>
                 )}
 
                 <motion.button
@@ -126,9 +125,9 @@ const AuthResetPasswordPage: React.FC = () => {
                   {!isLoading && <ChevronRight className="w-5 h-5" />}
                 </motion.button>
 
-                <button type="button" onClick={() => navigate('/auth')} className="w-full text-center text-primary font-black text-xs uppercase tracking-widest hover:underline">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/auth')} className="w-full font-black uppercase tracking-widest hover:underline">
                   Вернуться ко входу
-                </button>
+                </Button>
               </form>
             </FadeIn>
           )}

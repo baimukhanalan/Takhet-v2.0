@@ -7,7 +7,7 @@
   "scope": "https://www.takhet.com/",
   "display": "standalone",
   "background_color": "#FFFFFF",
-  "theme_color": "#0D47A1",
+  "theme_color": "#1D4ED8",
   "prefer_related_applications": false,
   "lang": "ru",
   "orientation": "portrait",

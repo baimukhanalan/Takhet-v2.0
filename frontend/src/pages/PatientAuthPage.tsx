@@ -5,6 +5,9 @@ import { motion } from 'motion/react';
 import { FadeIn } from '../components/FadeIn';
 import { UserRole } from '../types';
 import { useLanguage } from '../services/useLanguage';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { TextField } from '../components/ui/TextField';
 
 const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email: string; password: string }) => Promise<void> }> = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -85,34 +88,34 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
           <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
-                <div className="relative group">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-primary transition-colors" />
-                  <input
-                    required
-                    name="patient-email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="username"
-                    placeholder="Электронная почта"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-white/10 rounded-2xl pl-14 pr-6 py-5 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-white font-medium"
-                  />
-                </div>
+                <TextField
+                  required
+                  name="patient-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
+                  placeholder="Электронная почта"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  leading={<Mail className="h-5 w-5" />}
+                  leadingClassName="left-5 text-slate-500"
+                  tone="dark"
+                  inputClassName="py-5 pl-14 pr-6 font-medium"
+                />
 
-                <div className="relative group">
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-primary transition-colors" />
-                  <input
-                    required
-                    name="patient-password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="Пароль"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-white/10 rounded-2xl pl-14 pr-6 py-5 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-white font-medium"
-                  />
-                </div>
+                <TextField
+                  required
+                  name="patient-password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="Пароль"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  leading={<Lock className="h-5 w-5" />}
+                  leadingClassName="left-5 text-slate-500"
+                  tone="dark"
+                  inputClassName="py-5 pl-14 pr-6 font-medium"
+                />
               </div>
 
               <div className="flex items-center justify-between text-sm gap-4">
@@ -123,28 +126,31 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
                   </div>
                   <span className="text-slate-400 font-medium select-none">Я согласен с политикой</span>
                 </label>
-                <button type="button" onClick={openRegister} className="text-primary font-bold hover:underline">
+                <Button variant="ghost" size="sm" onClick={openRegister} className="px-0 hover:underline">
                   Зарегистрироваться
-                </button>
+                </Button>
               </div>
 
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-sm font-medium"
                 >
-                  <AlertCircle className="w-5 h-5 shrink-0" />
-                  {error}
+                  <Alert tone="error" icon={<AlertCircle className="h-5 w-5" />} className="border-red-500/20 bg-red-500/10 text-sm font-medium text-red-400">
+                    {error}
+                  </Alert>
                 </motion.div>
               )}
 
-              <button
-                disabled={isLoading}
+              <Button
+                type="submit"
+                loading={isLoading}
+                loadingLabel="Входим"
+                size="none"
                 className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3"
               >
-                {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Войти в систему <ChevronRight className="w-5 h-5" /></>}
-              </button>
+                Войти в систему <ChevronRight className="w-5 h-5" />
+              </Button>
             </form>
           </div>
         </FadeIn>
@@ -154,9 +160,9 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
             <p className="text-[10px] font-bold text-slate-600 uppercase tracking-[0.3em] max-w-xs mx-auto leading-relaxed">
               AI не ставит диагноз. Финальное решение принимает врач.
             </p>
-            <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest">
+            <Button variant="unstyled" size="none" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest">
               <ArrowLeft className="w-4 h-4" /> Вернуться на главную
-            </button>
+            </Button>
           </div>
         </FadeIn>
       </div>

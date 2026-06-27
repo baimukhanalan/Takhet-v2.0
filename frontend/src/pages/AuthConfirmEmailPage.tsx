@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Loader2, MailCheck, XCircle } from 'lucide-rea
 import { motion } from 'motion/react';
 import { FadeIn } from '../components/FadeIn';
 import { roleApi } from '../../services/roleApi';
+import { Button } from '../components/ui/Button';
 
 type ConfirmState = 'loading' | 'emailConfirmed' | 'error';
 
@@ -79,21 +80,21 @@ const AuthConfirmEmailPage: React.FC = () => {
                 {state === 'loading' ? <Icon className="w-8 h-8 text-primary animate-spin" /> : <Icon className={`w-8 h-8 ${state === 'emailConfirmed' ? 'text-blue-500' : 'text-red-500'}`} />}
               </div>
               <div className="space-y-2">
-                <h2 className="text-5xl font-black text-foreground tracking-tighter">Подтверждение почты</h2>
+                <h2 className="text-3xl sm:text-5xl font-black text-foreground tracking-tighter">Подтверждение почты</h2>
                 <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">{message}</p>
               </div>
             </div>
           </FadeIn>
 
           <FadeIn direction="up" delay={0.1}>
-            <button
-              type="button"
+            <Button
               onClick={() => navigate('/auth')}
+              size="none"
               className="w-full py-5 rounded-[2rem] font-black text-lg shadow-2xl transition-all flex items-center justify-center gap-3 bg-primary text-white shadow-primary/30 hover:shadow-primary/50"
             >
               <MailCheck className="w-5 h-5" />
               Вернуться ко входу
-            </button>
+            </Button>
           </FadeIn>
         </div>
       </div>

@@ -13,28 +13,7 @@ import { useLanguage } from '../services/useLanguage';
 import { FadeIn, FadeInStagger } from '../components/FadeIn';
 import { startVoiceInput } from '../services/voiceInput';
 import { roleApi } from '../../services/roleApi';
-
-type HeroWaveCameraValues = {
-  shiftX: number;
-  shiftY: number;
-  tiltX: number;
-  tiltY: number;
-  roll: number;
-  depth: number;
-  focusX: number;
-  focusY: number;
-};
-
-const createHeroWaveCameraValues = (): HeroWaveCameraValues => ({
-  shiftX: 0,
-  shiftY: 0,
-  tiltX: 0,
-  tiltY: 0,
-  roll: 0,
-  depth: 0,
-  focusX: 50,
-  focusY: 50,
-});
+import HeroFlowCanvas from '../components/HeroFlowCanvas';
 
 type LandingParallaxValues = {
   x: number;
@@ -68,10 +47,6 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
   const navigate = useNavigate();
   const { t, tArray } = useLanguage();
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
-  const [placeholder, setPlaceholder] = useState('');
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [feedbackName, setFeedbackName] = useState('');
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<string | null>(null);
@@ -79,17 +54,7 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
   const [heroQuery, setHeroQuery] = useState('');
   const [isHeroVoiceListening, setIsHeroVoiceListening] = useState(false);
   const [activeHeroActionPreview, setActiveHeroActionPreview] = useState<string | null>(null);
-  const heroWaveCameraRef = useRef<{
-    element: HTMLElement | null;
-    frame: number;
-    current: HeroWaveCameraValues;
-    target: HeroWaveCameraValues;
-  }>({
-    element: null,
-    frame: 0,
-    current: createHeroWaveCameraValues(),
-    target: createHeroWaveCameraValues(),
-  });
+  const heroSearchRef = useRef<HTMLDivElement | null>(null);
   const landingParallaxRef = useRef<{
     element: HTMLElement | null;
     frame: number;
@@ -106,7 +71,6 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
   const activeMagneticButtonRef = useRef<HTMLElement | null>(null);
 
   const faqItems = tArray<{ q: string; a: string }>('landing.faqItems');
-  const placeholders = tArray<string>('landing.heroPlaceholders');
   const guestPreviewDays = React.useMemo(() => {
     const formatter = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', weekday: 'short' });
     const slots = [['10:30', '12:00'], ['14:15', '16:45'], ['09:40', '18:10']];
@@ -202,33 +166,7 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
   }), [guestPreviewDays]);
 
   React.useEffect(() => {
-    const currentText = placeholders[placeholderIndex % Math.max(placeholders.length, 1)];
-    if (!currentText) return;
-    const typingSpeed = isDeleting ? 50 : 100;
-
-    const timeout = setTimeout(() => {
-      if (!isDeleting && charIndex < currentText.length) {
-        setPlaceholder(currentText.substring(0, charIndex + 1));
-        setCharIndex(prev => prev + 1);
-      } else if (isDeleting && charIndex > 0) {
-        setPlaceholder(currentText.substring(0, charIndex - 1));
-        setCharIndex(prev => prev - 1);
-      } else if (!isDeleting && charIndex === currentText.length) {
-        setTimeout(() => setIsDeleting(true), 2000);
-      } else if (isDeleting && charIndex === 0) {
-        setIsDeleting(false);
-        setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
-      }
-    }, typingSpeed);
-
-    return () => clearTimeout(timeout);
-  }, [charIndex, isDeleting, placeholderIndex]);
-
-  React.useEffect(() => {
     return () => {
-      if (heroWaveCameraRef.current.frame) {
-        cancelAnimationFrame(heroWaveCameraRef.current.frame);
-      }
       if (landingParallaxRef.current.frame) {
         cancelAnimationFrame(landingParallaxRef.current.frame);
       }
@@ -407,79 +345,6 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
     resetMagneticButton(activeMagneticButtonRef.current);
     activeTiltElementRef.current = null;
     activeMagneticButtonRef.current = null;
-  };
-
-  const writeHeroWaveCamera = (element: HTMLElement, values: HeroWaveCameraValues) => {
-    const { style } = element;
-    style.setProperty('--takhet-wave-camera-shift-x', `${values.shiftX.toFixed(2)}px`);
-    style.setProperty('--takhet-wave-camera-shift-y', `${values.shiftY.toFixed(2)}px`);
-    style.setProperty('--takhet-wave-camera-tilt-x', `${values.tiltX.toFixed(2)}deg`);
-    style.setProperty('--takhet-wave-camera-tilt-y', `${values.tiltY.toFixed(2)}deg`);
-    style.setProperty('--takhet-wave-camera-roll', `${values.roll.toFixed(2)}deg`);
-    style.setProperty('--takhet-wave-camera-depth', `${values.depth.toFixed(2)}px`);
-    style.setProperty('--takhet-wave-camera-focus-x', `${values.focusX.toFixed(2)}%`);
-    style.setProperty('--takhet-wave-camera-focus-y', `${values.focusY.toFixed(2)}%`);
-  };
-
-  const animateHeroWaveCamera = () => {
-    const camera = heroWaveCameraRef.current;
-    const { element, current, target } = camera;
-
-    if (!element) {
-      camera.frame = 0;
-      return;
-    }
-
-    let shouldContinue = false;
-    const ease = 0.12;
-
-    (Object.keys(current) as Array<keyof HeroWaveCameraValues>).forEach((key) => {
-      const delta = target[key] - current[key];
-      current[key] += delta * ease;
-      if (Math.abs(delta) > 0.02) {
-        shouldContinue = true;
-      }
-    });
-
-    writeHeroWaveCamera(element, current);
-    camera.frame = shouldContinue ? requestAnimationFrame(animateHeroWaveCamera) : 0;
-  };
-
-  const setHeroWaveCameraTarget = (element: HTMLElement, target: HeroWaveCameraValues) => {
-    const camera = heroWaveCameraRef.current;
-    camera.element = element;
-    camera.target = target;
-
-    if (!camera.frame) {
-      camera.frame = requestAnimationFrame(animateHeroWaveCamera);
-    }
-  };
-
-  const handleHeroWavePointerMove = (event: React.PointerEvent<HTMLElement>) => {
-    if (event.pointerType === 'touch') return;
-
-    const { currentTarget, clientX, clientY } = event;
-    const rect = currentTarget.getBoundingClientRect();
-    const normalizedX = ((clientX - rect.left) / rect.width - 0.5) * 2;
-    const normalizedY = ((clientY - rect.top) / rect.height - 0.5) * 2;
-    const x = Math.max(-1, Math.min(1, normalizedX));
-    const y = Math.max(-1, Math.min(1, normalizedY));
-    const distance = Math.min(1, Math.hypot(x, y));
-
-    setHeroWaveCameraTarget(currentTarget, {
-      shiftX: x * 46,
-      shiftY: y * 28,
-      tiltX: -y * 7,
-      tiltY: x * 10,
-      roll: x * 2.2,
-      depth: distance * 38,
-      focusX: 50 + x * 24,
-      focusY: 50 + y * 20,
-    });
-  };
-
-  const handleHeroWavePointerLeave = (event: React.PointerEvent<HTMLElement>) => {
-    setHeroWaveCameraTarget(event.currentTarget, createHeroWaveCameraValues());
   };
 
   const handleQuickAction = (path: string) => {
@@ -704,7 +569,7 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
             x="50"
             y="69"
             textAnchor="middle"
-            fill="#64B5F6"
+            fill="#7C8EE0"
             style={{
               fontFamily: 'Inter, sans-serif',
               fontWeight: 900,
@@ -717,110 +582,47 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
       </div>
       <PublicHeader activePath="/" />
 
-      <section
-        className="takhet-patient-hero relative min-h-[100svh] pt-24 md:pt-40 xl:pt-48 pb-16 md:pb-24 px-4 md:px-10 xl:px-20 overflow-hidden bg-white flex flex-col justify-center md:block"
-        onPointerMove={handleHeroWavePointerMove}
-        onPointerLeave={handleHeroWavePointerLeave}
-      >
-        <div className="takhet-hero-wave" aria-hidden="true">
-          <div className="takhet-hero-wave__viewport">
-            <div className="takhet-hero-wave__track">
-              <svg
-                className="takhet-hero-wave__svg"
-                viewBox="0 0 1440 260"
-                preserveAspectRatio="none"
-                focusable="false"
-              >
-                <path
-                  className="takhet-hero-wave__path takhet-hero-wave__path--one"
-                  d="M -80 150 C 160 52 400 52 640 150 S 1120 248 1360 150 S 1840 52 2080 150"
-                />
-                <path
-                  className="takhet-hero-wave__path takhet-hero-wave__path--two"
-                  d="M -80 178 C 160 96 400 96 640 178 S 1120 260 1360 178 S 1840 96 2080 178"
-                />
-                <path
-                  className="takhet-hero-wave__path takhet-hero-wave__path--three"
-                  d="M -80 122 C 160 64 400 64 640 122 S 1120 180 1360 122 S 1840 64 2080 122"
-                />
-              </svg>
-              <svg
-                className="takhet-hero-wave__svg"
-                viewBox="0 0 1440 260"
-                preserveAspectRatio="none"
-                focusable="false"
-              >
-                <path
-                  className="takhet-hero-wave__path takhet-hero-wave__path--one"
-                  d="M -80 150 C 160 52 400 52 640 150 S 1120 248 1360 150 S 1840 52 2080 150"
-                />
-                <path
-                  className="takhet-hero-wave__path takhet-hero-wave__path--two"
-                  d="M -80 178 C 160 96 400 96 640 178 S 1120 260 1360 178 S 1840 96 2080 178"
-                />
-                <path
-                  className="takhet-hero-wave__path takhet-hero-wave__path--three"
-                  d="M -80 122 C 160 64 400 64 640 122 S 1120 180 1360 122 S 1840 64 2080 122"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-5xl mx-auto text-center space-y-8 md:space-y-12 relative z-10 w-full">
-          <FadeIn direction="up" delay={0.2}>
-            <div className="space-y-4 md:space-y-6">
-              <h1 className="takhet-patient-hero-title text-[40px] xs:text-[50px] sm:text-[80px] md:text-[110px] lg:text-[135px] font-black text-slate-900 tracking-tighter leading-[0.85] uppercase" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                Takhet<span className="text-primary">+</span>
-              </h1>
-              <p className="takhet-patient-hero-text text-[13px] md:text-[18px] text-slate-500 font-medium max-w-3xl mx-auto leading-relaxed px-4">
-                Takhet+ собирает жалобу, анализы, запись и консультацию в один медицинский маршрут.
-                <span className="hidden md:inline"> Пациент быстрее понимает следующий шаг, а врач получает подготовленный контекст до встречи.</span>
-              </p>
-            </div>
-          </FadeIn>
+      <section className="takhet-flow-hero" data-takhet-flow-hero data-om-exportable-video-with-duration-secs="16">
+        <HeroFlowCanvas searchRef={heroSearchRef} />
+        <div className="takhet-flow-hero__veil" aria-hidden="true" />
+        <div className="takhet-flow-hero__glow" aria-hidden="true" />
 
-          <FadeIn direction="up" delay={0.4}>
-            <div className="max-w-3xl mx-auto space-y-6 md:space-y-8">
-              <div className="relative group px-2 md:px-0">
-                <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity duration-1000"></div>
-                <div className="takhet-patient-hero-search relative flex items-center bg-white border-2 border-slate-200 rounded-[1.5rem] md:rounded-[2.5rem] p-1 md:p-2 shadow-2xl shadow-slate-200/50 group-focus-within:border-primary transition-all duration-500">
-                  <div className="pl-4 md:pl-6 pr-2 md:pr-4">
-                    <Search className="w-5 h-5 md:w-6 md:h-6 text-slate-400 group-focus-within:text-primary transition-colors" />
-                  </div>
-                  <input
-                     type="text"
-                     placeholder={placeholder}
-                     value={heroQuery}
-                     onChange={(event) => setHeroQuery(event.target.value)}
-                     className="flex-1 py-4 md:py-6 bg-transparent border-none outline-none focus:ring-0 text-sm md:text-xl font-bold text-slate-900 placeholder:text-slate-300 min-w-0 pr-2"
-                     onKeyDown={(e) => {
-                       if (e.key === 'Enter') {
-                         openHealthBrowser((e.target as HTMLInputElement).value);
-                       }
-                     }}
-                   />
-                   <button
-                     type="button"
-                     onClick={handleHeroVoiceInput}
-                     data-takhet-magnetic-button
-                     className={`p-3 md:p-4 rounded-[1.2rem] md:rounded-[2rem] transition-colors shrink-0 ${
-                       isHeroVoiceListening ? 'bg-primary text-white' : 'bg-slate-50 text-slate-400 hover:text-primary'
-                     }`}
-                     title="Голосовой ввод"
-                   >
-                     <Mic className="w-5 h-5 md:w-6 md:h-6" />
-                   </button>
-                   <button
-                     onClick={() => openHealthBrowser()}
-                     data-takhet-magnetic-button
-                     className="p-3 md:p-4 bg-primary text-white rounded-[1.2rem] md:rounded-[2rem] hover:scale-105 transition-transform shadow-lg shadow-primary/20 shrink-0"
-                   >
-                     <ArrowUpRight className="w-5 h-5 md:w-6 md:h-6" />
-                  </button>
-                </div>
-              </div>
+        <div className="takhet-flow-hero__content">
+          <main className="takhet-flow-hero__main">
+            <h1 className="takhet-flow-hero__title">
+              <span>ТАКНЕТ<span className="takhet-flow-hero__plus">+</span></span>
+            </h1>
+            <p className="takhet-flow-hero__description">
+              Takhet+ собирает жалобу, анализы, запись и консультацию в один медицинский маршрут. Пациент быстрее понимает следующий шаг, а врач получает подготовленный контекст до встречи.
+            </p>
 
-              <div className="flex flex-wrap justify-center gap-2 md:gap-3 px-2 max-w-4xl mx-auto">
+            <div ref={heroSearchRef} className="takhet-flow-search">
+              <Search aria-hidden="true" />
+              <input
+                type="text"
+                placeholder="найти терапевта в Алматы"
+                aria-label="Поиск по медицинским вопросам"
+                value={heroQuery}
+                onChange={(event) => setHeroQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') openHealthBrowser(event.currentTarget.value);
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleHeroVoiceInput}
+                className={`takhet-flow-search__voice ${isHeroVoiceListening ? 'is-listening' : ''}`}
+                aria-label="Голосовой ввод"
+                title="Голосовой ввод"
+              >
+                <Mic aria-hidden="true" />
+              </button>
+              <button type="button" onClick={() => openHealthBrowser()} className="takhet-flow-search__submit" aria-label="Выполнить поиск">
+                <ArrowUpRight aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="takhet-flow-actions">
                 {[
                   { label: 'Записаться на консультацию', icon: Stethoscope, path: '/guest-consultation' },
                   { label: 'ИИ консультация', icon: Video, path: '/ai-consultation' },
@@ -848,9 +650,9 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
                         onClick={() => handleQuickAction(action.path)}
                         data-takhet-magnetic-button
                         data-hero-action-hover-trigger={preview ? action.path : undefined}
-                        className="takhet-patient-hero-action px-4 md:px-6 py-2 md:py-3 bg-slate-50 hover:bg-white border border-slate-100 hover:border-primary/20 rounded-xl md:rounded-2xl text-[9px] md:text-xs font-black uppercase tracking-widest text-slate-500 hover:text-primary transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                        className="takhet-flow-action"
                       >
-                        <action.icon className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                        <action.icon aria-hidden="true" />
                         {action.label}
                       </button>
 
@@ -870,13 +672,7 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
                   );
                 })}
               </div>
-            </div>
-          </FadeIn>
-        </div>
-
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none overflow-hidden" data-takhet-parallax="deep">
-          <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-[120px] animate-pulse-soft"></div>
-          <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-[120px] animate-pulse-soft delay-1000"></div>
+          </main>
         </div>
       </section>
 

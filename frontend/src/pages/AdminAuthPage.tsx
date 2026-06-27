@@ -5,6 +5,9 @@ import { UserRole } from '../types';
 import { useLanguage } from '../services/useLanguage';
 import { motion, AnimatePresence } from 'motion/react';
 import { FadeIn } from '../components/FadeIn';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { TextField } from '../components/ui/TextField';
 
 interface AdminAuthPageProps {
   onLogin: (role: UserRole, credentials: { email: string; password: string }) => Promise<void>;
@@ -65,33 +68,33 @@ const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onLogin }) => {
           <motion.div whileHover={{ scale: 1.01 }} className="bg-white/5 backdrop-blur-2xl p-10 md:p-14 rounded-[3.5rem] border border-white/10 shadow-2xl space-y-10">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
-                <div className="relative group">
-                  <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-primary transition-colors" />
-                  <input
-                    required
-                    name="admin-email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="username"
-                    placeholder={t.admin.emailPlaceholder}
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-white/5 rounded-3xl pl-16 pr-6 py-5 outline-none focus:border-primary focus:bg-slate-900 text-white font-bold transition-all"
-                  />
-                </div>
-                <div className="relative group">
-                  <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-primary transition-colors" />
-                  <input
-                    required
-                    name="admin-password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder={t.admin.passwordPlaceholder}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-white/5 rounded-3xl pl-16 pr-6 py-5 outline-none focus:border-primary focus:bg-slate-900 text-white font-bold transition-all"
-                  />
-                </div>
+                <TextField
+                  required
+                  name="admin-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
+                  placeholder={t.admin.emailPlaceholder}
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  leading={<Mail className="h-5 w-5" />}
+                  leadingClassName="left-6 text-slate-600"
+                  tone="dark"
+                  inputClassName="rounded-3xl border-white/5 py-5 pl-16 pr-6 focus:bg-slate-900"
+                />
+                <TextField
+                  required
+                  name="admin-password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder={t.admin.passwordPlaceholder}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  leading={<Lock className="h-5 w-5" />}
+                  leadingClassName="left-6 text-slate-600"
+                  tone="dark"
+                  inputClassName="rounded-3xl border-white/5 py-5 pl-16 pr-6 focus:bg-slate-900"
+                />
               </div>
 
               <AnimatePresence>
@@ -100,9 +103,11 @@ const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onLogin }) => {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="flex items-center gap-3 p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs font-bold overflow-hidden"
+                    className="overflow-hidden"
                   >
-                    <AlertCircle className="w-4 h-4" /> {error}
+                    <Alert tone="error" icon={<AlertCircle className="h-4 w-4" />} className="rounded-2xl border-red-500/20 bg-red-500/10 p-5 text-red-500">
+                      {error}
+                    </Alert>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -117,13 +122,9 @@ const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onLogin }) => {
               </motion.button>
             </form>
 
-            <motion.button
-              whileHover={{ x: -5 }}
-              onClick={() => navigate(-1)}
-              className="w-full py-4 text-slate-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-            >
+            <Button variant="unstyled" size="none" onClick={() => navigate(-1)} className="w-full py-4 text-slate-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
               <ArrowLeft className="w-4 h-4" /> {t.admin.backToMain}
-            </motion.button>
+            </Button>
           </motion.div>
         </FadeIn>
 

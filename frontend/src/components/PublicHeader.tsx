@@ -15,6 +15,7 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ activePath }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [lang, setLang] = useState<Language>(getStoredLanguage());
+  const [scrollProgress, setScrollProgress] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
@@ -23,6 +24,24 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ activePath }) => {
     const handleUpdate = () => setLang(getStoredLanguage());
     window.addEventListener('storage_update', handleUpdate);
     return () => window.removeEventListener('storage_update', handleUpdate);
+  }, []);
+
+  useEffect(() => {
+    let frame = 0;
+    const updateScrollProgress = () => {
+      frame = 0;
+      setScrollProgress(Math.max(0, Math.min(1, window.scrollY / 130)));
+    };
+    const handleScroll = () => {
+      if (!frame) frame = requestAnimationFrame(updateScrollProgress);
+    };
+
+    updateScrollProgress();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const handleLangChange = (newLang: Language) => {
@@ -45,54 +64,65 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({ activePath }) => {
 
   return (
     <>
-      <header className={`fixed top-0 w-full z-[200] transition-all duration-500 min-h-20 flex items-center justify-between px-4 sm:px-6 lg:px-10 xl:px-20 ${isMenuOpen ? 'bg-transparent border-transparent' : 'bg-background/70 backdrop-blur-2xl border-b border-border'}`}>
-        <div className="flex items-center gap-4 lg:gap-8 min-w-0">
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            {!isMenuOpen && <span className="text-xl sm:text-2xl font-black tracking-tight text-foreground animate-in fade-in duration-500">Takhet<span className="text-primary">+</span></span>}
+      <header
+        className={`takhet-flow-header ${isMenuOpen ? 'takhet-flow-header--menu-open' : ''}`}
+        style={{ '--takhet-header-progress': scrollProgress } as React.CSSProperties}
+      >
+        <div className="takhet-flow-header__bar">
+          <Link to="/" className="takhet-flow-header__logo">
+            {!isMenuOpen ? <>Takhet<span>+</span></> : null}
           </Link>
-          <nav className="hidden xl:flex items-center gap-6 2xl:gap-8 min-w-0">
+
+          <nav className="takhet-flow-header__nav" aria-label="Основная навигация">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
                 state={link.state}
-                className={`text-[10px] 2xl:text-[11px] font-black transition-all uppercase tracking-[0.2em] whitespace-nowrap ${activePath === link.path ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                className={activePath === link.path ? 'is-active' : undefined}
               >
                 {link.name}
               </Link>
             ))}
           </nav>
-        </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 shrink-0">
-          <div className="relative">
-            <button onClick={() => setIsLangOpen(!isLangOpen)} className="p-3 rounded-2xl bg-secondary text-muted-foreground hover:bg-secondary/80 transition-all flex items-center gap-2">
-              <Globe className="w-5 h-5" />
-              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">{lang}</span>
+          <div className="takhet-flow-header__actions">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsLangOpen(!isLangOpen)}
+                className="takhet-flow-header__language"
+                aria-label="Выбрать язык"
+                aria-expanded={isLangOpen}
+              >
+                <Globe aria-hidden="true" />
+                <span>{lang}</span>
+              </button>
+              {isLangOpen ? (
+                <div className="takhet-flow-header__language-menu">
+                  {LANGUAGE_OPTIONS.map((option) => (
+                    <button key={option.value} type="button" onClick={() => handleLangChange(option.value)} className={lang === option.value ? 'is-active' : undefined}>
+                      <span>{option.flag} {option.label}</span>
+                      {lang === option.value ? <Check aria-hidden="true" /> : null}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="takhet-flow-header__auth-actions">
+              <button type="button" onClick={() => navigate('/auth', { state: { mode: 'login', from: location, forcePublicAuth: true } })}>
+                {t.nav.auth}
+              </button>
+              <button type="button" onClick={() => navigate('/auth', { state: { role: UserRole.PATIENT, mode: 'register', from: location, forcePublicAuth: true } })} className="takhet-flow-header__register">
+                {t.nav.reg}
+              </button>
+            </div>
+
+            <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className="takhet-flow-header__menu" aria-label={isMenuOpen ? 'Закрыть меню' : 'Открыть меню'}>
+              {isMenuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
             </button>
-            {isLangOpen && (
-              <div className="absolute top-14 right-0 bg-background rounded-2xl border border-border shadow-2xl p-2 w-32 animate-in fade-in zoom-in-95">
-                {LANGUAGE_OPTIONS.map((option) => (
-                  <button key={option.value} onClick={() => handleLangChange(option.value)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${lang === option.value ? 'bg-primary/5 text-primary' : 'hover:bg-secondary text-muted-foreground'}`}>
-                    <span>{option.flag} {option.label}</span> {lang === option.value && <Check className="w-3 h-3" />}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
-
-          <div className="hidden 2xl:flex items-center gap-3">
-            <button onClick={() => navigate('/auth', { state: { mode: 'login', from: location, forcePublicAuth: true } })} className="text-xs font-black uppercase tracking-widest text-muted-foreground px-5 xl:px-6 py-3 hover:bg-secondary rounded-2xl transition-all whitespace-nowrap">
-              {t.nav.auth}
-            </button>
-            <button onClick={() => navigate('/auth', { state: { role: UserRole.PATIENT, mode: 'register', from: location, forcePublicAuth: true } })} className="bg-primary text-white px-6 xl:px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all whitespace-nowrap">
-              {t.nav.reg}
-            </button>
-          </div>
-
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-3 rounded-2xl transition-all active:scale-90 ${isMenuOpen ? 'bg-background text-primary rotate-90' : 'bg-secondary text-foreground 2xl:hidden'}`}>
-            {isMenuOpen ? <X className="w-7 h-7 sm:w-8 sm:h-8" /> : <Menu className="w-6 h-6 sm:w-7 sm:h-7" />}
-          </button>
         </div>
       </header>
 

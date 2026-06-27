@@ -16,6 +16,14 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const activeTiltElementRef = useRef<HTMLElement | null>(null);
   const activeMagneticButtonRef = useRef<HTMLElement | null>(null);
+  const motionAllowedRef = useRef(false);
+  const pointerFrameRef = useRef(0);
+  const pendingPointerRef = useRef<{
+    clientX: number;
+    clientY: number;
+    root: HTMLElement;
+    target: Element | null;
+  } | null>(null);
   const parallaxRef = useRef<{
     element: HTMLElement | null;
     frame: number;
@@ -29,10 +37,26 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
   });
 
   useEffect(() => {
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const syncMotionPreference = () => {
+      motionAllowedRef.current = finePointer.matches && !reducedMotion.matches;
+    };
+
+    syncMotionPreference();
+    finePointer.addEventListener('change', syncMotionPreference);
+    reducedMotion.addEventListener('change', syncMotionPreference);
+
     return () => {
       if (parallaxRef.current.frame) {
         cancelAnimationFrame(parallaxRef.current.frame);
       }
+      if (pointerFrameRef.current) {
+        cancelAnimationFrame(pointerFrameRef.current);
+      }
+      finePointer.removeEventListener('change', syncMotionPreference);
+      reducedMotion.removeEventListener('change', syncMotionPreference);
     };
   }, []);
 
@@ -95,10 +119,9 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
     element.style.setProperty('--takhet-magnetic-y', '0px');
   };
 
-  const updateTiltElement = (event: React.PointerEvent<HTMLElement>) => {
-    const target = event.target instanceof Element ? event.target : null;
+  const updateTiltElement = (target: Element | null, root: HTMLElement, clientX: number, clientY: number) => {
     const candidate = target?.closest('[data-takhet-tilt]');
-    const element = candidate instanceof HTMLElement && event.currentTarget.contains(candidate) ? candidate : null;
+    const element = candidate instanceof HTMLElement && root.contains(candidate) ? candidate : null;
 
     if (activeTiltElementRef.current && activeTiltElementRef.current !== element) {
       resetTiltElement(activeTiltElementRef.current);
@@ -108,8 +131,8 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
     if (!element) return;
 
     const rect = element.getBoundingClientRect();
-    const normalizedX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-    const normalizedY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+    const normalizedX = ((clientX - rect.left) / rect.width - 0.5) * 2;
+    const normalizedY = ((clientY - rect.top) / rect.height - 0.5) * 2;
     const x = Math.max(-1, Math.min(1, normalizedX));
     const y = Math.max(-1, Math.min(1, normalizedY));
 
@@ -120,10 +143,9 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
     element.style.setProperty('--takhet-tilt-glare-y', `${(50 + y * 12).toFixed(2)}%`);
   };
 
-  const updateMagneticButton = (event: React.PointerEvent<HTMLElement>) => {
-    const target = event.target instanceof Element ? event.target : null;
+  const updateMagneticButton = (target: Element | null, root: HTMLElement, clientX: number, clientY: number) => {
     const candidate = target?.closest('[data-takhet-magnetic-button]');
-    const element = candidate instanceof HTMLElement && event.currentTarget.contains(candidate) ? candidate : null;
+    const element = candidate instanceof HTMLElement && root.contains(candidate) ? candidate : null;
 
     if (activeMagneticButtonRef.current && activeMagneticButtonRef.current !== element) {
       resetMagneticButton(activeMagneticButtonRef.current);
@@ -133,8 +155,8 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
     if (!element) return;
 
     const rect = element.getBoundingClientRect();
-    const normalizedX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-    const normalizedY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+    const normalizedX = ((clientX - rect.left) / rect.width - 0.5) * 2;
+    const normalizedY = ((clientY - rect.top) / rect.height - 0.5) * 2;
     const x = Math.max(-1, Math.min(1, normalizedX));
     const y = Math.max(-1, Math.min(1, normalizedY));
 
@@ -142,23 +164,47 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
     element.style.setProperty('--takhet-magnetic-y', `${(y * 5).toFixed(2)}px`);
   };
 
-  const handlePointerMove = (event: React.PointerEvent<HTMLElement>) => {
-    if (event.pointerType === 'touch') return;
-    writeCursorPosition(event.clientX, event.clientY, 1);
-    updateTiltElement(event);
-    updateMagneticButton(event);
+  const flushPointerMove = () => {
+    pointerFrameRef.current = 0;
+    const pointer = pendingPointerRef.current;
+    if (!pointer || !motionAllowedRef.current) return;
 
-    if (variant !== 'rich') return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const normalizedX = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-    const normalizedY = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-    setParallaxTarget(event.currentTarget, {
-      x: Math.max(-1, Math.min(1, normalizedX)),
-      y: Math.max(-1, Math.min(1, normalizedY)),
-    });
+    const { clientX, clientY, root, target } = pointer;
+    writeCursorPosition(clientX, clientY, 1);
+    updateTiltElement(target, root, clientX, clientY);
+    updateMagneticButton(target, root, clientX, clientY);
+
+    if (variant === 'rich') {
+      const rect = root.getBoundingClientRect();
+      const normalizedX = ((clientX - rect.left) / rect.width - 0.5) * 2;
+      const normalizedY = ((clientY - rect.top) / rect.height - 0.5) * 2;
+      setParallaxTarget(root, {
+        x: Math.max(-1, Math.min(1, normalizedX)),
+        y: Math.max(-1, Math.min(1, normalizedY)),
+      });
+    }
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'touch' || !motionAllowedRef.current) return;
+    pendingPointerRef.current = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      root: event.currentTarget,
+      target: event.target instanceof Element ? event.target : null,
+    };
+
+    if (!pointerFrameRef.current) {
+      pointerFrameRef.current = requestAnimationFrame(flushPointerMove);
+    }
   };
 
   const handlePointerLeave = (event: React.PointerEvent<HTMLElement>) => {
+    pendingPointerRef.current = null;
+    if (pointerFrameRef.current) {
+      cancelAnimationFrame(pointerFrameRef.current);
+      pointerFrameRef.current = 0;
+    }
     writeCursorPosition(event.clientX, event.clientY, 0);
     resetTiltElement(activeTiltElementRef.current);
     resetMagneticButton(activeMagneticButtonRef.current);
@@ -181,7 +227,7 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
             x="50"
             y="69"
             textAnchor="middle"
-            fill="#64B5F6"
+            fill="#7C8EE0"
             style={{
               fontFamily: 'Inter, sans-serif',
               fontWeight: 900,

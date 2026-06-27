@@ -6,6 +6,10 @@ import { FadeIn } from '../components/FadeIn';
 import { UserRole } from '../types';
 import { useLanguage } from '../services/useLanguage';
 import { roleApi } from '../../services/roleApi';
+import { Alert } from '../components/ui/Alert';
+import { Button } from '../components/ui/Button';
+import { IconButton } from '../components/ui/IconButton';
+import { TextField } from '../components/ui/TextField';
 
 type AuthCredentials = {
   email: string;
@@ -204,7 +208,7 @@ const AuthPage: React.FC<{
         <div className="max-w-md w-full mx-auto space-y-10">
           <FadeIn direction="up">
             <div className="space-y-2">
-              <h2 className="text-5xl font-black text-foreground tracking-tighter">{mode === 'register' ? registerActionLabel : 'Вход'}</h2>
+              <h2 className="text-3xl sm:text-5xl font-black text-foreground tracking-tighter">{mode === 'register' ? registerActionLabel : 'Вход'}</h2>
               <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">
                 {mode === 'register' ? `Выберите свою роль и ${registerActionLabel.toLowerCase()}` : 'Выберите свою роль и войдите в существующий аккаунт'}
               </p>
@@ -217,7 +221,7 @@ const AuthPage: React.FC<{
                 const isActive = role === r;
                 const config = roleConfigs[r];
                 return (
-                  <button key={r} onClick={() => setRole(r)} className={`flex flex-col items-center gap-1.5 py-4 rounded-xl transition-all relative ${isActive ? 'text-primary' : 'text-muted-foreground hover:bg-white/50'}`}>
+                  <Button key={r} variant="unstyled" size="none" onClick={() => setRole(r)} className={`flex flex-col items-center gap-1.5 py-4 rounded-xl transition-all relative ${isActive ? 'text-primary' : 'text-muted-foreground hover:bg-white/50'}`}>
                     {isActive && (
                       <motion.div
                         layoutId="activeRole"
@@ -227,7 +231,7 @@ const AuthPage: React.FC<{
                     )}
                     <config.icon className={`w-5 h-5 relative z-10 ${isActive ? 'text-primary' : ''}`} />
                     <span className="text-[10px] font-black uppercase tracking-widest relative z-10">{config.title}</span>
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -236,38 +240,46 @@ const AuthPage: React.FC<{
           <FadeIn direction="up" delay={0.2}>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-3">
-                <div className="group relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary transition-colors" />
-                  <input required name="email" type="email" inputMode="email" autoComplete="username" placeholder={t.auth.email} value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-primary focus:bg-white transition-all font-bold" />
-                </div>
-                <div className="group relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-primary transition-colors" />
-                  <input required name="password" type={showPassword ? 'text' : 'password'} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} placeholder={t.auth.password} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-12 py-4 outline-none focus:border-primary focus:bg-white transition-all font-bold" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((value) => !value)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 transition-colors hover:text-primary"
-                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+                <TextField
+                  required
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
+                  placeholder={t.auth.email}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  leading={<Mail className="h-5 w-5" />}
+                />
+                <TextField
+                  required
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                  placeholder={t.auth.password}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  leading={<Lock className="h-5 w-5" />}
+                  trailing={(
+                    <IconButton
+                      onClick={() => setShowPassword((value) => !value)}
+                      className="text-slate-300 hover:text-primary"
+                      label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </IconButton>
+                  )}
+                />
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-red-600 bg-red-50 p-4 rounded-xl text-xs font-bold overflow-hidden">
-                  <AlertCircle className="w-4 h-4" /> {error}
-                </div>
+                <Alert tone="error" icon={<AlertCircle className="h-4 w-4" />}>{error}</Alert>
               )}
               {recoveryMessage && (
-                <div className="rounded-xl bg-blue-50 p-4 text-xs font-bold text-primary">
-                  {recoveryMessage}
-                </div>
+                <Alert>{recoveryMessage}</Alert>
               )}
               {infoMessage && (
-                <div className="rounded-xl bg-blue-50 p-4 text-xs font-bold text-blue-700">
-                  {infoMessage}
-                </div>
+                <Alert>{infoMessage}</Alert>
               )}
 
               <motion.button
@@ -280,16 +292,16 @@ const AuthPage: React.FC<{
                 {!isLoading && <ChevronRight className="w-5 h-5" />}
               </motion.button>
 
-              <button type="button" onClick={mode === 'register' ? openLogin : openRegister} className="w-full text-center text-primary font-black text-xs uppercase tracking-widest hover:underline">
+              <Button variant="ghost" size="sm" onClick={mode === 'register' ? openLogin : openRegister} className="w-full font-black uppercase tracking-widest hover:underline">
                 {mode === 'register' ? 'Войти' : registerActionLabel}
-              </button>
+              </Button>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button type="button" onClick={handleRequestEmailVerification} className="rounded-2xl bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary">
+                <Button variant="unstyled" size="none" onClick={handleRequestEmailVerification} className="rounded-2xl bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary">
                   Подтвердить почту
-                </button>
-                <button type="button" onClick={handleRequestPasswordReset} className="rounded-2xl bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary">
+                </Button>
+                <Button variant="unstyled" size="none" onClick={handleRequestPasswordReset} className="rounded-2xl bg-slate-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary">
                   Восстановить доступ
-                </button>
+                </Button>
               </div>
             </form>
           </FadeIn>

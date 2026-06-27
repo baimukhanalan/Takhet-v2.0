@@ -12,7 +12,7 @@ const TakhetLogo: React.FC<LogoProps> = ({ className = "w-10 h-10", size }) => {
         <text 
           x="15" 
           y="78" 
-          fill="#0D47A1" 
+          fill="#1D4ED8"
           style={{ 
             fontFamily: "'Times New Roman', serif", 
             fontWeight: 'bold', 
@@ -24,7 +24,7 @@ const TakhetLogo: React.FC<LogoProps> = ({ className = "w-10 h-10", size }) => {
         <text 
           x="62" 
           y="58" 
-          fill="#64B5F6" 
+          fill="#7C8EE0"
           style={{ 
             fontFamily: "Inter, sans-serif", 
             fontWeight: '900', 

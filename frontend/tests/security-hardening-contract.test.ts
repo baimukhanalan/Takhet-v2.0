@@ -10,6 +10,8 @@ const assert = (condition: unknown, message: string) => {
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
 const vercel = read('vercel.json');
+assert(vercel.includes('https://fonts.googleapis.com'), 'CSP must allow the Manrope stylesheet used by the production UI');
+assert(vercel.includes('https://fonts.gstatic.com'), 'CSP must allow the Manrope font files used by the production UI');
 const repoCursorIgnore = read('../.cursorignore');
 
 for (const header of [
