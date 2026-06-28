@@ -157,7 +157,6 @@ const TakhetJourneyScroll: React.FC = () => {
                   ref={videoRef}
                   src={stage.mediaSrc}
                   muted
-                  loop
                   playsInline
                   preload="metadata"
                 />

@@ -31,6 +31,7 @@ assert(journey.includes("mediaSrc: '/media/journey/stage-04-mobile-menu.webp'"),
 assert(journey.includes("mediaSrc: '/media/journey/stage-05-continuity.mp4'"), 'Stage 05 must use the supplied video');
 assert(journey.includes('<img'), 'Journey image stages must render real supplied images');
 assert(journey.includes('<video'), 'Journey final stage must render the supplied video');
+assert(!journey.includes('                  loop'), 'Final background video must stop on its last frame instead of looping');
 assert(journey.includes('videoRef.current?.play()'), 'Final background video must play only when its stage is active');
 assert(journey.includes('videoRef.current?.pause()'), 'Final background video must pause outside its stage');
 assert(journey.includes("window.addEventListener('scroll'"), 'Journey must react to document scroll');

@@ -31,7 +31,7 @@ The stage 04 source and implementation were normalized side by side. The phone r
 - Stage buttons 01-05 were exercised in Chrome and each displayed the requested source.
 - The stage 05 video produced different frames one second apart, confirming playback.
 - Video playback starts only on stage 05 and pauses after leaving the stage.
-- The video is muted, loops, uses inline playback and preloads metadata only.
+- The video is muted, plays inline once, stops on its final frame and preloads metadata only.
 
 ## Findings
 
