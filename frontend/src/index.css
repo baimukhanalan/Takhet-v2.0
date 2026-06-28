@@ -1160,11 +1160,6 @@
     overflow: visible;
   }
 
-  :is(a[href], button, input, textarea, select, summary, [role="button"]).takhet-cursor-hit {
-    outline: 2px solid rgba(37, 84, 217, 0.3);
-    outline-offset: 3px;
-  }
-
   .takhet-cursor-hit-group [data-hero-action-hover-preview] {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);

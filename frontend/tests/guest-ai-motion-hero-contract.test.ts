@@ -52,7 +52,7 @@ assert(app.includes('PlatformMotionShell variant={publicMotionVariant}'), 'Every
 assert(motionShell.includes('findExpandedInteractiveTarget'), 'Global custom cursor must resolve controls across its full area');
 assert(motionShell.includes("document.addEventListener('click'"), 'Global custom cursor must forward clicks from its expanded area');
 assert(motionShell.includes('takhet-cursor-hit'), 'Global cursor must expose hover state for expanded targets');
-assert(css.includes('.takhet-cursor-hit'), 'Expanded cursor hover state must be styled');
+assert(!css.includes('outline: 2px solid rgba(37, 84, 217, 0.3)'), 'Expanded cursor hover state must not draw a technical outline around controls');
 assert(css.includes('width: 40px') && css.includes('height: 40px'), 'Global plus cursor must use a stable 40px interaction footprint');
 
 assert(css.includes('font-size: clamp(44px, 15vw, 64px)'), 'Mobile hero name must be reduced proportionally');
