@@ -15,6 +15,7 @@ import { startVoiceInput } from '../services/voiceInput';
 import { roleApi } from '../../services/roleApi';
 import HeroFlowCanvas from '../components/HeroFlowCanvas';
 import TakhetJourneyScroll from '../components/TakhetJourneyScroll';
+import TakhetTestimonials from '../components/TakhetTestimonials';
 
 type LandingParallaxValues = {
   x: number;
@@ -871,6 +872,8 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
           </div>
         </FadeIn>
       </section>
+
+      <TakhetTestimonials />
 
       <section className="py-20 md:py-32 px-4 sm:px-6 md:px-10 xl:px-20 bg-primary/5">
         <div className="max-w-5xl mx-auto text-center space-y-12">

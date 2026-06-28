@@ -45,3 +45,33 @@ No actionable P0, P1 or P2 visual, mapping, readability or interaction issue rem
 - Added active-stage video play/pause lifecycle and contract coverage.
 
 final result: passed
+
+---
+
+# Takhet+ Testimonials Carousel Design QA
+
+- Source visual truth: `/Users/alanbaimukhan/Desktop/Screenshot 2026-06-28 at 23.34.02.png` through `Screenshot 2026-06-28 at 23.34.29.png`
+- Supplied content truth: `/var/folders/26/8__h2vm556l0r1fy5mscbqj40000gn/T/media-preview-0D68CE69-707A-4790-9BE1-325A06EC60C5/3e7641994b7d519edb0804f6e293fe31fa22245eebeae108b3d053cd1c45ac4c.png`
+- Implementation screenshot: `/tmp/takhet-testimonials-desktop.png`
+- Mobile screenshot: `/tmp/takhet-testimonials-mobile.png`
+- Combined comparison: `/tmp/takhet-testimonials-comparison.png`
+- Viewports: 1280x720 and 390x844
+
+## Fidelity and behavior
+
+- The section sits between the sixth control section and seventh philosophy section.
+- Five horizontally snapping stories use the supplied identities, ages, copy and portraits.
+- The active story is fully visible while adjacent stories remain partially faded.
+- Five clickable progress segments and the `n / 5` counter stay synchronized with swipe, trackpad and button navigation.
+- Desktop shows the active wide story and neighboring context; mobile shows one primary story with the next edge visible.
+- RU, KK and EN copy is available through the existing language state.
+- Reduced-motion users receive instant navigation without animated transitions.
+
+## Verification
+
+- TypeScript, protected second-section contract, testimonials contract and production build pass.
+- Desktop segment 03 and mobile segment 01 were activated in the browser and reported the expected `aria-current` state.
+- Browser console contained no relevant warnings or errors.
+- No overlap, clipping, missing media or framework error overlay was observed.
+
+final result: passed
