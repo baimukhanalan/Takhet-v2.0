@@ -1,50 +1,45 @@
-# Takhet+ Mobile Hero and Interaction Design QA
+# Takhet+ Five-stage Scroll Journey Design QA
 
-- Source visual truth: `/Users/alanbaimukhan/Desktop/Screenshot 2026-06-28 at 02.02.43.png`
-- Implementation screenshot: `/tmp/takhet-mobile-after-384x899.png`
-- Combined comparison: `/tmp/takhet-mobile-comparison.png`
-- Viewport: `384x899` CSS pixels
-- State: Russian, public landing, first viewport
+- Source interaction truth: `/Users/alanbaimukhan/Desktop/Screen Recording 2026-06-28 at 10.07.31.mov`
+- Source timeline contact sheet: `/tmp/takhet-scroll-reference-contact-sheet.jpg`
+- Desktop implementation evidence: `/tmp/takhet-journey-desktop-stage-1.png`, `/tmp/takhet-journey-desktop-stage-3.png`, `/tmp/takhet-journey-desktop-stage-5.png`
+- Mobile implementation evidence: `/tmp/takhet-journey-mobile-stage-1.png`, `/tmp/takhet-journey-mobile-stage-3.png`, `/tmp/takhet-journey-mobile-stage-5.png`
+- Viewports: `1440x900` and `390x844` CSS pixels
+- State: public landing, empty future media slots
 
-## Full-view comparison evidence
+## Interaction fidelity
 
-The combined before/after image confirms the requested proportional reduction. The mobile wordmark no longer dominates the viewport, the supporting text is shorter and denser, and the search/actions remain aligned with the animated canvas background. The page has no horizontal overflow.
+- One viewport remains pinned while the page advances through five full scroll stages.
+- Copy, subsection lists, active rail marker and `01/05` progress update together.
+- The right-side desktop rail becomes a compact horizontal `01-05` rail on mobile.
+- Clicking a stage marker scrolls to the corresponding point in the same sequence.
+- After stage five, the existing third landing section resumes without a jump.
 
-## Focused region comparison evidence
+## Layout and responsive evidence
 
-The full mobile viewport is sufficiently legible for the changed region. Browser measurements confirmed a `58.5px` title, `13px` description, `320px` description width, `358px` search width at a `390px` viewport, and matching body/viewport widths.
+- Desktop active content remains inside the viewport at stages 01, 03 and 05.
+- Mobile active content remains inside the `390x844` viewport at stages 01, 03 and 05.
+- Browser measurements confirmed matching body and viewport widths (`1440/1440` and `390/390`).
+- The protected second section remains byte-for-byte covered by its preservation contract.
 
-## Required fidelity surfaces
+## Media contract
 
-- Fonts and typography: Manrope remains active; the mobile title now uses `clamp(44px, 15vw, 64px)` and supporting copy uses `13px/1.6`.
-- Spacing and layout rhythm: the title, description, search and action controls retain the existing centered flow and proportional gaps.
-- Colors and visual tokens: no palette drift; navy, cobalt and periwinkle remain unchanged.
-- Image and asset fidelity: the existing nine-line animated canvas remains full-bleed and responsive; no visual asset was replaced.
-- Copy and content: platform name, description and action labels are unchanged; the search placeholder now rotates through translated typed phrases.
+- No image, video or picture element is mounted in the new section.
+- Stages 01-04 reserve image slots and stage 05 reserves a video slot.
+- The solid navy surface is only the section base color, not placeholder media.
 
-## Interaction evidence
+## Accessibility and performance
 
-- Typed placeholder changed during the live browser check.
-- Card groups expose ordered delays of `0s`, `0.11s`, `0.22s`, `0.33s` and `0.44s`.
-- A click 10px outside the menu button was resolved by the 40px custom cursor footprint and opened the menu.
-- Academy renders inside the same motion shell with exactly one global custom cursor.
-- The fourth AI Browser guest request shows the three-request limit message.
-- An off-topic platform-coordinator question is rejected locally and redirected to Takhet+ features.
+- Scroll state updates are passive and batched through `requestAnimationFrame`.
+- Reduced-motion mode converts the sticky scene into readable document flow.
+- Stage controls are real buttons with current-step semantics.
 
 ## Findings
 
-No actionable P0, P1 or P2 visual mismatch remains.
+No actionable P0, P1 or P2 visual or interaction mismatch remains. Local preview logs only the expected production API CORS rejection for `/auth/session`; it is unrelated to this frontend-only section.
 
-## Patches made
+## Intentional deviation from reference
 
-- Reduced mobile hero title and description proportionally.
-- Restored rotating typed search placeholders.
-- Repaired nested landing-card stagger behavior.
-- Removed the duplicate landing cursor and applied one expanded-hit-area cursor globally.
-- Preserved the previously protected second landing section content.
-
-## Follow-up polish
-
-- P3: the before/after wave positions differ because the canvas is continuously animated; line model, palette and responsive framing are unchanged.
+The supplied reference uses image backgrounds and a final video. Takhet+ media remains empty by explicit owner request until final assets are supplied.
 
 final result: passed

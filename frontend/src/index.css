@@ -56,7 +56,7 @@
   #root {
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   img,
@@ -640,6 +640,352 @@
   }
 }
 
+.takhet-journey {
+  --takhet-journey-progress: 0;
+  position: relative;
+  height: 500svh;
+  background: #081735;
+  color: #fff;
+  font-family: 'Manrope', sans-serif;
+}
+
+.takhet-journey__sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 720px;
+  overflow: hidden;
+  background: #081735;
+}
+
+.takhet-journey__media-stack,
+.takhet-journey__media {
+  position: absolute;
+  inset: 0;
+}
+
+.takhet-journey__media {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 700ms ease;
+}
+
+.takhet-journey__media.is-active {
+  opacity: 1;
+}
+
+.takhet-journey__frame {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 112px clamp(28px, 4.4vw, 84px) clamp(30px, 5vh, 56px);
+}
+
+.takhet-journey__heading {
+  position: absolute;
+  top: 112px;
+  left: clamp(28px, 4.4vw, 84px);
+  max-width: 720px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: clamp(15px, 1.35vw, 21px);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.takhet-journey__stage-stack {
+  position: absolute;
+  left: clamp(28px, 4.4vw, 84px);
+  bottom: clamp(44px, 7vh, 82px);
+  width: min(620px, 49vw);
+  min-height: 520px;
+}
+
+.takhet-journey__stage {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 40px, 0);
+  transition: opacity 520ms ease, transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.takhet-journey__stage.is-active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+.takhet-journey__number {
+  margin: 0 0 20px;
+  color: #7c8ee0;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.takhet-journey__title {
+  max-width: 600px;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(38px, 4.4vw, 72px);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.02;
+}
+
+.takhet-journey__lead {
+  margin: 24px 0 0;
+  color: #fff;
+  font-size: clamp(16px, 1.45vw, 21px);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.45;
+}
+
+.takhet-journey__description {
+  max-width: 610px;
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: clamp(14px, 1.05vw, 17px);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.65;
+}
+
+.takhet-journey__items {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.takhet-journey__items li {
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.35;
+  opacity: 0;
+  transform: translate3d(0, 12px, 0);
+  transition: opacity 420ms ease calc(var(--takhet-item-index) * 70ms + 160ms), transform 520ms ease calc(var(--takhet-item-index) * 70ms + 160ms);
+}
+
+.takhet-journey__stage.is-active .takhet-journey__items li {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.takhet-journey__rail {
+  position: absolute;
+  top: 50%;
+  right: clamp(28px, 4.4vw, 84px);
+  display: grid;
+  width: min(340px, 28vw);
+  transform: translateY(-50%);
+}
+
+.takhet-journey__rail button {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 16px;
+  min-height: 48px;
+  padding: 0 0 0 18px;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.46);
+  font-family: inherit;
+  text-align: left;
+  transition: color 240ms ease, border-color 240ms ease;
+}
+
+.takhet-journey__rail button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: transparent;
+  transition: background-color 240ms ease;
+}
+
+.takhet-journey__rail button:hover,
+.takhet-journey__rail button:focus-visible,
+.takhet-journey__rail button.is-active {
+  color: #fff;
+}
+
+.takhet-journey__rail button.is-active {
+  border-left-color: #7c8ee0;
+}
+
+.takhet-journey__rail button.is-active::before {
+  background: #7c8ee0;
+}
+
+.takhet-journey__rail span {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.takhet-journey__rail strong {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: right;
+}
+
+.takhet-journey__progress {
+  position: absolute;
+  right: clamp(28px, 4.4vw, 84px);
+  bottom: clamp(26px, 4vh, 46px);
+  display: flex;
+  gap: 7px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.takhet-journey__progress span:first-child {
+  color: #fff;
+}
+
+@media (max-width: 767px) {
+  .takhet-journey__sticky {
+    min-height: 680px;
+  }
+
+  .takhet-journey__frame {
+    padding: 100px 18px 26px;
+  }
+
+  .takhet-journey__heading {
+    top: 96px;
+    left: 18px;
+    right: 18px;
+    max-width: none;
+    font-size: 14px;
+  }
+
+  .takhet-journey__rail {
+    top: 158px;
+    right: 18px;
+    left: 18px;
+    display: grid;
+    width: auto;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    transform: none;
+  }
+
+  .takhet-journey__rail button {
+    display: flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    border-left: 0;
+  }
+
+  .takhet-journey__rail button::before {
+    top: auto;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    width: auto;
+    height: 2px;
+  }
+
+  .takhet-journey__rail button.is-active {
+    border-bottom-color: #7c8ee0;
+  }
+
+  .takhet-journey__rail span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .takhet-journey__rail strong {
+    font-size: 11px;
+  }
+
+  .takhet-journey__stage-stack {
+    top: 222px;
+    right: 18px;
+    bottom: 52px;
+    left: 18px;
+    width: auto;
+    min-height: 0;
+  }
+
+  .takhet-journey__stage {
+    top: 0;
+    bottom: auto;
+  }
+
+  .takhet-journey__number {
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+
+  .takhet-journey__title {
+    max-width: 350px;
+    font-size: clamp(29px, 9.4vw, 38px);
+    line-height: 1.04;
+  }
+
+  .takhet-journey__lead {
+    margin-top: 18px;
+    font-size: 15px;
+  }
+
+  .takhet-journey__description {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .takhet-journey__items {
+    gap: 4px 16px;
+    margin-top: 18px;
+  }
+
+  .takhet-journey__items li {
+    padding: 9px 0;
+    font-size: 11px;
+  }
+
+  .takhet-journey__progress {
+    right: 18px;
+    bottom: 22px;
+  }
+}
+
 .takhet-landing-shell {
   --takhet-parallax-soft-x: 0px;
   --takhet-parallax-soft-y: 0px;
@@ -826,6 +1172,63 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .takhet-journey {
+    height: auto;
+  }
+
+  .takhet-journey__sticky {
+    position: relative;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .takhet-journey__frame {
+    height: auto;
+    padding-top: 110px;
+  }
+
+  .takhet-journey__heading,
+  .takhet-journey__stage-stack {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: min(720px, 100%);
+  }
+
+  .takhet-journey__heading {
+    margin-bottom: 64px;
+  }
+
+  .takhet-journey__stage-stack {
+    display: grid;
+    gap: 72px;
+    min-height: 0;
+  }
+
+  .takhet-journey__stage {
+    position: relative;
+    inset: auto;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    transition: none;
+  }
+
+  .takhet-journey__items li {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .takhet-journey__rail,
+  .takhet-journey__progress,
+  .takhet-journey__media-stack {
+    display: none;
+  }
+
   [data-takhet-parallax] {
     translate: 0 0;
     rotate: 0deg;

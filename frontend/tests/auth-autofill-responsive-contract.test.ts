@@ -44,7 +44,7 @@ for (const path of ['src/pages/EnterpriseApp.tsx', 'src/pages/TakhetLabsApp.tsx'
 
 const css = read('src/index.css');
 assert(css.includes('box-sizing: border-box'), 'global CSS must use border-box sizing');
-assert(css.includes('overflow-x: hidden'), 'global CSS must prevent page-level horizontal overflow');
+assert(css.includes('overflow-x: clip'), 'global CSS must prevent page-level horizontal overflow without breaking sticky sections');
 assert(css.includes('max-width: 100%'), 'global CSS must constrain media width on small screens');
 
 console.log('Auth autofill and responsive contract passed');

@@ -14,6 +14,7 @@ import { FadeIn, FadeInStagger } from '../components/FadeIn';
 import { startVoiceInput } from '../services/voiceInput';
 import { roleApi } from '../../services/roleApi';
 import HeroFlowCanvas from '../components/HeroFlowCanvas';
+import TakhetJourneyScroll from '../components/TakhetJourneyScroll';
 
 type LandingParallaxValues = {
   x: number;
@@ -579,7 +580,7 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
 
   return (
     <div
-      className="takhet-landing-shell min-h-screen bg-white selection:bg-primary selection:text-white overflow-x-hidden"
+      className="takhet-landing-shell min-h-screen bg-white selection:bg-primary selection:text-white overflow-x-clip"
       onPointerMove={handleLandingParallaxPointerMove}
       onPointerLeave={handleLandingParallaxPointerLeave}
     >
@@ -733,6 +734,8 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
           </FadeInStagger>
         </div>
       </section>
+
+      <TakhetJourneyScroll />
 
       <section className="py-20 md:py-32 px-4 sm:px-6 md:px-10 xl:px-20 bg-white relative">
         <div className="max-w-7xl mx-auto space-y-24">
