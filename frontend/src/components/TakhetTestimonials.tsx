@@ -49,7 +49,7 @@ const copyByLanguage: Record<'ru' | 'kk' | 'en', TestimonialCopy> = {
 
 const people = [
   { name: 'Emily Chen', age: 28, image: '/media/testimonials/emily-david.webp', position: '25% center' },
-  { name: 'David Kim', age: 32, image: '/media/testimonials/emily-david.webp', position: '82% center' },
+  { name: 'David Kim', age: 32, image: '/media/testimonials/david-kim.webp', position: 'center' },
   { name: 'Sophia Williams', age: 35, image: '/media/testimonials/sophia-williams.webp', position: 'center' },
   { name: 'Isabella Martinez', age: 31, image: '/media/testimonials/isabella-martinez.webp', position: 'center' },
   { name: 'James Patel', age: 29, image: '/media/testimonials/james-patel.webp', position: 'center' },
@@ -58,9 +58,11 @@ const people = [
 const TakhetTestimonials: React.FC = () => {
   const { lang } = useLanguage();
   const copy = copyByLanguage[lang];
+  const sectionRef = useRef<HTMLElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Array<HTMLElement | null>>([]);
   const scrollFrameRef = useRef(0);
+  const pageScrollFrameRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const updateActiveCard = useCallback(() => {
@@ -90,11 +92,25 @@ const TakhetTestimonials: React.FC = () => {
   }, [updateActiveCard]);
 
   const scrollToCard = useCallback((index: number) => {
+    const section = sectionRef.current;
     const viewport = viewportRef.current;
     const card = cardRefs.current[index];
-    if (!viewport || !card) return;
+    if (!section || !viewport || !card) return;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const usesStickyScroll = window.matchMedia('(min-width: 768px)').matches && !reducedMotion;
+
+    if (usesStickyScroll) {
+      const scrollRange = Math.max(1, section.offsetHeight - window.innerHeight);
+      const sectionTop = window.scrollY + section.getBoundingClientRect().top;
+      window.scrollTo({
+        top: sectionTop + (index / (people.length - 1)) * scrollRange,
+        behavior: 'smooth',
+      });
+      setActiveIndex(index);
+      return;
+    }
+
     viewport.scrollTo({
       left: card.offsetLeft - (viewport.clientWidth - card.offsetWidth) / 2,
       behavior: reducedMotion ? 'auto' : 'smooth',
@@ -104,69 +120,99 @@ const TakhetTestimonials: React.FC = () => {
 
   useEffect(() => {
     updateActiveCard();
-    const handleResize = () => updateActiveCard();
+    const syncFromPageScroll = () => {
+      cancelAnimationFrame(pageScrollFrameRef.current);
+      pageScrollFrameRef.current = requestAnimationFrame(() => {
+        const section = sectionRef.current;
+        const viewport = viewportRef.current;
+        if (!section || !viewport) return;
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const usesStickyScroll = window.matchMedia('(min-width: 768px)').matches && !reducedMotion;
+        if (!usesStickyScroll) return;
+
+        const scrollRange = Math.max(1, section.offsetHeight - window.innerHeight);
+        const progress = Math.min(1, Math.max(0, -section.getBoundingClientRect().top / scrollRange));
+        const maxHorizontalScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        viewport.scrollLeft = maxHorizontalScroll * progress;
+        updateActiveCard();
+      });
+    };
+
+    const handleResize = () => {
+      updateActiveCard();
+      syncFromPageScroll();
+    };
+
+    window.addEventListener('scroll', syncFromPageScroll, { passive: true });
     window.addEventListener('resize', handleResize);
+    syncFromPageScroll();
+
     return () => {
+      window.removeEventListener('scroll', syncFromPageScroll);
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(scrollFrameRef.current);
+      cancelAnimationFrame(pageScrollFrameRef.current);
     };
   }, [updateActiveCard]);
 
   return (
-    <section className="takhet-testimonials" aria-labelledby="takhet-testimonials-title">
-      <div className="takhet-testimonials__header">
-        <h2 id="takhet-testimonials-title">{copy.heading}</h2>
-        <p>{copy.intro}</p>
-      </div>
+    <section ref={sectionRef} className="takhet-testimonials" aria-labelledby="takhet-testimonials-title">
+      <div className="takhet-testimonials__sticky">
+        <div className="takhet-testimonials__header">
+          <h2 id="takhet-testimonials-title">{copy.heading}</h2>
+          <p>{copy.intro}</p>
+        </div>
 
-      <div
-        ref={viewportRef}
-        className="takhet-testimonials__viewport"
-        onScroll={handleScroll}
-        tabIndex={0}
-        aria-label={copy.heading}
-      >
-        <div className="takhet-testimonials__track">
-          {people.map((person, index) => (
-            <article
-              key={person.name}
-              ref={(element) => { cardRefs.current[index] = element; }}
-              className="takhet-testimonials__card"
-              data-active={activeIndex === index}
-              aria-current={activeIndex === index ? 'true' : undefined}
-            >
-              <img
-                src={person.image}
-                alt={person.name}
-                style={{ objectPosition: person.position }}
-                loading="lazy"
-                decoding="async"
+        <div
+          ref={viewportRef}
+          className="takhet-testimonials__viewport"
+          onScroll={handleScroll}
+          tabIndex={0}
+          aria-label={copy.heading}
+        >
+          <div className="takhet-testimonials__track">
+            {people.map((person, index) => (
+              <article
+                key={person.name}
+                ref={(element) => { cardRefs.current[index] = element; }}
+                className="takhet-testimonials__card"
+                data-active={activeIndex === index}
+                aria-current={activeIndex === index ? 'true' : undefined}
+              >
+                <img
+                  src={person.image}
+                  alt={person.name}
+                  style={{ objectPosition: person.position }}
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div className="takhet-testimonials__copy">
+                  <h3>{person.name}</h3>
+                  <span>{copy.ageLabel(person.age)}</span>
+                  <blockquote>{copy.quotes[index]}</blockquote>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="takhet-testimonials__navigation" aria-label={`${activeIndex + 1} / ${people.length}`}>
+          <div className="takhet-testimonials__segments">
+            {people.map((person, index) => (
+              <button
+                key={person.name}
+                type="button"
+                className="takhet-testimonials__segment"
+                data-active={activeIndex === index}
+                onClick={() => scrollToCard(index)}
+                aria-label={`${index + 1} / ${people.length}: ${person.name}`}
+                aria-current={activeIndex === index ? 'step' : undefined}
               />
-              <div className="takhet-testimonials__copy">
-                <h3>{person.name}</h3>
-                <span>{copy.ageLabel(person.age)}</span>
-                <blockquote>{copy.quotes[index]}</blockquote>
-              </div>
-            </article>
-          ))}
+            ))}
+          </div>
+          <span className="takhet-testimonials__counter">{activeIndex + 1} / {people.length}</span>
         </div>
-      </div>
-
-      <div className="takhet-testimonials__navigation" aria-label={`${activeIndex + 1} / ${people.length}`}>
-        <div className="takhet-testimonials__segments">
-          {people.map((person, index) => (
-            <button
-              key={person.name}
-              type="button"
-              className="takhet-testimonials__segment"
-              data-active={activeIndex === index}
-              onClick={() => scrollToCard(index)}
-              aria-label={`${index + 1} / ${people.length}: ${person.name}`}
-              aria-current={activeIndex === index ? 'step' : undefined}
-            />
-          ))}
-        </div>
-        <span className="takhet-testimonials__counter">{activeIndex + 1} / {people.length}</span>
       </div>
     </section>
   );

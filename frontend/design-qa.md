@@ -75,3 +75,13 @@ final result: passed
 - No overlap, clipping, missing media or framework error overlay was observed.
 
 final result: passed
+
+## 2026-06-29 correction
+
+- Removed the duplicated use of the couple photo. All five supplied source photos now appear exactly once.
+- Restored the omitted South Asian portrait as the second testimonial image.
+- Desktop uses a five-viewport sticky scene: vertical progress maps continuously to the full horizontal track range.
+- Browser evidence confirmed `1 / 5` at entry, `3 / 5` at midpoint and `5 / 5` at the end, with no console errors.
+- Mobile keeps native horizontal snap and disables the five-screen sticky height.
+
+correction result: passed
