@@ -643,7 +643,7 @@
 .takhet-journey {
   --takhet-journey-progress: 0;
   position: relative;
-  height: 500svh;
+  height: 900svh;
   background: #081735;
   color: #fff;
   font-family: 'Manrope', sans-serif;
@@ -697,10 +697,11 @@
 
 .takhet-journey__stage-stack {
   position: absolute;
+  top: 50%;
   left: clamp(28px, 4.4vw, 84px);
-  bottom: clamp(44px, 7vh, 82px);
+  bottom: auto;
   width: min(620px, 49vw);
-  min-height: 520px;
+  min-height: 0;
 }
 
 .takhet-journey__stage {
@@ -871,6 +872,17 @@
   color: #fff;
 }
 
+@media (min-width: 768px) {
+  .takhet-journey__stage {
+    inset: 0 0 auto;
+    transform: translate3d(0, calc(-50% + 40px), 0);
+  }
+
+  .takhet-journey__stage.is-active {
+    transform: translate3d(0, -50%, 0);
+  }
+}
+
 @media (max-width: 767px) {
   .takhet-journey__sticky {
     min-height: 680px;
@@ -941,6 +953,7 @@
     left: 18px;
     width: auto;
     min-height: 0;
+    transform: none;
   }
 
   .takhet-journey__stage {

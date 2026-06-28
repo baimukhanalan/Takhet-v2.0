@@ -1,45 +1,40 @@
-# Takhet+ Five-stage Scroll Journey Design QA
+# Takhet+ Journey Alignment Design QA
 
-- Source interaction truth: `/Users/alanbaimukhan/Desktop/Screen Recording 2026-06-28 at 10.07.31.mov`
-- Source timeline contact sheet: `/tmp/takhet-scroll-reference-contact-sheet.jpg`
-- Desktop implementation evidence: `/tmp/takhet-journey-desktop-stage-1.png`, `/tmp/takhet-journey-desktop-stage-3.png`, `/tmp/takhet-journey-desktop-stage-5.png`
-- Mobile implementation evidence: `/tmp/takhet-journey-mobile-stage-1.png`, `/tmp/takhet-journey-mobile-stage-3.png`, `/tmp/takhet-journey-mobile-stage-5.png`
-- Viewports: `1440x900` and `390x844` CSS pixels
-- State: public landing, empty future media slots
+- Source visual truth: `/Users/alanbaimukhan/Desktop/Screenshot 2026-06-28 at 11.37.00.png`
+- Implementation screenshot: `/tmp/takhet-journey-centered-stage1.jpg`
+- Combined comparison: `/tmp/takhet-journey-alignment-comparison.jpg`
+- Viewport/state: desktop Chrome, public landing, journey stage 01
 
-## Interaction fidelity
+## Full-view comparison evidence
 
-- One viewport remains pinned while the page advances through five full scroll stages.
-- Copy, subsection lists, active rail marker and `01/05` progress update together.
-- The right-side desktop rail becomes a compact horizontal `01-05` rail on mobile.
-- Clicking a stage marker scrolls to the corresponding point in the same sequence.
-- After stage five, the existing third landing section resumes without a jump.
+The source shows the left article visually below the right `01-05` rail. In the implementation, the actual rendered article and the rail share the same viewport midpoint. The comparison was normalized to a common display height because the source and current Chrome window use slightly different pixel dimensions.
 
-## Layout and responsive evidence
+## Focused region comparison evidence
 
-- Desktop active content remains inside the viewport at stages 01, 03 and 05.
-- Mobile active content remains inside the `390x844` viewport at stages 01, 03 and 05.
-- Browser measurements confirmed matching body and viewport widths (`1440/1440` and `390/390`).
-- The protected second section remains byte-for-byte covered by its preservation contract.
+The full journey viewport keeps both columns legible enough to judge the requested alignment. Separate Chrome checks on stages 04 and 05 confirmed that variable-height copy remains centered by its own rendered height rather than by a fixed wrapper.
 
-## Media contract
+## Required fidelity surfaces
 
-- No image, video or picture element is mounted in the new section.
-- Stages 01-04 reserve image slots and stage 05 reserves a video slot.
-- The solid navy surface is only the section base color, not placeholder media.
+- Fonts and typography: unchanged Manrope hierarchy, wrapping and weights.
+- Spacing and layout rhythm: left article midpoint now matches the right rail midpoint on desktop.
+- Colors and visual tokens: unchanged navy, white and periwinkle tokens.
+- Image quality and assets: media slots remain empty by owner request; no asset was added or replaced.
+- Copy and content: all five stage texts and subsection lists are unchanged.
 
-## Accessibility and performance
+## Interaction evidence
 
-- Scroll state updates are passive and batched through `requestAnimationFrame`.
-- Reduced-motion mode converts the sticky scene into readable document flow.
-- Stage controls are real buttons with current-step semantics.
+- The sticky scene is now `900svh`, yielding roughly `200svh` of scroll travel between adjacent stages.
+- Stage rail buttons still navigate directly to all five positions.
+- Mobile keeps its existing top-flow layout and does not inherit desktop centering transforms.
 
 ## Findings
 
-No actionable P0, P1 or P2 visual or interaction mismatch remains. Local preview logs only the expected production API CORS rejection for `/auth/session`; it is unrelated to this frontend-only section.
+No actionable P0, P1 or P2 visual mismatch remains for the requested alignment and scroll-duration change.
 
-## Intentional deviation from reference
+## Patches made
 
-The supplied reference uses image backgrounds and a final video. Takhet+ media remains empty by explicit owner request until final assets are supplied.
+- Centered each desktop stage by its actual rendered height with `translate3d(0, -50%, 0)`.
+- Increased the sticky story from `500svh` to `900svh`.
+- Added contract coverage for the shared center and long stage interval.
 
 final result: passed

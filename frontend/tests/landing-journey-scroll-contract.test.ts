@@ -33,8 +33,9 @@ assert(journey.includes('takhet-journey__nav-button'), 'Journey stage controls m
 assert(journey.includes("matchMedia('(prefers-reduced-motion: reduce)')"), 'Journey must respect reduced motion');
 
 assert(css.includes('.takhet-journey'), 'Journey must have isolated BEM-style CSS');
-assert(css.includes('height: 500svh'), 'Journey must provide five viewport-length scroll stages');
+assert(css.includes('height: 900svh'), 'Journey must provide a long two-viewport scroll interval between stages');
 assert(css.includes('position: sticky'), 'Journey viewport must remain pinned during stage transitions');
+assert(css.includes('top: 50%') && css.includes('transform: translate3d(0, -50%, 0)'), 'Each desktop journey stage and the stage rail must share the same proportional vertical center');
 assert(css.includes('overflow-x: clip'), 'Root overflow clipping must preserve sticky positioning');
 assert(landing.includes('overflow-x-clip'), 'Landing shell must not create a scroll container that breaks sticky positioning');
 assert(css.includes('.takhet-journey__media'), 'Journey must reserve an empty future media layer');
