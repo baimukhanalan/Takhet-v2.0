@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { advancedChatStream, analyzeHealthData } from '../services/gemini';
 import { startVoiceInput } from '../services/voiceInput';
 import { User, UserRole } from '../types';
+import { consumeGuestAiRequest, guestAiLimitMessage, isGuestAiLimitError } from '../services/guestAiUsage';
 import { roleApi } from '../../services/roleApi';
 
 type Message = {
@@ -325,6 +326,22 @@ const TakhetAIChat: React.FC<{ user?: User; trialMode?: boolean }> = ({ user, tr
     const text = rawText.trim();
     if (!text) return;
 
+    if (isGuest) {
+      try {
+        consumeGuestAiRequest('takhet-ai');
+      } catch (error) {
+        if (isGuestAiLimitError(error)) {
+          setMessages((prev) => [
+            ...prev,
+            { id: `limit-${Date.now()}`, role: 'system', text: guestAiLimitMessage, timestamp: formatTime() }
+          ]);
+          setGuestPromptVisible(true);
+          return;
+        }
+        throw error;
+      }
+    }
+
     if (isTrial) {
       setGuestPromptVisible(true);
     }
@@ -372,6 +389,23 @@ const TakhetAIChat: React.FC<{ user?: User; trialMode?: boolean }> = ({ user, tr
   const handleAnalyzeFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (isGuest) {
+      try {
+        consumeGuestAiRequest('takhet-ai');
+      } catch (error) {
+        if (isGuestAiLimitError(error)) {
+          setMessages((prev) => [
+            ...prev,
+            { id: `limit-${Date.now()}`, role: 'system', text: guestAiLimitMessage, timestamp: formatTime() }
+          ]);
+          setGuestPromptVisible(true);
+          event.target.value = '';
+          return;
+        }
+        throw error;
+      }
+    }
     try {
       const text = await file.text();
       const analysis = await analyzeHealthData(file.type || 'document', text.slice(0, 4000));

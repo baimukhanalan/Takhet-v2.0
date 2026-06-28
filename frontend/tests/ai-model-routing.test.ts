@@ -22,7 +22,8 @@ assert(analysis[0] === 'gemini-2.5-pro', 'Analysis task must start with Pro');
 assert(analysis.includes('gemini-2.5-flash'), 'Analysis task must fallback to Flash');
 
 const complexChat = getModelCandidatesForTask('chat', 'расшифруй анализы, сравни риски и дай подробный план лечения');
-assert(complexChat[0] === 'gemini-2.5-pro', 'Complex chat must start with Pro');
+assert(complexChat[0] === 'gemini-2.5-flash', 'Complex text chat must start with Flash for lower first-token latency');
+assert(complexChat.includes('gemini-2.5-pro'), 'Complex text chat must retain Pro as a fallback');
 assert(shouldUseProModel('фото анализа PDF', 'chat'), 'Photo/file/PDF trigger must use Pro');
 
 const longText = 'обычный текст '.repeat(130);

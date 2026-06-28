@@ -178,7 +178,7 @@ const AppShell: React.FC<{ user: User | null; onLogout: () => void; children: Re
   const isEnterprise = pathname.startsWith('/enterprise');
   const isTakhetLabsNamespace = pathname.startsWith('/takhet-labs/login') || pathname.startsWith('/takhet-labs/portal');
   const shouldShowCoordinator = !user && isPublic && !isTakhetAi && !isAiConsultation;
-  const isPublicMotionRoute = PUBLIC_MOTION_ROUTES.has(pathname) && pathname !== '/';
+  const publicMotionVariant = PUBLIC_MOTION_ROUTES.has(pathname) || pathname === '/' ? 'rich' : 'portal';
 
   if (isEnterprise || isTakhetLabsNamespace) {
     return (
@@ -200,15 +200,11 @@ const AppShell: React.FC<{ user: User | null; onLogout: () => void; children: Re
       </>
     );
 
-    if (isPublicMotionRoute) {
-      return (
-        <Suspense fallback={null}>
-          <PlatformMotionShell variant="rich">{publicContent}</PlatformMotionShell>
-        </Suspense>
-      );
-    }
-
-    return publicContent;
+    return (
+      <Suspense fallback={null}>
+        <PlatformMotionShell variant={publicMotionVariant}>{publicContent}</PlatformMotionShell>
+      </Suspense>
+    );
   }
 
   if (isAdmin || isDoctorCaseRoom || isTakhetAi || isHealthBrowser) {
@@ -362,7 +358,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/guest-consultation" element={<GuestConsultationPage />} />
         <Route path="/health-browser" element={<AIHealthBrowser user={user || undefined} />} />
         <Route path="/ai-lab" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT, UserRole.DOCTOR]}><AIAnalysisCenter user={user!} /></PrivateRoute>} />
-        <Route path="/ai-consultation" element={<AIConsultationRoom />} />
+        <Route path="/ai-consultation" element={<AIConsultationRoom user={user || undefined} />} />
 
         <Route path="/auth" element={!user ? <AuthPage onLogin={handleLogin} onRegister={handleRegister} /> : <Navigate to={user.role === UserRole.ADMIN ? '/admin-dashboard' : '/dashboard'} replace />} />
         <Route path="/auth/confirm-email" element={<AuthConfirmEmailPage />} />

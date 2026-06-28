@@ -54,6 +54,7 @@ export const FadeIn: React.FC<FadeInProps> = ({
   return (
     <div
       ref={ref}
+      data-takhet-fade
       className={className}
       style={{
         opacity: visible ? 1 : 0,
@@ -61,7 +62,7 @@ export const FadeIn: React.FC<FadeInProps> = ({
         transitionProperty: 'opacity, transform',
         transitionDuration: '800ms',
         transitionTimingFunction: 'cubic-bezier(0.21, 0.47, 0.32, 0.98)',
-        transitionDelay: `${delay}s`,
+        transitionDelay: `var(--takhet-stagger-delay, ${delay}s)`,
         willChange: 'opacity, transform',
         ...style
       }}
@@ -77,5 +78,27 @@ interface FadeInStaggerProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const FadeInStagger: React.FC<FadeInStaggerProps> = ({ children, ...props }) => {
-  return <div {...props}>{children}</div>;
+  const { staggerDelay = 0.11, ...containerProps } = props;
+  const staggerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = staggerRef.current;
+    if (!container) return;
+    const fadeItems = container.querySelectorAll('[data-takhet-fade]') as NodeListOf<HTMLElement>;
+    Array.from(fadeItems)
+      .filter((item) => item.closest('[data-takhet-stagger]') === container)
+      .forEach((item, index) => {
+        item.style.setProperty('--takhet-stagger-delay', `${index * staggerDelay}s`);
+      });
+  }, [children, staggerDelay]);
+
+  return (
+    <div ref={staggerRef} data-takhet-stagger {...containerProps}>
+      {React.Children.map(children, (child, index) => {
+        if (!React.isValidElement<FadeInProps>(child)) return child;
+        const delay = child.props.delay ?? index * staggerDelay;
+        return child.type === FadeIn ? React.cloneElement(child, { delay }) : <FadeIn delay={delay}>{child}</FadeIn>;
+      })}
+    </div>
+  );
 };

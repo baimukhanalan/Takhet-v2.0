@@ -45,6 +45,8 @@ const streamText = async (res: any, text: string) => {
   return emitted;
 };
 
+export const maxDuration = 60;
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.status(405).setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -63,6 +65,7 @@ export default async function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
 
   try {
     const activeQuestion = extractActiveQuestion(message);
@@ -71,35 +74,47 @@ export default async function handler(req: any, res: any) {
     const strictInstruction = buildStrictChatInstruction(activeQuestion, systemInstruction);
     const modelCandidates = getModelCandidatesForTask('chat', `${systemInstruction || ''}\n${activeQuestion}`);
     let streamed = false;
+    let streamedText = '';
     let lastError: unknown = null;
 
-    for (const model of modelCandidates) {
+    for (let modelIndex = 0; modelIndex < modelCandidates.length; modelIndex += 1) {
+      const model = modelCandidates[modelIndex];
       try {
         const stream = await ai.models.generateContentStream({
           model,
-          contents: message,
+          contents: streamedText
+            ? `${message}\n\nContinue the answer from the exact point where it stopped. Do not repeat this delivered text:\n${streamedText.slice(-2400)}`
+            : message,
           config: {
             systemInstruction: strictInstruction,
             tools: useSearch || isFreshDataLike(activeQuestion) ? [{ googleSearch: {} }] : undefined,
             temperature: 0.15,
             topP: 0.9,
             candidateCount: 1,
-            maxOutputTokens: 1400
+            maxOutputTokens: 2200
           }
         });
 
+        let finishReason = '';
         for await (const chunk of stream) {
           const text = String(chunk.text || '');
           if (text) {
             streamed = true;
+            streamedText += text;
             res.write(text);
           }
+          finishReason = String((chunk as any)?.candidates?.[0]?.finishReason || finishReason);
         }
+        if (/MAX_TOKENS/i.test(finishReason)) {
+          lastError = new Error('AI_MAX_TOKENS');
+          continue;
+        }
+        lastError = null;
         break;
       } catch (error) {
         lastError = error;
         console.error(`AI chat stream failed on ${model}:`, error);
-        if (streamed || !isQuotaError(error)) break;
+        if (!isQuotaError(error) && !streamed) break;
       }
     }
 
@@ -109,6 +124,8 @@ export default async function handler(req: any, res: any) {
 
     if (!streamed) {
       await streamText(res, buildHelpfulFallback(activeQuestion));
+    } else if (lastError) {
+      await streamText(res, `\n\n${buildHelpfulFallback(activeQuestion)}`);
     }
   } catch (error) {
     console.error('AI chat stream fallback:', error);

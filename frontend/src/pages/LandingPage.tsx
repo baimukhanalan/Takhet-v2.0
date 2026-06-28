@@ -52,6 +52,8 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
   const [feedbackStatus, setFeedbackStatus] = useState<string | null>(null);
   const [feedbackSending, setFeedbackSending] = useState(false);
   const [heroQuery, setHeroQuery] = useState('');
+  const [typedHeroPlaceholder, setTypedHeroPlaceholder] = useState('');
+  const [heroPlaceholderIndex, setHeroPlaceholderIndex] = useState(0);
   const [isHeroVoiceListening, setIsHeroVoiceListening] = useState(false);
   const [activeHeroActionPreview, setActiveHeroActionPreview] = useState<string | null>(null);
   const heroSearchRef = useRef<HTMLDivElement | null>(null);
@@ -66,11 +68,12 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
     current: createLandingParallaxValues(),
     target: createLandingParallaxValues(),
   });
-  const customCursorRef = useRef<HTMLDivElement | null>(null);
   const activeTiltElementRef = useRef<HTMLElement | null>(null);
   const activeMagneticButtonRef = useRef<HTMLElement | null>(null);
 
   const faqItems = tArray<{ q: string; a: string }>('landing.faqItems');
+  const heroPlaceholders = tArray<string>('landing.heroPlaceholders');
+  const heroPlaceholdersKey = heroPlaceholders.join('\u0001');
   const guestPreviewDays = React.useMemo(() => {
     const formatter = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', weekday: 'short' });
     const slots = [['10:30', '12:00'], ['14:15', '16:45'], ['09:40', '18:10']];
@@ -172,6 +175,32 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
       }
     };
   }, []);
+
+  React.useEffect(() => {
+    const phrases = heroPlaceholdersKey.split('\u0001').filter(Boolean);
+    if (!phrases.length) return;
+
+    const phrase = phrases[heroPlaceholderIndex % phrases.length];
+    let character = 0;
+    let eraseTimer = 0;
+    setTypedHeroPlaceholder('');
+
+    const typeTimer = window.setInterval(() => {
+      character += 1;
+      setTypedHeroPlaceholder(phrase.slice(0, character));
+      if (character >= phrase.length) {
+        window.clearInterval(typeTimer);
+        eraseTimer = window.setTimeout(() => {
+          setHeroPlaceholderIndex((current) => (current + 1) % phrases.length);
+        }, 1700);
+      }
+    }, 58);
+
+    return () => {
+      window.clearInterval(typeTimer);
+      window.clearTimeout(eraseTimer);
+    };
+  }, [heroPlaceholderIndex, heroPlaceholdersKey]);
 
   const handleCommonLogin = (pathname: string, role: UserRole = UserRole.PATIENT) => {
     navigate('/auth', { state: { role, from: { pathname }, forcePublicAuth: true } });
@@ -282,13 +311,6 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
     element.style.setProperty('--takhet-magnetic-y', `${(y * 6).toFixed(2)}px`);
   };
 
-  const writeCustomCursorPosition = (clientX: number, clientY: number, opacity: number) => {
-    const cursor = customCursorRef.current;
-    if (!cursor) return;
-    cursor.style.transform = `translate3d(${clientX.toFixed(2)}px, ${clientY.toFixed(2)}px, 0)`;
-    cursor.style.opacity = opacity.toFixed(3);
-  };
-
   const animateLandingParallax = () => {
     const parallax = landingParallaxRef.current;
     const { element, current, target } = parallax;
@@ -333,14 +355,12 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
       x: Math.max(-1, Math.min(1, normalizedX)),
       y: Math.max(-1, Math.min(1, normalizedY)),
     });
-    writeCustomCursorPosition(clientX, clientY, 1);
     updateTiltElement(event);
     updateMagneticButton(event);
   };
 
   const handleLandingParallaxPointerLeave = (event: React.PointerEvent<HTMLElement>) => {
     setLandingParallaxTarget(event.currentTarget, createLandingParallaxValues());
-    writeCustomCursorPosition(event.clientX, event.clientY, 0);
     resetTiltElement(activeTiltElementRef.current);
     resetMagneticButton(activeMagneticButtonRef.current);
     activeTiltElementRef.current = null;
@@ -563,23 +583,6 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
       onPointerMove={handleLandingParallaxPointerMove}
       onPointerLeave={handleLandingParallaxPointerLeave}
     >
-      <div ref={customCursorRef} className="takhet-custom-cursor" aria-hidden="true">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
-          <text
-            x="50"
-            y="69"
-            textAnchor="middle"
-            fill="#7C8EE0"
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 900,
-              fontSize: '72px'
-            }}
-          >
-            +
-          </text>
-        </svg>
-      </div>
       <PublicHeader activePath="/" />
 
       <section className="takhet-flow-hero" data-takhet-flow-hero data-om-exportable-video-with-duration-secs="16">
@@ -600,7 +603,7 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
               <Search aria-hidden="true" />
               <input
                 type="text"
-                placeholder="найти терапевта в Алматы"
+                placeholder={typedHeroPlaceholder || heroPlaceholders[0] || 'найти терапевта в Алматы'}
                 aria-label="Поиск по медицинским вопросам"
                 value={heroQuery}
                 onChange={(event) => setHeroQuery(event.target.value)}

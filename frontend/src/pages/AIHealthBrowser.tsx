@@ -12,6 +12,7 @@ import { getHealthInsightsFast, AISearchResult } from '../services/gemini';
 import { useLanguage } from '../services/useLanguage';
 import { startVoiceInput } from '../services/voiceInput';
 import { roleApi } from '../../services/roleApi';
+import { consumeGuestAiRequest, guestAiLimitMessage, isGuestAiLimitError } from '../services/guestAiUsage';
 
 const textToBase64 = (value: string) => {
   const bytes = new TextEncoder().encode(value);
@@ -59,9 +60,14 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
   const [typedLoadingPhrase, setTypedLoadingPhrase] = useState(browserLoadingPhrases[0]);
   const [streamingPreview, setStreamingPreview] = useState('');
   const searchRequestRef = useRef(0);
+  const searchParamSyncRef = useRef('');
 
   useEffect(() => {
     if (!query) return;
+    if (searchParamSyncRef.current === query) {
+      searchParamSyncRef.current = '';
+      return;
+    }
     void handleSearch(query, false);
   }, [query]);
 
@@ -133,6 +139,20 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
   const handleSearch = async (rawValue: string, updateParams = true) => {
     const value = rawValue.trim();
     if (!value) return;
+
+    if (!user) {
+      try {
+        consumeGuestAiRequest('ai-browser');
+      } catch (error) {
+        if (isGuestAiLimitError(error)) {
+          setError(guestAiLimitMessage);
+          setResult(null);
+          setIsSearching(false);
+          return;
+        }
+        throw error;
+      }
+    }
     const requestId = searchRequestRef.current + 1;
     searchRequestRef.current = requestId;
     setIsSearching(true);
@@ -140,7 +160,10 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
     setStreamingPreview('');
     setLoadingPhraseIndex(0);
     setInputValue(value);
-    if (updateParams) setSearchParams({ q: value });
+    if (updateParams) {
+      searchParamSyncRef.current = value;
+      setSearchParams({ q: value });
+    }
     persistHistory(value);
     const cacheKey = value.toLowerCase();
 

@@ -31,7 +31,7 @@ assert(app.includes('PUBLIC_MOTION_ROUTES'), 'App must explicitly list public pa
 assert(app.includes('PUBLIC_MOTION_ROUTES.has(pathname)'), 'Rich public motion must be route-scoped, not applied blindly to every portal');
 assert(css.includes('.takhet-platform-motion-shell'), 'CSS must define the shared platform motion shell');
 assert(css.includes('.takhet-platform-cursor'), 'CSS must define the shared custom cursor');
-assert(css.includes('width: 32px'), 'Custom plus cursor must be slightly larger than the previous 28px version');
+assert(css.includes('width: 40px'), 'Custom plus cursor must expose a stable full-area interaction footprint');
 assert(css.includes('.takhet-platform-motion-shell--rich [data-takhet-parallax]'), 'Public pages must support opt-in rich parallax');
 assert(css.includes('.takhet-platform-motion-shell--portal'), 'Portal motion must have a lightweight mode');
 
@@ -56,7 +56,7 @@ assert(takhetAi.includes("value: '/mental'"), 'Guest soulful specialist action m
 assert(doctorsPage.includes('Takhet+ готовит контекст'), 'Doctors hero subtitle must use clear readable product copy');
 assert(enterpriseApp.includes('Цифровое медицинское сопровождение предприятий'), 'Enterprise hero must use requested positioning copy');
 
-assert(chatStream.includes('maxOutputTokens: 1400'), 'Streaming chat must raise maxOutputTokens to reduce answer truncation');
+assert(chatStream.includes('maxOutputTokens: 2200'), 'Streaming chat must raise maxOutputTokens to reduce answer truncation');
 assert(!chatStream.includes("cleanStreamChunk(chunk.text || '')"), 'Streaming must not destructively clean every chunk before writing it');
 assert(healthBrowserApi.includes('HEALTH_BROWSER_SINGLE_PASS'), 'AI Browser must use a single-pass response path before expensive fallback generation');
 assert(healthBrowserApi.includes('maxOutputTokens: medical ? 1600 : 1400'), 'AI Browser token limits must be raised to reduce truncated answers');

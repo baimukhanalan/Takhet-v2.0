@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import { Bot, Loader2, Mic, MicOff, Send, X } from 'lucide-react';
 import { advancedChatStream } from '../services/gemini';
+import { isPlatformCoordinatorQuestion, platformCoordinatorScopeReply } from '../services/platformCoordinator';
 
 type ChatMessage = { role: 'user' | 'ai'; text: string };
 
@@ -75,6 +76,12 @@ const AIChatOverlay: React.FC = () => {
     const value = text.trim();
     if (!value) return;
 
+    if (!isPlatformCoordinatorQuestion(value)) {
+      setMessages((prev) => [...prev, { role: 'user', text: value }, { role: 'ai', text: platformCoordinatorScopeReply }]);
+      setInputText('');
+      return;
+    }
+
     setMessages((prev) => [...prev, { role: 'user', text: value }]);
     setInputText('');
     setIsLoading(true);
@@ -131,6 +138,7 @@ const AIChatOverlay: React.FC = () => {
     <>
       <button
         onClick={() => setIsOpen((value) => !value)}
+        aria-label={isOpen ? 'Закрыть консультант Takhet+' : 'Открыть консультант Takhet+'}
         className="fixed bottom-8 right-8 w-16 h-16 bg-white text-slate-900 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.1)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border border-slate-200"
       >
         <Bot className="w-8 h-8 group-hover:rotate-12 transition-transform text-primary" />

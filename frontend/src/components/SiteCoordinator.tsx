@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Bot, LoaderCircle, MessageCircleMore, SendHorizonal, X } from 'lucide-react';
+import { isPlatformCoordinatorQuestion, platformCoordinatorScopeReply } from '../services/platformCoordinator';
 
 type Lang = 'ru' | 'kk';
 
@@ -74,6 +75,13 @@ export default function SiteCoordinator({ lang, navItems }: { lang: Lang; navIte
   const submitMessage = async (preset?: string) => {
     const text = (preset ?? query).trim();
     if (!text || loading) return;
+
+    if (!isPlatformCoordinatorQuestion(text)) {
+      setMessages((current) => [...current, { role: 'user', text }, { role: 'assistant', text: platformCoordinatorScopeReply }]);
+      setQuery('');
+      setOpen(true);
+      return;
+    }
 
     const nextMessages = [...messages, { role: 'user' as const, text }];
     const assistantIndex = nextMessages.length;

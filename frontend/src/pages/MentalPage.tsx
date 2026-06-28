@@ -5,6 +5,7 @@ import { advancedChatStream } from '../services/gemini';
 import { User } from '../types';
 import PublicHeader from '../components/PublicHeader';
 import { roleApi } from '../../services/roleApi';
+import { consumeGuestAiRequest, guestAiLimitMessage, isGuestAiLimitError } from '../services/guestAiUsage';
 
 type Specialist = {
   id: string;
@@ -38,7 +39,7 @@ const isMentalSpecialist = (specialty: string) => {
 const canShowInMental = (specialist: Specialist) =>
   specialist.catalogAudience === 'mental' || specialist.catalogAudience === 'both' || isMentalSpecialist(specialist.specialty);
 
-const SoulAssistant: React.FC<{ onOpenFull: () => void; publicMode: boolean }> = ({ onOpenFull, publicMode }) => {
+const SoulAssistant: React.FC<{ onOpenFull: () => void; publicMode: boolean; guestMode: boolean }> = ({ onOpenFull, publicMode, guestMode }) => {
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -51,6 +52,18 @@ const SoulAssistant: React.FC<{ onOpenFull: () => void; publicMode: boolean }> =
   const handleSend = async () => {
     const value = input.trim();
     if (!value) return;
+
+    if (guestMode) {
+      try {
+        consumeGuestAiRequest('mental-ai');
+      } catch (error) {
+        if (isGuestAiLimitError(error)) {
+          setMessages((prev) => [...prev, { role: 'ai', text: guestAiLimitMessage }]);
+          return;
+        }
+        throw error;
+      }
+    }
     setMessages((prev) => [...prev, { role: 'user', text: value }]);
     setInput('');
     setIsTyping(true);
@@ -306,7 +319,7 @@ const MentalPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isPort
                   </div>
                 </div>
               </div>
-              <div className="lg:col-span-5"><SoulAssistant onOpenFull={openSoulfulMode} publicMode={true} /></div>
+              <div className="lg:col-span-5"><SoulAssistant onOpenFull={openSoulfulMode} publicMode={true} guestMode={!user} /></div>
             </section>
 
             <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -395,7 +408,7 @@ const MentalPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isPort
                 <h1 className="text-4xl md:text-6xl font-black tracking-tight text-slate-950 leading-none">Каталог специалистов и душевный режим Takhet AI</h1>
                 <p className="text-slate-500 font-medium text-lg leading-relaxed">Выберите специалиста по вашему запросу или начните с душевного режима, если сначала хочется выговориться и собрать мысли.</p>
               </div>
-              <SoulAssistant onOpenFull={openSoulfulMode} publicMode={false} />
+              <SoulAssistant onOpenFull={openSoulfulMode} publicMode={false} guestMode={false} />
             </div>
 
             <div className="space-y-8">

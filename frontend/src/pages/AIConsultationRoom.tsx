@@ -13,6 +13,8 @@ import { advancedChatStream } from '../services/gemini';
 import { roleApi } from '../../services/roleApi';
 import { motion, AnimatePresence } from 'motion/react';
 import { FadeIn, FadeInStagger } from '../components/FadeIn';
+import { User } from '../types';
+import { consumeGuestAiRequest, guestAiLimitMessage, isGuestAiLimitError } from '../services/guestAiUsage';
 
 const DEFAULT_GEMINI_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
 
@@ -93,7 +95,7 @@ type ConsultationTranscriptEntry = {
   createdAt: string;
 };
 
-const AIConsultationRoom: React.FC = () => {
+const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [step, setStep] = useState<'payment' | 'consultation'>('payment');
@@ -1367,6 +1369,20 @@ const AIConsultationRoom: React.FC = () => {
                     });
                     streamRef.current = stream;
 
+                    if (!user) {
+                      try {
+                        consumeGuestAiRequest('ai-video');
+                      } catch (error) {
+                        stream.getTracks().forEach((track) => track.stop());
+                        streamRef.current = null;
+                        if (isGuestAiLimitError(error)) {
+                          setConnectionError(guestAiLimitMessage);
+                          return;
+                        }
+                        throw error;
+                      }
+                    }
+
                     sessionEndedRef.current = false;
                     setStep('consultation');
                   } catch (err) {
@@ -1378,6 +1394,7 @@ const AIConsultationRoom: React.FC = () => {
               >
                 {t('ai_consultation.payment.enterRoom')}
               </motion.button>
+              {connectionError ? <p className="mx-auto max-w-md text-sm font-semibold leading-relaxed text-red-300">{connectionError}</p> : null}
             </motion.div>
           )}
         </AnimatePresence>

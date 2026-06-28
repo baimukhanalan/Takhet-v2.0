@@ -91,7 +91,11 @@ export function shouldUseProModel(input: string, task: AiModelTask = 'chat') {
 }
 
 export function getModelCandidatesForTask(task: AiModelTask = 'chat', input = '') {
-  return shouldUseProModel(input, task) ? AI_PRO_MODEL_CANDIDATES : AI_MODEL_CANDIDATES;
+  if (proOnlyTasks.has(task)) return AI_PRO_MODEL_CANDIDATES;
+  if (shouldUseProModel(input, task)) {
+    return Array.from(new Set([FAST_MODEL, PRO_MODEL, FALLBACK_MODEL].filter(Boolean)));
+  }
+  return AI_MODEL_CANDIDATES;
 }
 
 function extractUserQuery(message: string) {

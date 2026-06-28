@@ -1,43 +1,50 @@
-# Takhet+ Hero Design QA
+# Takhet+ Mobile Hero and Interaction Design QA
 
-- Source visual truth: `/Users/alanbaimukhan/Desktop/Screenshot 2026-06-28 at 00.28.58.png`
-- Source implementation: `/Users/alanbaimukhan/Downloads/backgroundflow.zip`
-- Implementation screenshot: `/tmp/takhet-hero-reference-viewport.png`
-- Combined comparison: `/tmp/takhet-hero-comparison.png`
-- Viewport: `1710x1107`
-- State: Russian, landing route at scroll position 0
+- Source visual truth: `/Users/alanbaimukhan/Desktop/Screenshot 2026-06-28 at 02.02.43.png`
+- Implementation screenshot: `/tmp/takhet-mobile-after-384x899.png`
+- Combined comparison: `/tmp/takhet-mobile-comparison.png`
+- Viewport: `384x899` CSS pixels
+- State: Russian, public landing, first viewport
 
 ## Full-view comparison evidence
 
-The combined comparison shows the source and implementation at the same CSS viewport. Header placement, centered wordmark, description width, 820x80 search control, two-row action layout, white canvas field, and navy/cobalt/periwinkle palette align with the source. The canvas wave phase differs between captures because both backgrounds animate continuously.
+The combined before/after image confirms the requested proportional reduction. The mobile wordmark no longer dominates the viewport, the supporting text is shorter and denser, and the search/actions remain aligned with the animated canvas background. The page has no horizontal overflow.
 
 ## Focused region comparison evidence
 
-A separate crop was not required: at 1710x1107 the header labels, title, search controls, icons, and action labels are legible in the full-view comparison. Browser measurements additionally confirmed the 820x80 search geometry and the 100vh hero frame.
+The full mobile viewport is sufficiently legible for the changed region. Browser measurements confirmed a `58.5px` title, `13px` description, `320px` description width, `358px` search width at a `390px` viewport, and matching body/viewport widths.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: Manrope 400-800 is loaded; title uses the reference 172px cap, 0.88 line-height, tight tracking, text stroke, and corrected horizontal optical scale.
-- Spacing and layout rhythm: header, hero content, 34px/50px vertical gaps, search geometry, button rows, radii, and shadows match the supplied HTML.
-- Colors and visual tokens: platform tokens now use `#0E1F44`, `#1D4ED8`, `#7C8EE0`, `#5D6B86`, and `#E7EBF4`.
-- Image and asset fidelity: the hero has no raster assets; its nine animated lines are rendered by the supplied canvas algorithm and Lucide icons replace the source interface icons.
-- Copy and content: hero copy, search placeholder, action labels, and Russian navigation match the source state.
+- Fonts and typography: Manrope remains active; the mobile title now uses `clamp(44px, 15vw, 64px)` and supporting copy uses `13px/1.6`.
+- Spacing and layout rhythm: the title, description, search and action controls retain the existing centered flow and proportional gaps.
+- Colors and visual tokens: no palette drift; navy, cobalt and periwinkle remain unchanged.
+- Image and asset fidelity: the existing nine-line animated canvas remains full-bleed and responsive; no visual asset was replaced.
+- Copy and content: platform name, description and action labels are unchanged; the search placeholder now rotates through translated typed phrases.
+
+## Interaction evidence
+
+- Typed placeholder changed during the live browser check.
+- Card groups expose ordered delays of `0s`, `0.11s`, `0.22s`, `0.33s` and `0.44s`.
+- A click 10px outside the menu button was resolved by the 40px custom cursor footprint and opened the menu.
+- Academy renders inside the same motion shell with exactly one global custom cursor.
+- The fourth AI Browser guest request shows the three-request limit message.
+- An off-topic platform-coordinator question is rejected locally and redirected to Takhet+ features.
 
 ## Findings
 
-No actionable P0, P1, or P2 mismatches remain.
+No actionable P0, P1 or P2 visual mismatch remains.
 
 ## Patches made
 
-- Replaced the previous SVG wave with the nine-layer canvas flow from the supplied HTML.
-- Added cursor-local swell/lag, scroll-speed response, search micro-parallax, reduced-motion handling, and offscreen pause.
-- Rebuilt the responsive header with its scroll-driven glass capsule state.
-- Applied the hero palette and Manrope typography across platform tokens, logos, shell cursors, and dashboard charts.
-- Added a fingerprint contract proving the second landing section stayed unchanged.
-- Corrected the title's horizontal optical scale after the first side-by-side comparison.
+- Reduced mobile hero title and description proportionally.
+- Restored rotating typed search placeholders.
+- Repaired nested landing-card stagger behavior.
+- Removed the duplicate landing cursor and applied one expanded-hit-area cursor globally.
+- Preserved the previously protected second landing section content.
 
 ## Follow-up polish
 
-- P3: animated wave phases cannot be pixel-identical between independently timed screenshots; structure, amplitude model, colors, and interaction behavior match the supplied algorithm.
+- P3: the before/after wave positions differ because the canvas is continuously animated; line model, palette and responsive framing are unchanged.
 
 final result: passed

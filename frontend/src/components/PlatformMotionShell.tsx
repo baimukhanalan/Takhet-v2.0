@@ -10,12 +10,55 @@ type ParallaxValues = {
   y: number;
 };
 
+const INTERACTIVE_SELECTOR = 'a[href], button, input, textarea, select, summary, [role="button"], [tabindex]:not([tabindex="-1"])';
+const CURSOR_HIT_RADIUS = 20;
+
+const findExpandedInteractiveTarget = (clientX: number, clientY: number, root: HTMLElement) => {
+  const offsets = [
+    [0, 0],
+    [-CURSOR_HIT_RADIUS, 0],
+    [CURSOR_HIT_RADIUS, 0],
+    [0, -CURSOR_HIT_RADIUS],
+    [0, CURSOR_HIT_RADIUS],
+    [-14, -14],
+    [14, -14],
+    [-14, 14],
+    [14, 14]
+  ];
+  const candidates = new Set<HTMLElement>();
+
+  offsets.forEach(([offsetX, offsetY]) => {
+    document.elementsFromPoint(clientX + offsetX, clientY + offsetY).forEach((node) => {
+      const interactive = node.closest(INTERACTIVE_SELECTOR);
+      if (!(interactive instanceof HTMLElement) || !root.contains(interactive)) return;
+      if (interactive.matches(':disabled, [aria-disabled="true"]')) return;
+      candidates.add(interactive);
+    });
+  });
+
+  let nearest: HTMLElement | null = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  candidates.forEach((candidate) => {
+    const rect = candidate.getBoundingClientRect();
+    const distanceX = Math.max(rect.left - clientX, 0, clientX - rect.right);
+    const distanceY = Math.max(rect.top - clientY, 0, clientY - rect.bottom);
+    const distance = Math.hypot(distanceX, distanceY);
+    if (distance <= CURSOR_HIT_RADIUS && distance < nearestDistance) {
+      nearest = candidate;
+      nearestDistance = distance;
+    }
+  });
+
+  return nearest;
+};
+
 const createParallaxValues = (): ParallaxValues => ({ x: 0, y: 0 });
 
 const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, variant = 'portal' }) => {
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const activeTiltElementRef = useRef<HTMLElement | null>(null);
   const activeMagneticButtonRef = useRef<HTMLElement | null>(null);
+  const activeCursorTargetRef = useRef<HTMLElement | null>(null);
   const motionAllowedRef = useRef(false);
   const pointerFrameRef = useRef(0);
   const pendingPointerRef = useRef<{
@@ -58,6 +101,28 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
       finePointer.removeEventListener('change', syncMotionPreference);
       reducedMotion.removeEventListener('change', syncMotionPreference);
     };
+  }, []);
+
+  useEffect(() => {
+    const forwardExpandedCursorClick = (event: MouseEvent) => {
+      if (!motionAllowedRef.current || event.button !== 0) return;
+      const expandedTarget = activeCursorTargetRef.current;
+      const directTarget = event.target instanceof Element ? event.target.closest(INTERACTIVE_SELECTOR) : null;
+      if (!expandedTarget || directTarget === expandedTarget || expandedTarget.contains(event.target as Node)) return;
+
+      const rect = expandedTarget.getBoundingClientRect();
+      const distanceX = Math.max(rect.left - event.clientX, 0, event.clientX - rect.right);
+      const distanceY = Math.max(rect.top - event.clientY, 0, event.clientY - rect.bottom);
+      if (Math.hypot(distanceX, distanceY) > CURSOR_HIT_RADIUS) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      expandedTarget.focus({ preventScroll: true });
+      expandedTarget.click();
+    };
+
+    document.addEventListener('click', forwardExpandedCursorClick, true);
+    return () => document.removeEventListener('click', forwardExpandedCursorClick, true);
   }, []);
 
   const writeCursorPosition = (clientX: number, clientY: number, opacity: number) => {
@@ -171,6 +236,14 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
 
     const { clientX, clientY, root, target } = pointer;
     writeCursorPosition(clientX, clientY, 1);
+    const expandedTarget = findExpandedInteractiveTarget(clientX, clientY, root);
+    if (activeCursorTargetRef.current !== expandedTarget) {
+      activeCursorTargetRef.current?.closest('.group')?.classList.remove('takhet-cursor-hit-group');
+      activeCursorTargetRef.current?.classList.remove('takhet-cursor-hit');
+      expandedTarget?.classList.add('takhet-cursor-hit');
+      expandedTarget?.closest('.group')?.classList.add('takhet-cursor-hit-group');
+      activeCursorTargetRef.current = expandedTarget;
+    }
     updateTiltElement(target, root, clientX, clientY);
     updateMagneticButton(target, root, clientX, clientY);
 
@@ -208,8 +281,11 @@ const PlatformMotionShell: React.FC<PlatformMotionShellProps> = ({ children, var
     writeCursorPosition(event.clientX, event.clientY, 0);
     resetTiltElement(activeTiltElementRef.current);
     resetMagneticButton(activeMagneticButtonRef.current);
+    activeCursorTargetRef.current?.closest('.group')?.classList.remove('takhet-cursor-hit-group');
+    activeCursorTargetRef.current?.classList.remove('takhet-cursor-hit');
     activeTiltElementRef.current = null;
     activeMagneticButtonRef.current = null;
+    activeCursorTargetRef.current = null;
     if (variant === 'rich') {
       setParallaxTarget(event.currentTarget, createParallaxValues());
     }

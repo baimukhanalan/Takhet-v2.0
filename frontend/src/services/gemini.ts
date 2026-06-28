@@ -29,6 +29,70 @@ type HealthInsightStreamOptions = {
   onDelta?: (delta: string, fullText: string) => void;
 };
 
+const AI_FIRST_RESPONSE_TIMEOUT_MS = 12000;
+const AI_STREAM_IDLE_TIMEOUT_MS = 12000;
+const AI_STREAM_TOTAL_TIMEOUT_MS = 50000;
+
+const readAiTextStream = async (
+  body: Record<string, unknown>,
+  onDelta?: (delta: string, fullText: string) => void
+) => {
+  const controller = new AbortController();
+  let firstResponseTimer = window.setTimeout(() => controller.abort(), AI_FIRST_RESPONSE_TIMEOUT_MS);
+  let idleTimer = 0;
+  const totalTimer = window.setTimeout(() => controller.abort(), AI_STREAM_TOTAL_TIMEOUT_MS);
+  let fullText = '';
+
+  const resetIdleTimer = () => {
+    window.clearTimeout(idleTimer);
+    idleTimer = window.setTimeout(() => controller.abort(), AI_STREAM_IDLE_TIMEOUT_MS);
+  };
+
+  try {
+    const response = await fetch('/api/ai/chat-stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    window.clearTimeout(firstResponseTimer);
+    firstResponseTimer = 0;
+
+    if (!response.ok) {
+      const raw = await response.text();
+      throw new Error(`AI ${response.status}: ${raw}`);
+    }
+    if (!response.body) throw new Error('AI_STREAM_UNAVAILABLE');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    resetIdleTimer();
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      resetIdleTimer();
+      const delta = decoder.decode(value, { stream: true });
+      if (!delta) continue;
+      fullText += delta;
+      onDelta?.(delta, fullText);
+    }
+
+    const tail = decoder.decode();
+    if (tail) {
+      fullText += tail;
+      onDelta?.(tail, fullText);
+    }
+    return fullText;
+  } catch (error) {
+    throw error;
+  } finally {
+    window.clearTimeout(firstResponseTimer);
+    window.clearTimeout(idleTimer);
+    window.clearTimeout(totalTimer);
+  }
+};
+
 const medicalQueryPattern =
   /(боль|температур|каш|горл|насморк|давлен|сердц|груд|одыш|тошнот|рвот|понос|диаре|живот|голов|мигрен|сып|кров|травм|перелом|симптом|анализ|лекар|таблет|препарат|дозиров|врач|диагноз|лечени|здоров|пульс|сахар|инсульт|инфаркт|аллерг|беремен|ребен|ребён|сустав|спин|почек|печен|печён|желуд|вирус|инфекц|грипп|ковид|covid|пневмони|астм|неврол|хирург|лор|терапевт|кардиолог|эндокрин|дерматолог|психолог|психотерап|психосомат|tuberculosis|\btb\b|symptom|diagnosis|treatment|doctor|medicine|analysis|lab result)/i;
 
@@ -299,45 +363,21 @@ export async function getHealthInsightsFast(query: string, options: HealthInsigh
   ].join('\n');
 
   try {
-    const response = await fetch('/api/ai/chat-stream', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    const fullText = await readAiTextStream(
+      {
         message: `AI Browser query: ${query}`,
         systemInstruction,
         useSearch: isFreshBrowserQuery(query)
-      })
-    });
-
-    if (!response.ok || !response.body) {
-      return getHealthInsights(query);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let fullText = '';
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      const delta = decoder.decode(value, { stream: true });
-      if (!delta) continue;
-      fullText += delta;
-      options.onDelta?.(delta, fullText);
-    }
-
-    const tail = decoder.decode();
-    if (tail) {
-      fullText += tail;
-      options.onDelta?.(tail, fullText);
-    }
+      },
+      options.onDelta
+    );
 
     return buildHealthInsightFromStreamText(query, fullText);
   } catch (error) {
     console.error('Fast Health Insights Stream Error:', error);
-    return getHealthInsights(query);
+    const fallback = buildLocalFallback(`AI Browser query: ${query}`);
+    options.onDelta?.(fallback, fallback);
+    return buildHealthInsightFromStreamText(query, fallback);
   }
 }
 
@@ -391,50 +431,16 @@ export async function advancedChatStream(
   config: { systemInstruction?: string; useSearch?: boolean; onDelta?: (delta: string, fullText: string) => void }
 ) {
   try {
-    const response = await fetch('/api/ai/chat-stream', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    const fullText = await readAiTextStream({
         message,
         systemInstruction: config.systemInstruction,
         useSearch: config.useSearch
-      })
-    });
-
-    if (!response.ok) {
-      const raw = await response.text();
-      throw new Error(`AI ${response.status}: ${raw}`);
-    }
-
-    if (!response.body) {
-      return advancedChat(message, config);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let fullText = '';
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      const delta = decoder.decode(value, { stream: true });
-      if (!delta) continue;
-      fullText += delta;
-      config.onDelta?.(delta, fullText);
-    }
-
-    const tail = decoder.decode();
-    if (tail) {
-      fullText += tail;
-      config.onDelta?.(tail, fullText);
-    }
+      }, config.onDelta);
 
     return fullText || buildLocalFallback(message);
   } catch (error) {
     console.error('Advanced Chat Stream Error:', error);
-    const fallback = await advancedChat(message, config);
+    const fallback = buildLocalFallback(message);
     config.onDelta?.(fallback, fallback);
     return fallback;
   }
