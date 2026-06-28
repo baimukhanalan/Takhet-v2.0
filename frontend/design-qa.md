@@ -1,40 +1,47 @@
-# Takhet+ Journey Alignment Design QA
+# Takhet+ Journey Media Design QA
 
-- Source visual truth: `/Users/alanbaimukhan/Desktop/Screenshot 2026-06-28 at 11.37.00.png`
-- Implementation screenshot: `/tmp/takhet-journey-centered-stage1.jpg`
-- Combined comparison: `/tmp/takhet-journey-alignment-comparison.jpg`
-- Viewport/state: desktop Chrome, public landing, journey stage 01
+- Source visual truth:
+  - `/Users/alanbaimukhan/Downloads/ChatGPT Image 28 июн. 2026 г., 22_00_11.png` -> stage 01
+  - `/Users/alanbaimukhan/Downloads/ChatGPT Image 28 июн. 2026 г., 21_59_59.png` -> stage 02
+  - `/Users/alanbaimukhan/Downloads/ChatGPT Image 28 июн. 2026 г., 21_59_52.png` -> stage 03
+  - `/Users/alanbaimukhan/Downloads/ChatGPT Image 28 июн. 2026 г., 22_00_05.png` -> stage 04
+  - `/Users/alanbaimukhan/Downloads/Screen_Recording_2026-06-28_at_185231_202606282159.mp4` -> stage 05
+- Implementation screenshot: `/tmp/takhet-journey-media-stage-4.jpg`
+- Combined comparison: `/tmp/takhet-journey-media-comparison.jpg`
+- Viewport/state: desktop Chrome, public landing, journey stages 01-05
 
 ## Full-view comparison evidence
 
-The source shows the left article visually below the right `01-05` rail. In the implementation, the actual rendered article and the rail share the same viewport midpoint. The comparison was normalized to a common display height because the source and current Chrome window use slightly different pixel dimensions.
+All four source photos were checked in their assigned stage. Each source fills the pinned viewport with `object-fit: cover`, keeps its central product/device subject visible, and transitions without exposing the navy base between stages.
 
 ## Focused region comparison evidence
 
-The full journey viewport keeps both columns legible enough to judge the requested alignment. Separate Chrome checks on stages 04 and 05 confirmed that variable-height copy remains centered by its own rendered height rather than by a fixed wrapper.
+The stage 04 source and implementation were normalized side by side. The phone remains the dominant center subject while the left article and right stage rail stay readable over the solid navy overlay. No asset substitution, distortion, or incorrect mapping is visible.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: unchanged Manrope hierarchy, wrapping and weights.
-- Spacing and layout rhythm: left article midpoint now matches the right rail midpoint on desktop.
-- Colors and visual tokens: unchanged navy, white and periwinkle tokens.
-- Image quality and assets: media slots remain empty by owner request; no asset was added or replaced.
+- Fonts and typography: existing Manrope hierarchy, wrapping and centered column geometry are unchanged.
+- Spacing and layout rhythm: media is isolated behind the existing frame; no foreground position changed.
+- Colors and visual tokens: a solid `rgba(4, 14, 36, 0.62)` overlay preserves the navy system and text contrast without hiding the supplied media.
+- Image quality and asset fidelity: all supplied photos were converted losslessly in dimensions to quality-86 WebP; combined image size is about 243 KB. The original H.264 MP4 is preserved.
 - Copy and content: all five stage texts and subsection lists are unchanged.
 
 ## Interaction evidence
 
-- The sticky scene is now `900svh`, yielding roughly `200svh` of scroll travel between adjacent stages.
-- Stage rail buttons still navigate directly to all five positions.
-- Mobile keeps its existing top-flow layout and does not inherit desktop centering transforms.
+- Stage buttons 01-05 were exercised in Chrome and each displayed the requested source.
+- The stage 05 video produced different frames one second apart, confirming playback.
+- Video playback starts only on stage 05 and pauses after leaving the stage.
+- The video is muted, loops, uses inline playback and preloads metadata only.
 
 ## Findings
 
-No actionable P0, P1 or P2 visual mismatch remains for the requested alignment and scroll-duration change.
+No actionable P0, P1 or P2 visual, mapping, readability or interaction issue remains.
 
 ## Patches made
 
-- Centered each desktop stage by its actual rendered height with `translate3d(0, -50%, 0)`.
-- Increased the sticky story from `500svh` to `900svh`.
-- Added contract coverage for the shared center and long stage interval.
+- Added four optimized WebP backgrounds and one MP4 background.
+- Added cross-fade and subtle media scale settling.
+- Added solid navy readability overlay.
+- Added active-stage video play/pause lifecycle and contract coverage.
 
 final result: passed

@@ -7,6 +7,7 @@ type JourneyStage = {
   description: string;
   items: string[];
   mediaKind: 'image' | 'video';
+  mediaSrc: string;
 };
 
 const JOURNEY_STAGES: JourneyStage[] = [
@@ -17,7 +18,8 @@ const JOURNEY_STAGES: JourneyStage[] = [
     description:
       'Опишите симптомы, задайте вопрос или загрузите медицинские документы. Takhet+ становится отправной точкой вашего обращения.',
     items: ['Описание жалоб', 'Голосовой ввод', 'Загрузка документов', 'Фото анализов'],
-    mediaKind: 'image'
+    mediaKind: 'image',
+    mediaSrc: '/media/journey/stage-01-tablet.webp'
   },
   {
     number: '02',
@@ -26,7 +28,8 @@ const JOURNEY_STAGES: JourneyStage[] = [
     description:
       'Добавьте анализы, снимки, заключения, назначения и другие документы. История больше не теряется между клиниками.',
     items: ['Анализы', 'Заключения', 'Рецепты', 'Медицинские изображения'],
-    mediaKind: 'image'
+    mediaKind: 'image',
+    mediaSrc: '/media/journey/stage-02-ai-mobile.webp'
   },
   {
     number: '03',
@@ -35,7 +38,8 @@ const JOURNEY_STAGES: JourneyStage[] = [
     description:
       'Takhet AI анализирует предоставленную информацию, объясняет результаты исследований и помогает подготовиться к консультации.',
     items: ['Разбор анализов', 'Объяснение документов', 'Подготовка вопросов врачу', 'Подбор специалиста'],
-    mediaKind: 'image'
+    mediaKind: 'image',
+    mediaSrc: '/media/journey/stage-03-doctor-search.webp'
   },
   {
     number: '04',
@@ -44,7 +48,8 @@ const JOURNEY_STAGES: JourneyStage[] = [
     description:
       'Выберите онлайн-консультацию или очный прием. Врач получает уже подготовленный контекст и медицинскую историю.',
     items: ['Онлайн-консультация', 'Запись в клинику', 'Второе мнение', 'Медицинский чат'],
-    mediaKind: 'image'
+    mediaKind: 'image',
+    mediaSrc: '/media/journey/stage-04-mobile-menu.webp'
   },
   {
     number: '05',
@@ -53,12 +58,14 @@ const JOURNEY_STAGES: JourneyStage[] = [
     description:
       'Все документы, консультации, анализы и рекомендации автоматически сохраняются. При следующем обращении не нужно начинать заново.',
     items: ['Медицинский архив', 'История обращений', 'Динамика анализов', 'Единый профиль здоровья'],
-    mediaKind: 'video'
+    mediaKind: 'video',
+    mediaSrc: '/media/journey/stage-05-continuity.mp4'
   }
 ];
 
 const TakhetJourneyScroll: React.FC = () => {
   const sectionRef = useRef<HTMLElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const scrollFrameRef = useRef(0);
   const reducedMotionRef = useRef(false);
   const [activeStage, setActiveStage] = useState(0);
@@ -104,6 +111,16 @@ const TakhetJourneyScroll: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (activeStage === JOURNEY_STAGES.length - 1 && !reducedMotionRef.current) {
+      const playAttempt = videoRef.current?.play();
+      void playAttempt?.catch(() => undefined);
+      return;
+    }
+
+    videoRef.current?.pause();
+  }, [activeStage]);
+
   const scrollToStage = (stageIndex: number) => {
     const section = sectionRef.current;
     if (!section) return;
@@ -127,7 +144,25 @@ const TakhetJourneyScroll: React.FC = () => {
               className={`takhet-journey__media ${activeStage === index ? 'is-active' : ''}`}
               data-media-kind={stage.mediaKind}
               data-media-slot={`journey-${stage.number}`}
-            />
+            >
+              {stage.mediaKind === 'image' ? (
+                <img
+                  src={stage.mediaSrc}
+                  alt=""
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={stage.mediaSrc}
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                />
+              )}
+            </div>
           ))}
         </div>
 
