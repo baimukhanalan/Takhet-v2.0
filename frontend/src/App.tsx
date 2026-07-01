@@ -4,6 +4,7 @@ import { Suspense, lazy } from 'react';
 import { User, UserRole } from './types';
 import { api } from '../services/api';
 import { roleApi } from '../services/roleApi';
+import RouteScrollManager from './components/RouteScrollManager';
 
 const Sidebar = lazy(() => import('./components/Sidebar'));
 const Header = lazy(() => import('./components/Header'));
@@ -228,7 +229,7 @@ const AppShell: React.FC<{ user: User | null; onLogout: () => void; children: Re
         <Suspense fallback={null}>
           <Header user={user} />
         </Suspense>
-        <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6 xl:p-10">{children}</main>
+        <main data-route-scroll-container className="flex-1 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6 xl:p-10">{children}</main>
           </div>
       </div>
       </PlatformMotionShell>
@@ -433,6 +434,7 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => (
   <BrowserRouter>
+    <RouteScrollManager />
     <AppRoutes />
   </BrowserRouter>
 );
