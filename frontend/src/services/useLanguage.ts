@@ -30,7 +30,7 @@ const createTranslator = (language: Language): Translator => {
 
     if (!replacements) return text;
     return Object.entries(replacements).reduce(
-      (result, [key, replacement]) => result.replaceAll(`{${key}}`, String(replacement)),
+      (result, [key, replacement]) => result.split(`{${key}}`).join(String(replacement)),
       text
     );
   };

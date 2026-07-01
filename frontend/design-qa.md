@@ -85,3 +85,12 @@ final result: passed
 - Mobile keeps native horizontal snap and disables the five-screen sticky height.
 
 correction result: passed
+
+## 2026-07-01 Yandex Browser compatibility
+
+- Added legacy `vh` before every modern `svh` height used by landing scroll scenes.
+- Production JavaScript now targets ES2019 and Chromium 87+ explicitly.
+- Removed two unsupported newer built-in method calls.
+- Landing hero and journey rendered normally after the compatibility build with no console errors.
+
+compatibility result: passed

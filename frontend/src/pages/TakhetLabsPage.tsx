@@ -592,7 +592,7 @@ const PatientLabsModule: React.FC<{ user?: User }> = ({ user }) => {
       <Section title="Trends & Analytics" icon={TrendingUp}>
         <div className="grid gap-4 md:grid-cols-3">
           {[
-            ['Biomarker evolution', biomarkers.slice(0, 4).map((item) => item.trend.at(-1) || 70)],
+            ['Biomarker evolution', biomarkers.slice(0, 4).map((item) => item.trend[item.trend.length - 1] || 70)],
             ['Biological Age changes', [36, 35, 33, dashboard.biologicalAge]],
             ['Improvement tracking', [72, 76, 81, dashboard.healthScore]]
           ].map(([title, points]) => (

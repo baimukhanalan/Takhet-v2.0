@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
+      target: ['es2019', 'chrome87', 'edge88', 'firefox78', 'safari14'],
       rollupOptions: {
         output: {
           manualChunks(id) {
