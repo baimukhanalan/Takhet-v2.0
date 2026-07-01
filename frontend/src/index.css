@@ -533,7 +533,48 @@
   stroke-width: 2;
 }
 
-@media (max-width: 1535px) {
+@media (min-width: 1200px) and (max-width: 1535px) {
+  .takhet-flow-header__bar {
+    gap: 12px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .takhet-flow-header__logo {
+    font-size: 22px;
+  }
+
+  .takhet-flow-header__nav {
+    gap: 10px;
+  }
+
+  .takhet-flow-header__nav a {
+    font-size: 10px;
+    letter-spacing: 0.35px;
+  }
+
+  .takhet-flow-header__actions,
+  .takhet-flow-header__auth-actions {
+    gap: 10px;
+  }
+
+  .takhet-flow-header__language {
+    gap: 5px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .takhet-flow-header__auth-actions > button {
+    font-size: 10px;
+    letter-spacing: 0.35px;
+  }
+
+  .takhet-flow-header__auth-actions > .takhet-flow-header__register {
+    padding: 13px 18px;
+  }
+}
+
+@media (max-width: 1199px) {
   .takhet-flow-header__nav {
     display: none;
   }
