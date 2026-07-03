@@ -32,8 +32,13 @@ assert(journey.includes("mediaSrc: '/media/journey/stage-05-continuity.mp4'"), '
 assert(journey.includes('<img'), 'Journey image stages must render real supplied images');
 assert(journey.includes('<video'), 'Journey final stage must render the supplied video');
 assert(!journey.includes('                  loop'), 'Final background video must stop on its last frame instead of looping');
-assert(journey.includes('videoRef.current?.play()'), 'Final background video must play only when its stage is active');
+assert(journey.includes('video.play()'), 'Final background video must play only when its stage is active');
 assert(journey.includes('videoRef.current?.pause()'), 'Final background video must pause outside its stage');
+assert(journey.includes('preload="auto"'), 'Final background video must preload before its stage becomes active');
+assert(journey.includes('onCanPlay'), 'Final background video must retry playback when the media becomes ready');
+assert(journey.includes('videoPlaybackBlocked'), 'Final background video must expose a recovery control when autoplay is blocked');
+assert(journey.includes('takhet-journey__reduced-video'), 'Reduced-motion users must retain an explicit video control');
+assert(journey.includes('reducedMotionEnabled ? undefined'), 'Reduced-motion stages must remain available to assistive navigation');
 assert(journey.includes("window.addEventListener('scroll'"), 'Journey must react to document scroll');
 assert(journey.includes('requestAnimationFrame(updateFromScroll)'), 'Journey scroll work must be frame-batched');
 assert(journey.includes('scrollToStage'), 'Journey stage rail must navigate to each scroll stage');
@@ -49,5 +54,7 @@ assert(landing.includes('overflow-x-clip'), 'Landing shell must not create a scr
 assert(css.includes('.takhet-journey__media'), 'Journey must reserve an empty future media layer');
 assert(css.includes('object-fit: cover'), 'Journey media must cover the full pinned viewport');
 assert(css.includes('background: rgba(4, 14, 36, 0.62)'), 'Journey media must retain a readable solid navy overlay');
+assert(css.includes('.takhet-journey__video-play'), 'Journey must style the blocked-autoplay recovery control');
+assert(css.includes('.takhet-journey__reduced-video'), 'Journey must style the reduced-motion video fallback');
 
 console.log('Landing five-stage scroll journey contract passed');

@@ -744,6 +744,30 @@
   transform: scale(1);
 }
 
+.takhet-journey__reduced-video {
+  display: none;
+}
+
+.takhet-journey__video-play {
+  position: absolute;
+  right: clamp(28px, 4.4vw, 84px);
+  bottom: clamp(30px, 5vh, 56px);
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #2455df;
+  box-shadow: 0 14px 36px rgba(1, 8, 24, 0.28);
+}
+
+.takhet-journey__video-play svg {
+  width: 22px;
+  height: 22px;
+}
+
 .takhet-journey__frame {
   position: relative;
   z-index: 2;
@@ -1584,6 +1608,14 @@
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .takhet-journey__reduced-video {
+    display: block;
+    width: min(720px, 100%);
+    margin-top: 28px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
   }
 
   .takhet-journey__rail,

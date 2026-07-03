@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Play } from 'lucide-react';
 
 type JourneyStage = {
   number: string;
@@ -69,10 +70,24 @@ const TakhetJourneyScroll: React.FC = () => {
   const scrollFrameRef = useRef(0);
   const reducedMotionRef = useRef(false);
   const [activeStage, setActiveStage] = useState(0);
+  const [reducedMotionEnabled, setReducedMotionEnabled] = useState(false);
+  const [videoPlaybackBlocked, setVideoPlaybackBlocked] = useState(false);
+
+  const playJourneyVideo = useCallback((restart = false) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (restart || video.ended) video.currentTime = 0;
+    const playAttempt = video.play();
+    void playAttempt
+      .then(() => setVideoPlaybackBlocked(false))
+      .catch(() => setVideoPlaybackBlocked(true));
+  }, []);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     reducedMotionRef.current = reducedMotion.matches;
+    setReducedMotionEnabled(reducedMotion.matches);
 
     const updateFromScroll = () => {
       scrollFrameRef.current = 0;
@@ -95,6 +110,7 @@ const TakhetJourneyScroll: React.FC = () => {
 
     const syncReducedMotion = () => {
       reducedMotionRef.current = reducedMotion.matches;
+      setReducedMotionEnabled(reducedMotion.matches);
       scheduleScrollUpdate();
     };
 
@@ -112,14 +128,14 @@ const TakhetJourneyScroll: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (activeStage === JOURNEY_STAGES.length - 1 && !reducedMotionRef.current) {
-      const playAttempt = videoRef.current?.play();
-      void playAttempt?.catch(() => undefined);
+    if (activeStage === JOURNEY_STAGES.length - 1) {
+      playJourneyVideo(true);
       return;
     }
 
     videoRef.current?.pause();
-  }, [activeStage]);
+    setVideoPlaybackBlocked(false);
+  }, [activeStage, playJourneyVideo]);
 
   const scrollToStage = (stageIndex: number) => {
     const section = sectionRef.current;
@@ -158,7 +174,13 @@ const TakhetJourneyScroll: React.FC = () => {
                   src={stage.mediaSrc}
                   muted
                   playsInline
-                  preload="metadata"
+                  preload="auto"
+                  onCanPlay={() => {
+                    if (activeStage === JOURNEY_STAGES.length - 1 && videoRef.current?.paused) {
+                      playJourneyVideo();
+                    }
+                  }}
+                  onError={() => setVideoPlaybackBlocked(true)}
                 />
               )}
             </div>
@@ -175,7 +197,7 @@ const TakhetJourneyScroll: React.FC = () => {
               <article
                 key={stage.number}
                 className={`takhet-journey__stage ${activeStage === index ? 'is-active' : ''}`}
-                aria-hidden={activeStage !== index}
+                aria-hidden={reducedMotionEnabled ? undefined : activeStage !== index}
               >
                 <p className="takhet-journey__number">{stage.number}</p>
                 <h3 className="takhet-journey__title">{stage.title}</h3>
@@ -188,6 +210,17 @@ const TakhetJourneyScroll: React.FC = () => {
                     </li>
                   ))}
                 </ul>
+                {stage.mediaKind === 'video' && (
+                  <video
+                    className="takhet-journey__reduced-video"
+                    src={stage.mediaSrc}
+                    muted
+                    playsInline
+                    controls
+                    preload="metadata"
+                    aria-label="Видео о непрерывной истории здоровья"
+                  />
+                )}
               </article>
             ))}
           </div>
@@ -212,6 +245,18 @@ const TakhetJourneyScroll: React.FC = () => {
             <span>/</span>
             <span>{String(JOURNEY_STAGES.length).padStart(2, '0')}</span>
           </p>
+
+          {activeStage === JOURNEY_STAGES.length - 1 && videoPlaybackBlocked && (
+            <button
+              type="button"
+              className="takhet-journey__video-play"
+              onClick={() => playJourneyVideo(videoRef.current?.ended ?? false)}
+              aria-label="Запустить видео"
+              title="Запустить видео"
+            >
+              <Play aria-hidden="true" fill="currentColor" />
+            </button>
+          )}
         </div>
       </div>
     </section>
