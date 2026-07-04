@@ -44,6 +44,23 @@ for (const requiredRule of [
   assert.ok(service.includes(requiredRule), `Academy import pipeline must enforce ${requiredRule}`);
 }
 
+for (const longFormRule of [
+  'article_length_out_of_range',
+  'article_character_count_mismatch',
+  'authoritative_sources_required',
+  'medical_qa_not_approved',
+  'medical_qa_artifact_required'
+]) {
+  assert.ok(service.includes(longFormRule), `Academy import pipeline must enforce ${longFormRule}`);
+}
+
+assert.ok(controller.includes('@Min(7000)'), 'Academy imports must reject articles shorter than 7000 characters');
+assert.ok(controller.includes('@Max(10000)'), 'Academy imports must reject articles longer than 10000 characters');
+assert.ok(controller.includes('characterCount'), 'Academy imports must require characterCount');
+assert.ok(controller.includes('medicalQaStatus'), 'Academy imports must require Medical QA status');
+assert.ok(controller.includes('medicalQaArtifact'), 'Academy imports must require a Medical QA artifact');
+assert.ok(controller.includes('sourceUrls'), 'Academy imports must require authoritative source URLs');
+
 assert.ok(service.includes("status = 'published'"), 'Public Academy queries must continue to expose only published articles');
 assert.ok(service.includes('academy_article_versions'), 'Approved imports must preserve article versions');
 assert.ok(service.includes('academy_article_seo'), 'Approved imports must persist SEO metadata');

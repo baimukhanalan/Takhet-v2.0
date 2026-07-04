@@ -18,6 +18,10 @@ export type AcademyImportPayload = {
   title: string;
   summary: string;
   body: string;
+  characterCount?: number;
+  medicalQaStatus?: 'APPROVED' | 'REQUIRED_CHANGES' | 'REJECTED';
+  medicalQaArtifact?: string;
+  sourceUrls?: string[];
   tags?: string[];
   readMinutes?: number;
   status?: 'draft' | 'review';
@@ -29,6 +33,9 @@ export type AcademyImportPayload = {
   seoDescription?: string;
   canonicalUrl?: string;
 };
+
+const MIN_ARTICLE_CHARACTER_COUNT = 7000;
+const MAX_ARTICLE_CHARACTER_COUNT = 10000;
 
 const categorySeeds = [
   {
@@ -206,7 +213,8 @@ export class AcademyService {
     await this.ensureReady();
 
     const rows = await this.dataSource.query(
-      `SELECT a.id, a.slug, a.title, a.summary, a.body, a.read_minutes AS "readMinutes",
+      `SELECT a.id, a.slug, a.title, a.summary, a.body, a.character_count AS "characterCount",
+              a.read_minutes AS "readMinutes",
               a.views, a.review_status AS "reviewStatus", a.published_at AS "publishedAt",
               c.slug AS "categorySlug", c.title AS "categoryTitle"
        FROM academy_articles a
@@ -258,12 +266,16 @@ export class AcademyService {
 
     const rows = await this.dataSource.query(
       `INSERT INTO academy_article_imports (
-         slug, category_slug, title, summary, body, tags, read_minutes, status,
+         slug, category_slug, title, summary, body, character_count, medical_qa_status, medical_qa_artifact,
+         source_urls, tags, read_minutes, status,
          source_file, source_tool, automation_run_id, created_by,
          seo_title, seo_description, canonical_url, medical_review_required
        )
-       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12, $13, $14, $15, true)
-       RETURNING id, slug, category_slug AS "categorySlug", title, summary, body, tags, read_minutes AS "readMinutes",
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16, $17, $18, $19, true)
+       RETURNING id, slug, category_slug AS "categorySlug", title, summary, body,
+         character_count AS "characterCount", medical_qa_status AS "medicalQaStatus",
+         medical_qa_artifact AS "medicalQaArtifact", source_urls AS "sourceUrls",
+         tags, read_minutes AS "readMinutes",
          status, source_file AS "sourceFile", source_tool AS "sourceTool", automation_run_id AS "automationRunId",
          created_by AS "createdBy", seo_title AS "seoTitle", seo_description AS "seoDescription",
          canonical_url AS "canonicalUrl", medical_review_required AS "medicalReviewRequired",
@@ -274,6 +286,10 @@ export class AcademyService {
         normalized.title,
         normalized.summary,
         normalized.body,
+        normalized.characterCount,
+        normalized.medicalQaStatus,
+        normalized.medicalQaArtifact,
+        JSON.stringify(normalized.sourceUrls),
         JSON.stringify(normalized.tags),
         normalized.readMinutes,
         normalized.status || 'draft',
@@ -314,7 +330,9 @@ export class AcademyService {
 
     const rows = await this.dataSource.query(
       `SELECT i.id, i.slug, i.category_slug AS "categorySlug", i.title, i.summary, i.tags,
-              i.read_minutes AS "readMinutes", i.status, i.source_file AS "sourceFile",
+              i.read_minutes AS "readMinutes", i.status, i.character_count AS "characterCount",
+              i.medical_qa_status AS "medicalQaStatus", i.medical_qa_artifact AS "medicalQaArtifact",
+              i.source_urls AS "sourceUrls", i.source_file AS "sourceFile",
               i.source_tool AS "sourceTool", i.automation_run_id AS "automationRunId",
               i.created_by AS "createdBy", i.medical_review_required AS "medicalReviewRequired",
               i.rejected_reason AS "rejectedReason", i.created_at AS "createdAt", i.updated_at AS "updatedAt"
@@ -335,6 +353,13 @@ export class AcademyService {
     if (!['draft', 'review'].includes(draft.status)) {
       throw new BadRequestException('Only draft or review imports can be approved');
     }
+    if (draft.medicalQaStatus !== 'APPROVED') {
+      throw new BadRequestException('medical_qa_not_approved');
+    }
+    if (!draft.medicalQaArtifact) {
+      throw new BadRequestException('medical_qa_artifact_required');
+    }
+    this.assertApprovedLongForm(draft);
 
     const existing = await this.dataSource.query(`SELECT id FROM academy_articles WHERE slug = $1 LIMIT 1`, [draft.slug]);
     if (existing[0]) {
@@ -342,10 +367,10 @@ export class AcademyService {
     }
 
     const articleRows = await this.dataSource.query(
-      `INSERT INTO academy_articles (slug, category_slug, title, summary, body, read_minutes, status, review_status, is_featured)
-       VALUES ($1, $2, $3, $4, $5, $6, 'published', 'medically_reviewed', false)
+      `INSERT INTO academy_articles (slug, category_slug, title, summary, body, character_count, read_minutes, status, review_status, is_featured)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'published', 'medically_reviewed', false)
        RETURNING id, slug, title`,
-      [draft.slug, draft.categorySlug, draft.title, draft.summary, draft.body, draft.readMinutes]
+      [draft.slug, draft.categorySlug, draft.title, draft.summary, draft.body, draft.characterCount, draft.readMinutes]
     );
     const article = articleRows[0];
 
@@ -399,7 +424,8 @@ export class AcademyService {
 
   private async articleListQuery(where: string, params: any[], limit: number, order = 'a.is_featured DESC, a.published_at DESC') {
     return this.dataSource.query(
-      `SELECT a.slug, a.title, a.summary, a.read_minutes AS "readMinutes",
+      `SELECT a.slug, a.title, a.summary, a.character_count AS "characterCount",
+              a.read_minutes AS "readMinutes",
               a.views, a.review_status AS "reviewStatus", a.published_at AS "publishedAt",
               c.slug AS "categorySlug", c.title AS "categoryTitle"
        FROM academy_articles a
@@ -418,6 +444,12 @@ export class AcademyService {
       title: (dto.title || '').trim(),
       summary: (dto.summary || '').trim(),
       body: (dto.body || '').trim(),
+      characterCount: Number(dto.characterCount || 0),
+      medicalQaStatus: dto.medicalQaStatus || 'REJECTED',
+      medicalQaArtifact: (dto.medicalQaArtifact || '').trim(),
+      sourceUrls: Array.isArray(dto.sourceUrls)
+        ? dto.sourceUrls.map((url) => String(url).trim()).filter(Boolean).slice(0, 12)
+        : [],
       tags: Array.isArray(dto.tags) ? dto.tags.map((tag) => String(tag).trim()).filter(Boolean).slice(0, 12) : [],
       readMinutes: Math.max(1, Math.min(60, Number(dto.readMinutes || 4))),
       status: dto.status === 'review' ? 'review' : 'draft',
@@ -440,6 +472,9 @@ export class AcademyService {
     }
     if (!dto.automationRunId) {
       throw new BadRequestException('automation_run_id_required');
+    }
+    if (dto.medicalQaStatus === 'APPROVED') {
+      this.assertApprovedLongForm(dto);
     }
 
     const category = await this.dataSource.query(`SELECT slug FROM academy_categories WHERE slug = $1 LIMIT 1`, [dto.categorySlug]);
@@ -486,6 +521,8 @@ export class AcademyService {
   private async getImportById(id: string) {
     const rows = await this.dataSource.query(
       `SELECT id, slug, category_slug AS "categorySlug", title, summary, body, tags,
+              character_count AS "characterCount", medical_qa_status AS "medicalQaStatus",
+              medical_qa_artifact AS "medicalQaArtifact", source_urls AS "sourceUrls",
               read_minutes AS "readMinutes", status, seo_title AS "seoTitle",
               seo_description AS "seoDescription", canonical_url AS "canonicalUrl"
        FROM academy_article_imports
@@ -548,6 +585,7 @@ export class AcademyService {
         title TEXT NOT NULL,
         summary TEXT NOT NULL,
         body TEXT NOT NULL,
+        character_count INT,
         read_minutes INT NOT NULL DEFAULT 4,
         status TEXT NOT NULL DEFAULT 'published',
         review_status TEXT NOT NULL DEFAULT 'medically_reviewed',
@@ -599,6 +637,10 @@ export class AcademyService {
         title TEXT NOT NULL,
         summary TEXT NOT NULL,
         body TEXT NOT NULL,
+        character_count INT,
+        medical_qa_status TEXT NOT NULL DEFAULT 'REJECTED',
+        medical_qa_artifact TEXT,
+        source_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
         tags JSONB NOT NULL DEFAULT '[]'::jsonb,
         read_minutes INT NOT NULL DEFAULT 4,
         status TEXT NOT NULL DEFAULT 'draft',
@@ -617,6 +659,11 @@ export class AcademyService {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )
     `);
+    await this.dataSource.query(`ALTER TABLE academy_articles ADD COLUMN IF NOT EXISTS character_count INT`);
+    await this.dataSource.query(`ALTER TABLE academy_article_imports ADD COLUMN IF NOT EXISTS character_count INT`);
+    await this.dataSource.query(`ALTER TABLE academy_article_imports ADD COLUMN IF NOT EXISTS medical_qa_status TEXT NOT NULL DEFAULT 'REJECTED'`);
+    await this.dataSource.query(`ALTER TABLE academy_article_imports ADD COLUMN IF NOT EXISTS medical_qa_artifact TEXT`);
+    await this.dataSource.query(`ALTER TABLE academy_article_imports ADD COLUMN IF NOT EXISTS source_urls JSONB NOT NULL DEFAULT '[]'::jsonb`);
     await this.dataSource.query(`
       CREATE TABLE IF NOT EXISTS academy_article_sources (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -704,5 +751,26 @@ export class AcademyService {
       .replace(/[^a-zа-я0-9]+/gi, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 80);
+  }
+
+  private mainArticleCharacterCount(body: string) {
+    const [mainBody] = body.split(/\n\s*Источники:\s*\n/i);
+    return Array.from(mainBody.trim()).length;
+  }
+
+  private assertApprovedLongForm(dto: { body: string; characterCount: number; medicalQaArtifact: string; sourceUrls: string[] }) {
+    const actualCharacterCount = this.mainArticleCharacterCount(dto.body);
+    if (dto.characterCount < MIN_ARTICLE_CHARACTER_COUNT || dto.characterCount > MAX_ARTICLE_CHARACTER_COUNT) {
+      throw new BadRequestException('article_length_out_of_range');
+    }
+    if (actualCharacterCount !== dto.characterCount) {
+      throw new BadRequestException('article_character_count_mismatch');
+    }
+    if (!dto.medicalQaArtifact) {
+      throw new BadRequestException('medical_qa_artifact_required');
+    }
+    if (dto.sourceUrls.length < 2 || dto.sourceUrls.some((url) => !/^https:\/\//i.test(url))) {
+      throw new BadRequestException('authoritative_sources_required');
+    }
   }
 }

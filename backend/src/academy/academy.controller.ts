@@ -58,6 +58,26 @@ class AcademyImportDto {
   @IsString()
   body!: string;
 
+  @IsInt()
+  @Min(7000)
+  @Max(10000)
+  @IsOptional()
+  characterCount?: number;
+
+  @IsString()
+  @IsIn(['APPROVED', 'REQUIRED_CHANGES', 'REJECTED'])
+  @IsOptional()
+  medicalQaStatus?: 'APPROVED' | 'REQUIRED_CHANGES' | 'REJECTED';
+
+  @IsString()
+  @MaxLength(240)
+  @IsOptional()
+  medicalQaArtifact?: string;
+
+  @IsArray()
+  @IsOptional()
+  sourceUrls?: string[];
+
   @IsArray()
   @IsOptional()
   tags?: string[];
