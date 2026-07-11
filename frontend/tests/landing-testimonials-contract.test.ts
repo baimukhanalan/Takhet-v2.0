@@ -1,66 +1,36 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+const assert = (condition: unknown, message: string) => {
+  if (!condition) throw new Error(message);
+};
+
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 const landing = read('src/pages/LandingPage.tsx');
-const testimonials = read('src/components/TakhetTestimonials.tsx');
 const css = read('src/index.css');
 
-const controlSection = landing.indexOf('t.landing.controlTitle');
-const testimonialsPosition = landing.indexOf('<TakhetTestimonials />');
-const philosophySection = landing.indexOf('t.landing.philosophy');
+const servicesPosition = landing.indexOf('takhet-story-services');
+const testimonialsPosition = landing.indexOf('takhet-story-testimonials-wrap');
+const mapPosition = landing.indexOf('takhet-story-map');
 
-if (!(controlSection > -1 && testimonialsPosition > controlSection && philosophySection > testimonialsPosition)) {
-  throw new Error('Testimonials must stay between the sixth control section and seventh philosophy section');
-}
+assert(
+  servicesPosition > -1 && testimonialsPosition > servicesPosition && mapPosition > testimonialsPosition,
+  'Story testimonials must sit after services and before map coverage'
+);
 
-if ((testimonials.match(/name: '/g) || []).length !== 5) {
-  throw new Error('Testimonials must define exactly five user stories');
-}
+assert((landing.match(/name: '/g) || []).length === 5, 'Story testimonials must define exactly five user stories');
 
-if ((testimonials.match(/image: '\/media\/testimonials\//g) || []).length !== 5) {
-  throw new Error('Every testimonial must render a supplied portrait');
-}
+const testimonialImages = [...landing.matchAll(/image: '(\/media\/testimonials\/[^']+)'/g)].map((match) => match[1]);
+assert(testimonialImages.length === 5, 'Every Story testimonial must render a supplied portrait');
+assert(new Set(testimonialImages).size === 5, 'All five supplied testimonial photos must be used exactly once');
+assert(testimonialImages.includes('/media/testimonials/david-kim.webp'), 'David Kim must use his own supplied portrait');
 
-const testimonialImages = [...testimonials.matchAll(/image: '(\/media\/testimonials\/[^']+)'/g)].map((match) => match[1]);
-if (new Set(testimonialImages).size !== 5 || !testimonialImages.includes('/media/testimonials/david-kim.webp')) {
-  throw new Error('All five supplied testimonial photos must be used exactly once');
-}
+assert(landing.includes("name: 'Emily Chen'") && landing.includes("name: 'James Patel'"), 'The supplied testimonial identities must be preserved');
+assert(landing.includes('data-story-testimonials-ring'), 'Story testimonials must use a scroll-driven ring stage');
+assert(landing.includes('data-story-testimonial-card'), 'Story testimonials must expose cards to the scroll animation loop');
+assert(!landing.includes('[...testimonials, ...testimonials]'), 'Story testimonials must not be the old horizontal marquee loop');
+assert(css.includes('.takhet-story-testimonials-wrap'), 'Story testimonials sticky wrapper must be styled');
+assert(css.includes('.takhet-story-testimonials__ring'), 'Story testimonials 3D ring must be styled');
+assert(css.includes('transform-style: preserve-3d'), 'Story testimonials must preserve 3D transforms');
 
-if (!testimonials.includes("name: 'Emily Chen'") || !testimonials.includes("name: 'James Patel'")) {
-  throw new Error('The supplied testimonial identities must be preserved');
-}
-
-if (!testimonials.includes("window.matchMedia('(prefers-reduced-motion: reduce)')")) {
-  throw new Error('Carousel navigation must respect reduced motion');
-}
-
-if (!testimonials.includes('requestAnimationFrame(updateActiveCard)')) {
-  throw new Error('Scroll state updates must be frame-batched');
-}
-
-if (!testimonials.includes("window.addEventListener('scroll', syncFromPageScroll, { passive: true })")) {
-  throw new Error('Desktop page scroll must drive the horizontal testimonial track');
-}
-
-if (!testimonials.includes('section.offsetHeight - window.innerHeight')) {
-  throw new Error('Vertical progress must cover the complete sticky testimonial section');
-}
-
-if (!testimonials.includes('viewport.scrollLeft = maxHorizontalScroll * progress')) {
-  throw new Error('Vertical section progress must map to horizontal carousel progress');
-}
-
-if (!css.includes('scroll-snap-type: x mandatory') || !css.includes('scroll-snap-align: center')) {
-  throw new Error('Testimonials must use native horizontal scroll snap');
-}
-
-if (!css.includes('height: 500svh') || !css.includes('.takhet-testimonials__sticky')) {
-  throw new Error('Desktop testimonials must provide a five-screen sticky scroll scene');
-}
-
-if (!css.includes(".takhet-testimonials__card[data-active='true']")) {
-  throw new Error('The active testimonial must remain visually distinct');
-}
-
-console.log('Landing testimonials carousel contract passed');
+console.log('Landing Story testimonials contract passed');
