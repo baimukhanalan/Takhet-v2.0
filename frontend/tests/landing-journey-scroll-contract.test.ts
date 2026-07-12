@@ -13,11 +13,12 @@ const css = read('src/index.css');
 assert(landing.includes("import TakhetJourneyScroll from '../components/TakhetJourneyScroll'"), 'Landing must import the isolated journey component');
 assert(landing.includes('<TakhetJourneyScroll />'), 'Landing must render the journey component');
 
-const beforeAfterPosition = landing.indexOf('takhet-story-before-after');
+const protectedSecondStart = landing.indexOf('<section className="py-20 md:py-32 px-4 sm:px-6 md:px-10 xl:px-20 bg-slate-50');
+const protectedSecondEnd = landing.indexOf('</section>', protectedSecondStart) + '</section>'.length;
 const journeyPosition = landing.indexOf('<TakhetJourneyScroll />');
-const principlesPosition = landing.indexOf('takhet-story-principles');
-assert(beforeAfterPosition >= 0, 'Story before/after section must be present before the preserved journey block');
-assert(journeyPosition > beforeAfterPosition && journeyPosition < principlesPosition, 'Journey must sit strictly between the Story before/after and principles sections');
+const previousThirdPosition = landing.indexOf('<section className="py-20 md:py-32 px-4 sm:px-6 md:px-10 xl:px-20 bg-white relative">');
+assert(protectedSecondStart >= 0 && protectedSecondEnd >= 0, 'Protected second section must remain present');
+assert(journeyPosition > protectedSecondEnd && journeyPosition < previousThirdPosition, 'Journey must sit strictly between the second and third sections');
 
 assert(journey.includes('Как Takhet+ сопровождает вас на каждом этапе'), 'Journey must use the requested heading');
 assert((journey.match(/mediaKind: '(?:image|video)',\n/g) || []).length === 5, 'Journey must define exactly five media slots');
