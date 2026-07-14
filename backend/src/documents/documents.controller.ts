@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { IsIn, IsObject, IsString, MinLength } from 'class-validator';
 import { AuthGuard } from '../auth/auth.guard';
 import { DocumentsService } from './documents.service';
@@ -36,7 +36,16 @@ export class DocumentsController {
 
   @Post('create')
   create(@Req() req: any, @Body() dto: CreateDocumentDto) {
-    return this.documentsService.createDraft({ ...dto, actorId: req.user.id });
+    if (req.user.role !== 'doctor' && req.user.role !== 'admin') {
+      throw new ForbiddenException('Only doctors and admins can create medical documents');
+    }
+
+    return this.documentsService.createDraft({
+      ...dto,
+      doctorId: req.user.role === 'doctor' ? req.user.id : dto.doctorId,
+      actorId: req.user.id,
+      actorRole: req.user.role
+    });
   }
 
   @Get('my/list')
