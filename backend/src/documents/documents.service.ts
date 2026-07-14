@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DocumentEntity, DocumentStatus, DocumentType } from './document.entity';
@@ -26,7 +26,20 @@ export class DocumentsService {
     title: string;
     payloadJson: Record<string, any>;
     actorId: string;
+    actorRole?: string;
   }) {
+    const relatedCase = await this.casesService.findById(input.caseId);
+    if (!relatedCase) throw new NotFoundException('Case not found');
+    if (relatedCase.patientId !== input.patientId) {
+      throw new ForbiddenException('Document patient does not match case patient');
+    }
+    if (relatedCase.doctorId && relatedCase.doctorId !== input.doctorId) {
+      throw new ForbiddenException('Document doctor does not match assigned case doctor');
+    }
+    if (input.actorRole !== 'admin' && input.actorId !== input.doctorId) {
+      throw new ForbiddenException('Only the document doctor can author this document');
+    }
+
     const created = await this.documentRepo.save(
       this.documentRepo.create({
         caseId: input.caseId,
@@ -104,7 +117,6 @@ export class DocumentsService {
     await this.auditService.log('document.viewed', actorId, { documentId });
     return { ...doc, latestVersion: latest };
   }
-
 
   async download(documentId: string, actorId: string) {
     const doc = await this.requireDocument(documentId);
