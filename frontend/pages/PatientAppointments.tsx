@@ -12,7 +12,7 @@ const mapCaseToAppointment = (c: any): Appointment => ({
   date: new Date(c.createdAt).toLocaleDateString(),
   time: new Date(c.createdAt).toLocaleTimeString(),
   type: 'Video',
-  status: c.status === 'closed' ? 'completed' : c.status === 'active' ? 'ongoing' : 'upcoming'
+  status: c.status === 'closed' || c.status === 'consultation_finished' ? 'completed' : c.status === 'consultation_started' ? 'ongoing' : 'upcoming'
 });
 
 const PatientAppointments: React.FC = () => {
