@@ -44,7 +44,14 @@ export class CasesService {
   }
 
   findDoctorCases(doctorId: string) {
-    return this.casesRepo.find({ where: [{ doctorId }, { status: 'assigned' }, { status: 'consultation_started' }, { status: 'consultation_finished' }], order: { createdAt: 'DESC' } });
+    return this.casesRepo.find({
+      where: [
+        { doctorId, status: 'assigned' },
+        { doctorId, status: 'consultation_started' },
+        { doctorId, status: 'consultation_finished' }
+      ],
+      order: { createdAt: 'DESC' }
+    });
   }
 
   findDoctorQueue() {
@@ -141,7 +148,6 @@ export class CasesService {
   findByStatus(status: CaseStatus, clinicId?: string) {
     return this.casesRepo.find({ where: clinicId ? ({ status, clinicId } as any) : { status }, order: { createdAt: 'DESC' } });
   }
-
 
   async setPaymentPending(caseId: string) {
     const found = await this.casesRepo.findOne({ where: { id: caseId } });
