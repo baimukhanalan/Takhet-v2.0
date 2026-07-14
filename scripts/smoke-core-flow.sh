@@ -37,7 +37,7 @@ login_resp="$(req POST /auth/login "$login_payload")"
 PATIENT_TOKEN="$(python - <<'PY' "$login_resp"
 import json,sys
 obj=json.loads(sys.argv[1])
-t=obj.get('accessToken') or obj.get('token')
+t=obj.get('access_token') or obj.get('accessToken') or obj.get('token')
 assert t, f"token missing: {obj}"
 print(t)
 PY
