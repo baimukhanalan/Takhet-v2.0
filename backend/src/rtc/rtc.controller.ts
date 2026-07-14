@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Post, Req, UseGuards } from '@nestjs/common';
 import { IsIn, IsObject, IsString } from 'class-validator';
 import { AuthGuard } from '../auth/auth.guard';
 import { RtcService } from './rtc.service';
@@ -41,6 +41,17 @@ class TokenDto {
   role!: 'doctor' | 'patient';
 }
 
+function resolveTokenRole(user: any, requestedRole: 'doctor' | 'patient') {
+  if (user.role === 'admin') return requestedRole;
+  if (user.role !== 'doctor' && user.role !== 'patient') {
+    throw new ForbiddenException('Only RTC participants can mint RTC tokens');
+  }
+  if (user.role !== requestedRole) {
+    throw new ForbiddenException('RTC token role does not match authenticated user');
+  }
+  return requestedRole;
+}
+
 @Controller('rtc/session')
 @UseGuards(AuthGuard)
 export class RtcController {
@@ -51,44 +62,44 @@ export class RtcController {
 
   @Post('create')
   create(@Req() req: any, @Body() dto: CreateRtcSessionDto) {
-    return this.rtcService.createSession(dto.caseId, dto.doctorId, dto.patientId, req.user.id);
+    return this.rtcService.createSession(dto.caseId, dto.doctorId, dto.patientId, req.user.id, req.user.role);
   }
 
   @Post('join')
   join(@Req() req: any, @Body() dto: SessionRefDto) {
-    return this.rtcService.joinSession(dto.sessionId, req.user.id);
+    return this.rtcService.joinSession(dto.sessionId, req.user.id, req.user.role);
   }
 
   @Post('offer')
   offer(@Req() req: any, @Body() dto: OfferAnswerDto) {
-    return this.rtcService.saveOffer(dto.sessionId, dto.sdp, req.user.id);
+    return this.rtcService.saveOffer(dto.sessionId, dto.sdp, req.user.id, req.user.role);
   }
 
   @Post('answer')
   answer(@Req() req: any, @Body() dto: OfferAnswerDto) {
-    return this.rtcService.saveAnswer(dto.sessionId, dto.sdp, req.user.id);
+    return this.rtcService.saveAnswer(dto.sessionId, dto.sdp, req.user.id, req.user.role);
   }
 
   @Post('ice')
   ice(@Req() req: any, @Body() dto: IceDto) {
-    return this.rtcService.saveIce(dto.sessionId, dto.role, dto.candidate, req.user.id);
+    return this.rtcService.saveIce(dto.sessionId, dto.role, dto.candidate, req.user.id, req.user.role);
   }
 
   @Post('token')
   token(@Req() req: any, @Body() dto: TokenDto) {
+    const role = resolveTokenRole(req.user, dto.role);
     return {
       provider: 'livekit-compatible',
       url: process.env.LIVEKIT_URL || '',
-      token: this.rtcProviderService.createAccessToken({ roomName: dto.roomName, userId: req.user.id, role: dto.role })
+      token: this.rtcProviderService.createAccessToken({ roomName: dto.roomName, userId: req.user.id, role })
     };
   }
 
   @Post('end')
   end(@Req() req: any, @Body() dto: SessionRefDto) {
-    return this.rtcService.endSession(dto.sessionId, req.user.id);
+    return this.rtcService.endSession(dto.sessionId, req.user.id, req.user.role);
   }
 }
-
 
 @Controller('rtc')
 @UseGuards(AuthGuard)
@@ -97,10 +108,11 @@ export class RtcTokenController {
 
   @Post('token')
   token(@Req() req: any, @Body() dto: TokenDto) {
+    const role = resolveTokenRole(req.user, dto.role);
     return {
       provider: 'livekit-compatible',
       url: process.env.LIVEKIT_URL || '',
-      token: this.rtcProviderService.createAccessToken({ roomName: dto.roomName, userId: req.user.id, role: dto.role })
+      token: this.rtcProviderService.createAccessToken({ roomName: dto.roomName, userId: req.user.id, role })
     };
   }
 }
