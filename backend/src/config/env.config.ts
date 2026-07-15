@@ -52,7 +52,15 @@ const deriveSupabaseStorageHostname = () => {
   const supabaseUrl = (process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
   if (!supabaseUrl) return '';
 
-  return supabaseUrl.replace('://', '://storage.');
+  try {
+    const url = new URL(supabaseUrl);
+    if (url.hostname.endsWith('.supabase.co') && !url.hostname.includes('.storage.')) {
+      url.hostname = url.hostname.replace('.supabase.co', '.storage.supabase.co');
+    }
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return '';
+  }
 };
 
 assertProductionRequiredSecret('DATABASE_URL', process.env.DATABASE_URL, 12);
