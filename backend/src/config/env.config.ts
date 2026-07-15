@@ -9,6 +9,7 @@ const weakSecretValues = new Set([
   'replace-with-supabase-jwt-secret',
   'replace-with-gemini-api-key',
   'replace-with-admin-password',
+  'replace-with-kaspi-secret-key',
   'your-secret',
   'your-secret-key',
   'your-service-role-key',
@@ -72,6 +73,10 @@ assertProductionRequiredSecret('PII_ENCRYPTION_KEY', process.env.PII_ENCRYPTION_
 assertProductionRequiredSecret('SUPABASE_SERVICE_KEY', process.env.SUPABASE_SERVICE_KEY, 32);
 assertProductionRequiredSecret('SUPABASE_JWT_SECRET', process.env.SUPABASE_JWT_SECRET, 32);
 assertProductionRequiredSecret('GEMINI_API_KEY', process.env.GEMINI_API_KEY, 20);
+
+if ((process.env.PAYMENT_PROVIDER || 'kaspi') === 'kaspi') {
+  assertProductionRequiredSecret('KASPI_SECRET_KEY', process.env.KASPI_SECRET_KEY, 20);
+}
 
 export const env = {
   port: Number(process.env.PORT || 3000),
