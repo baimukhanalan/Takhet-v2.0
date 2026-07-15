@@ -14,10 +14,6 @@ export type LoginRole = 'patient' | 'doctor' | 'partner' | 'admin';
 export class AuthService {
   private readonly hashPrefix = 'scrypt';
   private readonly sessionCookieName = 'takhet_session';
-  private readonly tempPortalCredentials = {
-    login: 'baimukhanalan1@gmail.com',
-    password: 'baimukhanalan1@gmail.com'
-  } as const;
 
   constructor(
     @InjectRepository(User) private readonly usersRepo: Repository<User>,
@@ -57,12 +53,12 @@ export class AuthService {
       await this.markEmailVerified(tempAccount.id, tempAccount.email, role);
       await this.markPortalApplicationApproved(tempAccount.id, role, 'temp_portal_login');
       const verified = await this.resolveVerifiedStatus(tempAccount.id, role);
-      return this.issueToken(tempAccount.id, this.tempPortalCredentials.login, role, verified);
+      return this.issueToken(tempAccount.id, env.demoPortalEmail, role, verified);
     }
 
     const allowed = credentials[role];
 
-    if (normalizedEmail === allowed.email && password === allowed.password) {
+    if (allowed.email && allowed.password && normalizedEmail === allowed.email && password === allowed.password) {
       await this.ensureAccountIsActive(allowed.userId);
       await this.ensureCoreAccount(allowed.userId, normalizedEmail, role);
       await this.markEmailVerified(allowed.userId, normalizedEmail, role);
@@ -350,7 +346,7 @@ export class AuthService {
       patient: { email: env.appPatientEmail, userId: '44444444-4444-4444-4444-444444444444' }
     };
 
-    return seeds[role];
+    return seeds[role].email ? seeds[role] : null;
   }
 
   private async ensureAuthRecoveryTables() {
@@ -607,6 +603,9 @@ export class AuthService {
     const storageEmail = this.toStorageEmail(email, role);
     const existingUser = await this.usersRepo.findOne({ where: { id: userId } });
     const seededPassword = this.getConfiguredPassword(role);
+    if (!seededPassword) {
+      throw new UnauthorizedException('Configured account password is not available');
+    }
     if (!existingUser) {
       await this.usersRepo.save(
         this.usersRepo.create({
@@ -638,7 +637,7 @@ export class AuthService {
   }
 
   private isTempPortalLogin(email: string, password: string) {
-    return email === this.tempPortalCredentials.login && password === this.tempPortalCredentials.password;
+    return Boolean(env.demoPortalEmail && env.demoPortalPassword && email === env.demoPortalEmail && password === env.demoPortalPassword);
   }
 
   private getTempPortalAccountSeed(role: LoginRole) {
@@ -673,7 +672,7 @@ export class AuthService {
         this.usersRepo.create({
           id: seed.id,
           email: seed.email,
-          passwordHash: this.hashPassword(this.tempPortalCredentials.password),
+          passwordHash: this.hashPassword(env.demoPortalPassword),
           role
         })
       );
@@ -690,8 +689,8 @@ export class AuthService {
         shouldSave = true;
       }
 
-      if (!user.passwordHash || !this.verifyPassword(user.passwordHash, this.tempPortalCredentials.password)) {
-        user.passwordHash = this.hashPassword(this.tempPortalCredentials.password);
+      if (!user.passwordHash || !this.verifyPassword(user.passwordHash, env.demoPortalPassword)) {
+        user.passwordHash = this.hashPassword(env.demoPortalPassword);
         shouldSave = true;
       }
 
