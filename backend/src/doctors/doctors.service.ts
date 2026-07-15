@@ -306,7 +306,7 @@ export class DoctorsService {
       .slice(0, 40) || 'doctor';
 
     const temporaryLogin = options.temporaryLogin?.trim() || `${emailSafeName}.${doctorId.slice(0, 8)}@takhet.local`;
-    const temporaryPassword = options.temporaryPassword || 'managed-by-admin';
+    const temporaryPassword = options.temporaryPassword || this.generateTemporaryPassword();
     const user = await this.usersRepo.save(
       this.usersRepo.create({
         id: doctorId,
@@ -315,7 +315,7 @@ export class DoctorsService {
         role: 'doctor'
       })
     );
-    return { user, temporaryLogin, temporaryPassword: options.temporaryPassword ? temporaryPassword : undefined };
+    return { user, temporaryLogin, temporaryPassword };
   }
 
   private async approvePortalApplicationForDoctor(doctorId: string) {
@@ -370,5 +370,3 @@ export class DoctorsService {
     return organizationName;
   }
 }
-
-
