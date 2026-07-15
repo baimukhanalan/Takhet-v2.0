@@ -45,6 +45,9 @@ if (demoPortalLoginEnabled) {
   }
 }
 
+const activeDemoPortalEmail = demoPortalLoginEnabled ? demoPortalEmail : '';
+const activeDemoPortalPassword = demoPortalLoginEnabled ? demoPortalPassword : '';
+
 const deriveSupabaseStorageHostname = () => {
   const explicit = process.env.SUPABASE_STORAGE_HOSTNAME || '';
   if (explicit) return explicit;
@@ -86,16 +89,16 @@ export const env = {
   kaspiApiUrl: process.env.KASPI_API_URL || 'https://kaspi.kz/pay/api',
   paymentSuccessUrl: process.env.PAYMENT_SUCCESS_URL || '',
   paymentCancelUrl: process.env.PAYMENT_CANCEL_URL || '',
-  appAdminEmail: process.env.APP_ADMIN_EMAIL || demoPortalEmail,
-  appAdminPassword: process.env.APP_ADMIN_PASSWORD || demoPortalPassword,
-  appDoctorEmail: process.env.APP_DOCTOR_EMAIL || demoPortalEmail,
-  appDoctorPassword: process.env.APP_DOCTOR_PASSWORD || demoPortalPassword,
-  appPartnerEmail: process.env.APP_PARTNER_EMAIL || demoPortalEmail,
-  appPartnerPassword: process.env.APP_PARTNER_PASSWORD || demoPortalPassword,
-  appPatientEmail: process.env.APP_PATIENT_EMAIL || demoPortalEmail,
-  appPatientPassword: process.env.APP_PATIENT_PASSWORD || demoPortalPassword,
-  demoPortalEmail,
-  demoPortalPassword,
+  appAdminEmail: process.env.APP_ADMIN_EMAIL || activeDemoPortalEmail,
+  appAdminPassword: process.env.APP_ADMIN_PASSWORD || activeDemoPortalPassword,
+  appDoctorEmail: process.env.APP_DOCTOR_EMAIL || activeDemoPortalEmail,
+  appDoctorPassword: process.env.APP_DOCTOR_PASSWORD || activeDemoPortalPassword,
+  appPartnerEmail: process.env.APP_PARTNER_EMAIL || activeDemoPortalEmail,
+  appPartnerPassword: process.env.APP_PARTNER_PASSWORD || activeDemoPortalPassword,
+  appPatientEmail: process.env.APP_PATIENT_EMAIL || activeDemoPortalEmail,
+  appPatientPassword: process.env.APP_PATIENT_PASSWORD || activeDemoPortalPassword,
+  demoPortalEmail: activeDemoPortalEmail,
+  demoPortalPassword: activeDemoPortalPassword,
   feedbackEmailRecipient: process.env.FEEDBACK_EMAIL_RECIPIENT || 'takhetplus@gmail.com',
   feedbackEmailWebhookUrl: process.env.FEEDBACK_EMAIL_WEBHOOK_URL || '',
   resendApiKey: process.env.RESEND_API_KEY || '',
