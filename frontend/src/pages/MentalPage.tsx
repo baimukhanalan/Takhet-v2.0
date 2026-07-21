@@ -204,15 +204,10 @@ const MentalPage: React.FC<{ user?: User; isPortal: boolean }> = ({ user, isPort
     setSubmitting(true);
     try {
       if (!isPortal || !user) {
-        const params = new URLSearchParams({
-          doctorId: selectedDoctor.id,
-          date: selectedDate,
-          slot: selectedSlot,
-          source: 'mental'
-        });
-        if (bookingNote.trim()) params.set('note', bookingNote.trim());
         setSelectedDoctor(null);
-        navigate(`/guest-consultation?${params.toString()}`);
+        navigate('/patient-auth', {
+          state: { from: { pathname: `/doctors-search/${selectedDoctor.id}` }, forcePublicAuth: true }
+        });
         return;
       }
       const created = await roleApi.patientCreateCase({

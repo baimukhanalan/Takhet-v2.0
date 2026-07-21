@@ -55,9 +55,11 @@ const AuthPage: React.FC<{
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const registerActionLabel = isApplicationRole(role) ? 'Подать заявку' : 'Зарегистрироваться';
-  const registerSubmitLabel = isApplicationRole(role) ? 'Отправить заявку' : 'Перейти к регистрации';
+  const registerSubmitLabel = isApplicationRole(role) ? 'Отправить заявку' : 'Зарегистрироваться';
   const registerLead =
     role === UserRole.DOCTOR
       ? 'Заполните форму, чтобы подать заявку врача на подключение к платформе.'
@@ -91,6 +93,18 @@ const AuthPage: React.FC<{
     const normalizedEmail = email.trim().toLowerCase();
     if (!emailRegex.test(normalizedEmail)) {
       setError('Введите корректную почту.');
+      return;
+    }
+    if (mode === 'register' && password.length < 10) {
+      setError('Пароль должен содержать не менее 10 символов.');
+      return;
+    }
+    if (mode === 'register' && password !== confirmPassword) {
+      setError('Пароли не совпадают.');
+      return;
+    }
+    if (mode === 'register' && !acceptedTerms) {
+      setError('Подтвердите согласие с условиями и политикой конфиденциальности.');
       return;
     }
 
@@ -270,7 +284,26 @@ const AuthPage: React.FC<{
                     </IconButton>
                   )}
                 />
+                {mode === 'register' && (
+                  <TextField
+                    required
+                    name="confirm-password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="Повторите пароль"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    leading={<Lock className="h-5 w-5" />}
+                  />
+                )}
               </div>
+
+              {mode === 'register' && (
+                <label className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                  <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 h-4 w-4 accent-emerald-700" />
+                  <span>Я принимаю <a href="/terms" className="font-bold text-primary underline">условия использования</a> и <a href="/privacy" className="font-bold text-primary underline">политику конфиденциальности</a>.</span>
+                </label>
+              )}
 
               {error && (
                 <Alert tone="error" icon={<AlertCircle className="h-4 w-4" />}>{error}</Alert>

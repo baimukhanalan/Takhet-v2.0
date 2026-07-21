@@ -103,6 +103,7 @@ npm run dev
    - `SUPABASE_SERVICE_KEY`
    - `SUPABASE_JWT_SECRET`
 2. Создать и выдать `GEMINI_API_KEY`.
+   - Live-аудио и видео используют одноразовые токены, которые выдаёт backend; ключ Gemini нельзя добавлять во frontend env.
 3. Подписать договор с Kaspi Pay и получить:
    - `KASPI_MERCHANT_ID`
    - `KASPI_SECRET_KEY`
@@ -114,6 +115,7 @@ npm run dev
    - `APP_PARTNER_EMAIL` / `APP_PARTNER_PASSWORD`
    - `APP_PATIENT_EMAIL` / `APP_PATIENT_PASSWORD`
    - `APP_JWT_SECRET`
+6. Для стабильных звонков между мобильными, домашними и корпоративными сетями настроить TURN и заполнить `TURN_ICE_SERVERS_JSON`.
 
 Без этих данных backend работает как технический каркас, но не как полнофункциональная production-система.
 

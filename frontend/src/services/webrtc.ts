@@ -8,14 +8,17 @@ export class WebRTCService {
   private localStream: MediaStream | null = null;
   private onRemoteStream: (stream: MediaStream) => void;
   private onIceCandidate: (candidate: RTCIceCandidate) => void;
+  private onConnectionStateChange?: (state: RTCPeerConnectionState) => void;
 
   constructor(
     iceServers: RTCIceServer[],
     onRemoteStream: (stream: MediaStream) => void,
-    onIceCandidate: (candidate: RTCIceCandidate) => void
+    onIceCandidate: (candidate: RTCIceCandidate) => void,
+    onConnectionStateChange?: (state: RTCPeerConnectionState) => void
   ) {
     this.onRemoteStream = onRemoteStream;
     this.onIceCandidate = onIceCandidate;
+    this.onConnectionStateChange = onConnectionStateChange;
     this.peerConnection = new RTCPeerConnection({
       iceServers: getConfiguredIceServers(iceServers)
     });
@@ -29,17 +32,22 @@ export class WebRTCService {
         this.onRemoteStream(event.streams[0]);
       }
     };
+
+    this.peerConnection.onconnectionstatechange = () => {
+      if (this.peerConnection) this.onConnectionStateChange?.(this.peerConnection.connectionState);
+    };
   }
 
   async startLocalStream(): Promise<MediaStream> {
-    this.localStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
+    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+        audio
+      });
+    } catch {
+      this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio });
+    }
 
     this.localStream.getTracks().forEach((track) => {
       if (this.peerConnection && this.localStream) {

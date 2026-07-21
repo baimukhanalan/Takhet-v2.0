@@ -126,6 +126,7 @@ export const env = {
   geminiFlashModel: process.env.GEMINI_FLASH_MODEL || 'gemini-2.5-flash',
   geminiProModel: process.env.GEMINI_PRO_MODEL || 'gemini-2.5-pro',
   geminiFallbackModel: process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash-lite',
+  geminiLiveModel: process.env.GEMINI_LIVE_MODEL || 'gemini-3.1-flash-live-preview',
   appJwtSecret: process.env.APP_JWT_SECRET || runtimeJwtFallback,
   rateLimitTtlMs: Number(process.env.RATE_LIMIT_TTL_MS || 60000),
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX || 30)

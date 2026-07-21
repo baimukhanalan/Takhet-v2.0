@@ -143,7 +143,9 @@ const AcademyPage: React.FC<{ user?: User; portal?: boolean }> = ({ user, portal
 
   const handleConsultation = () => {
     void academyApi.trackEvent({ event: 'consultation_cta' }).catch(() => undefined);
-    navigate(user ? '/doctors-search' : '/guest-consultation');
+    navigate(user ? '/doctors-search' : '/patient-auth', {
+      state: user ? undefined : { from: { pathname: '/doctors-search' }, forcePublicAuth: true }
+    });
   };
 
   const handleCategory = (slug: string) => {

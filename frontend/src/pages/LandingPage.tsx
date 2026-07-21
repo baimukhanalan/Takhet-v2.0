@@ -4,7 +4,7 @@ import {
   ChevronRight,
   Video, Truck, Archive, Stethoscope,
   ChevronDown, Send, MessageSquare, Info, Activity, Dog, ArrowUpRight, Plus, Users, HeartPulse, Clock, ShieldAlert, AlertTriangle, Check,
-  Search, FileText, Camera, Mic
+  Search, FileText, Camera, Mic, CalendarCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
@@ -380,13 +380,18 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
       return;
     }
 
+    if (path === '/urgent-doctor') {
+      navigate(user?.role === UserRole.PATIENT ? '/takhet-ai/patient?urgent=1' : '/takhet-ai/try?urgent=1');
+      return;
+    }
+
     if (path.startsWith('/health-browser')) {
       navigate(path);
       return;
     }
 
-    if (path === '/guest-consultation') {
-      navigate('/guest-consultation');
+    if (path === '/patient-auth') {
+      navigate('/patient-auth', { state: { from: { pathname: '/doctors-search' }, forcePublicAuth: true } });
       return;
     }
 
@@ -629,7 +634,8 @@ const LandingPage: React.FC<{ user?: User }> = ({ user }) => {
 
             <div className="takhet-flow-actions">
                 {[
-                  { label: 'Записаться на консультацию', icon: Stethoscope, path: '/guest-consultation' },
+                  { label: 'Срочный врач', icon: Stethoscope, path: '/urgent-doctor' },
+                  { label: 'Записаться к врачу', icon: CalendarCheck, path: '/patient-auth' },
                   { label: 'ИИ консультация', icon: Video, path: '/ai-consultation' },
                   { label: 'Takhet AI', icon: Activity, path: '/takhet-ai' },
                   { label: 'Разобрать анализы', icon: FileText, path: '/ai-lab' },

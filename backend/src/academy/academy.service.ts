@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 type AcademyArticleSeed = {
@@ -139,10 +139,18 @@ const articleSeeds: AcademyArticleSeed[] = [
 const alphabet = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Э'];
 
 @Injectable()
-export class AcademyService {
+export class AcademyService implements OnModuleInit {
+  private readonly logger = new Logger(AcademyService.name);
   private initialized?: Promise<void>;
 
   constructor(private readonly dataSource: DataSource) {}
+
+  onModuleInit() {
+    void this.ensureReady().catch((error) => {
+      this.initialized = undefined;
+      this.logger.error('Academy initialization failed', error instanceof Error ? error.stack : String(error));
+    });
+  }
 
   async overview() {
     await this.ensureReady();

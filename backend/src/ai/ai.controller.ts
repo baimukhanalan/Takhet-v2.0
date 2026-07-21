@@ -47,6 +47,11 @@ class AnalyzeDto {
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
+  @Post('live-token')
+  liveToken() {
+    return this.aiService.createLiveToken();
+  }
+
   @Post('health-insights')
   getHealthInsights(@Body() dto: HealthInsightsDto) {
     return this.aiService.getHealthInsights(dto.query);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { LayoutDashboard, BrainCircuit, Truck, MessageSquare, Settings, CalendarCheck2, Wallet, LogOut, Archive, Users, Stethoscope, BarChart3, Menu, X, Heart, Search, Microscope, GraduationCap } from 'lucide-react';
+import { Siren } from 'lucide-react';
 import { UserRole } from '../types';
 import TakhetLogo from './Logo';
 import { useLanguage } from '../services/useLanguage';
@@ -22,6 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, onLogout }) => {
 
   const patientLinks = [
     { to: '/dashboard', icon: LayoutDashboard, label: t.sidebar.panel },
+    { to: '/takhet-ai/patient?urgent=1', icon: Siren, label: 'Срочный врач' },
     { to: '/ai-lab', icon: BrainCircuit, label: t.sidebar.aiAnalysis },
     { to: '/ai-consultation', icon: BrainCircuit, label: t.sidebar.aiConsultation },
     { to: takhetAiRoute, icon: MessageSquare, label: t.sidebar.takhetAI },

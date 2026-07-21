@@ -31,7 +31,6 @@ const AIAnalysisCenter = lazy(() => import('./pages/AIAnalysisCenter'));
 const AIConsultationRoom = lazy(() => import('./pages/AIConsultationRoom'));
 const TakhetLabsPage = lazy(() => import('./pages/TakhetLabsPage'));
 const TakhetLabsApp = lazy(() => import('./pages/TakhetLabsApp'));
-const GuestConsultationPage = lazy(() => import('./pages/GuestConsultationPage'));
 const DoctorsSearchPage = lazy(() => import('./pages/DoctorsSearchPage'));
 const DoctorProfileBookingPage = lazy(() => import('./pages/DoctorProfileBookingPage'));
 const DoctorBookingConfirmPage = lazy(() => import('./pages/DoctorBookingConfirmPage'));
@@ -356,7 +355,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/refund" element={<LegalPage kind="refund" />} />
         <Route path="/terms" element={<LegalPage kind="terms" />} />
         <Route path="/contacts" element={<LegalPage kind="contacts" />} />
-        <Route path="/guest-consultation" element={<GuestConsultationPage />} />
+        <Route path="/guest-consultation" element={<Navigate to="/patient-auth" replace state={{ from: { pathname: '/doctors-search' }, forcePublicAuth: true }} />} />
         <Route path="/health-browser" element={<AIHealthBrowser user={user || undefined} />} />
         <Route path="/ai-lab" element={<PrivateRoute user={user} allowed={[UserRole.PATIENT, UserRole.DOCTOR]}><AIAnalysisCenter user={user!} /></PrivateRoute>} />
         <Route path="/ai-consultation" element={<AIConsultationRoom user={user || undefined} />} />

@@ -9,7 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI, Modality, ThinkingLevel, LiveServerMessage } from "@google/genai";
 import { useLanguage } from '../services/useLanguage';
-import { advancedChatStream } from '../services/gemini';
+import { advancedChatStream, analyzeHealthData } from '../services/gemini';
 import { roleApi } from '../../services/roleApi';
 import { motion, AnimatePresence } from 'motion/react';
 import { FadeIn, FadeInStagger } from '../components/FadeIn';
@@ -17,14 +17,6 @@ import { User } from '../types';
 import { consumeGuestAiRequest, guestAiLimitMessage, isGuestAiLimitError } from '../services/guestAiUsage';
 
 const DEFAULT_GEMINI_LIVE_MODEL = 'gemini-3.1-flash-live-preview';
-
-const getGeminiBrowserApiKey = () => (
-  import.meta.env.VITE_GEMINI_API_KEY ||
-  import.meta.env.VITE_API_KEY ||
-  process.env.GEMINI_API_KEY ||
-  process.env.API_KEY ||
-  ''
-).trim();
 
 const getGeminiLiveModel = () => (
   import.meta.env.VITE_GEMINI_LIVE_MODEL ||
@@ -139,6 +131,9 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
   const isStartupGreetingRef = useRef(false);
   const hasAudioInputStartedRef = useRef(false);
   const startupMicEnableTimerRef = useRef<number | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const sessionResumptionHandleRef = useRef<string | null>(null);
   const lastUserSpeechInterruptAtRef = useRef(0);
   const draftSyncTimerRef = useRef<number | null>(null);
   const lastDraftSignatureRef = useRef('');
@@ -157,12 +152,20 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
 
   useEffect(() => {
     const stopActiveSession = () => cleanupLive();
+    const reconnectWhenOnline = () => {
+      if (step === 'consultation' && !sessionEndedRef.current && !isLiveConnectedRef.current) {
+        reconnectAttemptRef.current = 0;
+        void startConsultation();
+      }
+    };
     window.addEventListener('pagehide', stopActiveSession);
     window.addEventListener('beforeunload', stopActiveSession);
+    window.addEventListener('online', reconnectWhenOnline);
 
     return () => {
       window.removeEventListener('pagehide', stopActiveSession);
       window.removeEventListener('beforeunload', stopActiveSession);
+      window.removeEventListener('online', reconnectWhenOnline);
       cleanupLive();
     };
   }, []);
@@ -229,6 +232,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
     const { preserveMediaStream = false, invalidateSession = true } = options;
     if (invalidateSession) {
       activeLiveConnectionIdRef.current += 1;
+      sessionResumptionHandleRef.current = null;
     }
     isCleaningUpRef.current = true;
     isConnectingRef.current = false;
@@ -252,6 +256,11 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
     if (startupMicEnableTimerRef.current) {
       window.clearTimeout(startupMicEnableTimerRef.current);
       startupMicEnableTimerRef.current = null;
+    }
+
+    if (reconnectTimerRef.current && invalidateSession) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
 
     if (audioInputProcessorRef.current) {
@@ -417,26 +426,24 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
     setConnectionError(null);
 
     try {
-      // 1. Create fresh Gemini instance
-      const apiKey = getGeminiBrowserApiKey();
-      if (!apiKey) {
-        throw new Error('Gemini Live API key is not configured for the browser build.');
-      }
-      const ai = new GoogleGenAI({ apiKey });
+      // The backend mints a short-lived, one-use token. The permanent key never enters the browser bundle.
+      const liveAuth = await roleApi.aiLiveToken();
+      const ai = new GoogleGenAI({ apiKey: liveAuth.token, httpOptions: { apiVersion: 'v1alpha' } });
 
       // 2. Use existing stream or request new one if missing
       let stream = streamRef.current;
       const hasLiveAudio = stream?.getAudioTracks().some((track) => track.readyState === 'live');
-      const hasLiveVideo = stream?.getVideoTracks().some((track) => track.readyState === 'live');
-      if (!stream || !hasLiveAudio || !hasLiveVideo) {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        });
+      if (!stream || !hasLiveAudio) {
+        const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+          setIsCameraOn(false);
+        }
         streamRef.current = stream;
       }
 
@@ -473,7 +480,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
 
       // 4. Connect Live API
       const sessionPromise = ai.live.connect({
-        model: getGeminiLiveModel(),
+        model: liveAuth.model || getGeminiLiveModel(),
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
@@ -481,6 +488,14 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
           },
           outputAudioTranscription: {},
           inputAudioTranscription: {},
+          sessionResumption: {
+            handle: sessionResumptionHandleRef.current || undefined,
+            transparent: true
+          },
+          contextWindowCompression: {
+            triggerTokens: '24000',
+            slidingWindow: { targetTokens: '12000' }
+          },
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           systemInstruction: liveSystemInstruction,
         },
@@ -492,6 +507,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
             }
             isLiveConnectedRef.current = true;
             setIsLiveConnected(true);
+            reconnectAttemptRef.current = 0;
             isConnectingRef.current = false;
             sessionPromise.then(session => {
               if (activeLiveConnectionIdRef.current !== connectionId || sessionEndedRef.current) {
@@ -518,6 +534,10 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
             setIsLiveConnected(false);
             isConnectingRef.current = false;
             cleanupLive({ invalidateSession: false });
+            if (!sessionEndedRef.current && navigator.onLine) {
+              const delay = Math.min(10_000, 1000 * 2 ** reconnectAttemptRef.current++);
+              reconnectTimerRef.current = window.setTimeout(() => void startConsultation(), delay);
+            }
           },
           onerror: (err) => {
             if (activeLiveConnectionIdRef.current !== connectionId) return;
@@ -727,6 +747,8 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
 
   const handleLiveMessage = (message: LiveServerMessage) => {
     if (sessionEndedRef.current) return;
+    const resumptionHandle = message.sessionResumptionUpdate?.newHandle;
+    if (resumptionHandle) sessionResumptionHandleRef.current = resumptionHandle;
     // Audio Output - Process ALL audio parts in the message
     const audioParts = message.serverContent?.modelTurn?.parts?.filter(p => p.inlineData);
     if (audioParts && audioParts.length > 0) {
@@ -960,7 +982,6 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
   const handleImageAnalysis = async (file: File) => {
     setIsAIThinking(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: getGeminiBrowserApiKey() });
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve((reader.result as string).split(',')[1]);
@@ -968,17 +989,10 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
         reader.readAsDataURL(file);
       });
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        contents: [{
-          parts: [
-            { inlineData: { data: base64, mimeType: file.type } },
-            { text: t.ai_consultation.room.imageAnalysisPrompt }
-          ]
-        }]
-      });
-
-      const analysis = cleanAIText(response.text || t.ai_consultation.room.docAnalysisFail);
+      const result = await analyzeHealthData('image', `${file.type};base64,${base64}`);
+      const analysis = cleanAIText(
+        [result.summary, ...(result.recommendations || [])].filter(Boolean).join('\n') || t.ai_consultation.room.docAnalysisFail
+      );
       setUploadedDocs(prev => [...prev, { name: file.name, analysis }]);
 
       const currentSession = sessionRef.current || liveSessionRef.current;
@@ -1113,24 +1127,15 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
         return;
       }
 
-      const ai = new GoogleGenAI({ apiKey: getGeminiBrowserApiKey() });
       const conversation = consultationTranscript.length
         ? consultationTranscript.map((m) => `${m.speaker}: ${m.text}`).join('\n')
         : messages.map(m => `${m.role}: ${m.text}`).join('\n');
       const docs = uploadedDocs.map(d => `Document ${d.name}: ${d.analysis}`).join('\n');
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        contents: [{
-          role: "user",
-          parts: [{ text: t.ai_consultation.room.reportPrompt.replace('{conversation}', conversation).replace('{docs}', docs) }]
-        }],
-        config: {
-          systemInstruction: t.ai_consultation.room.reportSystemInstruction
-        }
-      });
-
-      const result = cleanAIText(response.text || t.ai_consultation.room.reportFail);
+      const result = cleanAIText(await advancedChatStream(
+        t.ai_consultation.room.reportPrompt.replace('{conversation}', conversation).replace('{docs}', docs),
+        { systemInstruction: t.ai_consultation.room.reportSystemInstruction, useSearch: false }
+      ) || t.ai_consultation.room.reportFail);
       setReport(result);
       setMessages(prev => [...prev, { role: 'ai', text: `${t.ai_consultation.room.reportFormed}: ${result}` }]);
       upsertTranscriptEntry('ai', `${t.ai_consultation.room.reportFormed}: ${result}`, 'append');
@@ -1363,10 +1368,16 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
                     await audioContextRef.current.resume();
 
                     // Pre-request stream
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-                      audio: true
-                    });
+                    let stream: MediaStream;
+                    try {
+                      stream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: true
+                      });
+                    } catch {
+                      stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                      setIsCameraOn(false);
+                    }
                     streamRef.current = stream;
 
                     if (!user) {

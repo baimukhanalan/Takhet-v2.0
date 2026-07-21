@@ -114,6 +114,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const [relayWarning, setRelayWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isLocalPrimary, setIsLocalPrimary] = useState(!isDoctor);
@@ -129,6 +130,8 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
   const aiAssistantSignatureRef = useRef('');
   const doctorRecommendationsEditedRef = useRef(false);
   const sharedContextCaseRef = useRef<string | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const isRecoveringConnectionRef = useRef(false);
 
   const attachVideoStream = (video: HTMLVideoElement | null, stream: MediaStream | null, muted: boolean) => {
     if (!video) return;
@@ -166,7 +169,15 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
 
   const setupLocalMedia = async () => {
     stopLocalMedia();
-    const iceConfig = await roleApi.consultationIceServers().catch(() => ({ iceServers: [] as RTCIceServer[] }));
+    const iceConfig = await roleApi.consultationIceServers().catch(() => ({
+      iceServers: [] as RTCIceServer[],
+      relayConfigured: false
+    }));
+    setRelayWarning(
+      iceConfig.relayConfigured === false
+        ? 'TURN-сервер не настроен: звонок может не пройти в корпоративной или мобильной сети.'
+        : null
+    );
     rtcRef.current = new WebRTCService(
       iceConfig.iceServers || [],
       (remoteStream) => {
@@ -179,6 +190,21 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
           type: 'ice',
           payload: { sessionId, candidate: candidate.toJSON() }
         }).catch(() => undefined);
+      },
+      (state) => {
+        if (state === 'connected') {
+          isRecoveringConnectionRef.current = false;
+          setLocalStatus('Видео и аудио подключены');
+          return;
+        }
+        if (state === 'connecting') setLocalStatus('Устанавливаем защищённое соединение…');
+        if ((state === 'disconnected' || state === 'failed') && !isCallEnded && !reconnectTimerRef.current) {
+          setLocalStatus('Связь прервалась. Переподключаемся…');
+          reconnectTimerRef.current = window.setTimeout(() => {
+            reconnectTimerRef.current = null;
+            void recoverConnection();
+          }, state === 'failed' ? 500 : 2500);
+        }
       }
     );
     const stream = await rtcRef.current.startLocalStream();
@@ -350,6 +376,27 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     }
   };
 
+  const recoverConnection = async () => {
+    if (!caseItem || isCallEnded || isRecoveringConnectionRef.current || !navigator.onLine) return;
+    isRecoveringConnectionRef.current = true;
+    try {
+      offerSentRef.current = false;
+      answerSentForSessionRef.current = null;
+      remoteSignalSessionRef.current = null;
+      remoteDescriptionReadyRef.current = false;
+      pendingCandidatesRef.current = [];
+      processedSignalsRef.current.clear();
+      lastSignalIdRef.current = 0;
+      localSignalSessionRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      await setupLocalMedia();
+      await startConsultationSignaling();
+    } catch {
+      setError('Не удалось восстановить звонок. Проверьте интернет и разрешения камеры и микрофона.');
+    } finally {
+      isRecoveringConnectionRef.current = false;
+    }
+  };
+
   const syncConsultationReport = async () => {
     if (!caseItem) return;
     const report = isDoctor ? await roleApi.doctorCaseReport(caseItem.id) : await roleApi.patientConsultationReport(caseItem.id);
@@ -455,7 +502,11 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     };
 
     void setup();
+    const reconnectWhenOnline = () => void recoverConnection();
+    window.addEventListener('online', reconnectWhenOnline);
     return () => {
+      window.removeEventListener('online', reconnectWhenOnline);
+      if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
       stopLocalMedia();
     };
   }, [caseItem?.id, isDoctor]);
@@ -847,6 +898,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
 
               <div className="border-t border-slate-100 px-4 py-4">
                 {localStatus ? <p className="mb-3 text-xs font-bold text-blue-600">{localStatus}</p> : null}
+                {relayWarning ? <p className="mb-3 text-xs font-semibold text-amber-700">{relayWarning}</p> : null}
                 {error ? <p className="mb-3 text-xs font-bold text-red-500">{error}</p> : null}
                 <div className="mb-3 flex items-center gap-2">
                   <label className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500">
@@ -1078,6 +1130,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
                 </div>
 
                 {localStatus ? <p className="text-xs font-bold text-blue-600">{localStatus}</p> : null}
+                {relayWarning ? <p className="text-xs font-semibold text-amber-700">{relayWarning}</p> : null}
                 {error ? <p className="text-xs font-bold text-red-500">{error}</p> : null}
               </div>
             )}

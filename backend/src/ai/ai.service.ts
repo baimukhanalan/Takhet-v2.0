@@ -5,6 +5,9 @@ import { env } from '../config/env.config';
 @Injectable()
 export class AiService {
   private readonly ai = env.geminiApiKey ? new GoogleGenAI({ apiKey: env.geminiApiKey }) : null;
+  private readonly liveAi = env.geminiApiKey
+    ? new GoogleGenAI({ apiKey: env.geminiApiKey, httpOptions: { apiVersion: 'v1alpha' } })
+    : null;
   private readonly fastModel = env.geminiFlashModel;
   private readonly proModel = env.geminiProModel;
   private readonly fallbackModel = env.geminiFallbackModel;
@@ -21,6 +24,33 @@ export class AiService {
     'For general questions, answer the general question directly; do not force a medical template.',
     'No markdown asterisks. No filler. If a sentence does not help the user decide what to do, omit it.'
   ].join('\n');
+
+  async createLiveToken() {
+    if (!this.liveAi) {
+      throw new InternalServerErrorException('AI_NOT_CONFIGURED');
+    }
+
+    const now = Date.now();
+    const newSessionExpireTime = new Date(now + 5 * 60_000).toISOString();
+    const expireTime = new Date(now + 30 * 60_000).toISOString();
+    const token = await this.liveAi.authTokens.create({
+      config: {
+        uses: 1,
+        newSessionExpireTime,
+        expireTime
+      }
+    });
+
+    if (!token.name) {
+      throw new InternalServerErrorException('AI_LIVE_TOKEN_FAILED');
+    }
+
+    return {
+      token: token.name,
+      model: env.geminiLiveModel,
+      expiresAt: expireTime
+    };
+  }
 
   async analyzeSymptoms(text: string) {
     const response = await this.generateWithFallback('chat', text, {
@@ -372,16 +402,16 @@ export class AiService {
       query,
       summary: {
         likelyCause:
-          'Чтобы записаться к врачу в Takhet+, откройте гостевой каталог врачей, выберите карточку специалиста, дату и свободное время. После выбора слота система попросит подтвердить номер телефона по SMS перед оплатой и созданием записи.',
+          'Чтобы планово записаться к врачу в Takhet+, войдите в аккаунт пациента и выберите специалиста, дату и свободное время. Для помощи прямо сейчас используйте “Срочный врач” внутри TakhetAI.',
         urgency: 'Low',
         whatToDoNow:
-          'Нажмите “Поговорить с врачом” или перейдите на /guest-consultation. В карточке врача проверьте специализацию, опыт, формат приема, цену и ближайшие слоты.',
+          'Для плановой записи войдите через /patient-auth. Для срочной онлайн-консультации откройте /takhet-ai/try?urgent=1.',
         whenToTalkToDoctor:
           'Если есть сильная боль, одышка, боль в груди, потеря сознания, кровотечение или резкое ухудшение состояния, не ждите онлайн-записи и обращайтесь в 103 или 112.'
       },
       detailedExplanation: {
         scenarios: [
-          'Без регистрации: можно выбрать врача в гостевом каталоге и получить консультацию, но итоговое PDF-заключение доступно один раз, а саммари не сохраняется в медархив.',
+          'Без регистрации можно пройти пробный опрос “Срочный врач”; для оплаты, подбора врача и сохранения заключения потребуется вход пациента.',
           'С аккаунтом пациента: консультации, заключения и файлы сохраняются в личном кабинете и медархиве.',
           'Если нужный слот занят, выберите другую дату или другого специалиста.'
         ],
@@ -389,21 +419,21 @@ export class AiService {
         mistakes: [
           'Не выбирайте врача только по цене: проверьте специализацию, опыт и ближайшее доступное время.',
           'Не откладывайте срочную помощь, если есть красные флаги.',
-          'Не закрывайте страницу гостевой записи до подтверждения телефона и оплаты.'
+          'Не закрывайте страницу оплаты до подтверждения операции.'
         ],
         nextSteps: [
-          'Откройте /guest-consultation.',
+          'Откройте /patient-auth для плановой записи или /takhet-ai/try?urgent=1 для срочного опроса.',
           'Выберите карточку врача и подходящий слот.',
-          'Подтвердите номер телефона по SMS.',
+          'Подтвердите данные обращения.',
           'Перейдите к оплате и дождитесь подтверждения записи.'
         ]
       },
       sources: [
         {
-          id: 'takhet-guest-consultation',
-          title: 'Takhet+ guest consultation',
-          url: '/guest-consultation',
-          summary: 'Гостевой каталог врачей, карточка специалиста, календарь и запись на онлайн-консультацию.',
+          id: 'takhet-urgent-doctor',
+          title: 'Takhet+ urgent doctor',
+          url: '/takhet-ai/try?urgent=1',
+          summary: 'Срочный опрос, проверка красных флагов и подготовка обращения для врача.',
           trustLevel: 'High',
           sourceName: 'Takhet+'
         },

@@ -25,6 +25,7 @@ import { startVoiceInput } from '../services/voiceInput';
 import { User, UserRole } from '../types';
 import { consumeGuestAiRequest, guestAiLimitMessage, isGuestAiLimitError } from '../services/guestAiUsage';
 import { roleApi } from '../../services/roleApi';
+import DoctorNowFlow from '../components/DoctorNowFlow';
 
 type Message = {
   id: string;
@@ -113,13 +114,13 @@ const TakhetAIChat: React.FC<{ user?: User; trialMode?: boolean }> = ({ user, tr
   };
 
   const medicalModeActions = useMemo<QuickAction[]>(() => [
-    { id: 'ai-consultation', label: 'ИИ консультация', action: 'navigate', value: '/ai-consultation' },
-    { id: 'find-doctor', label: 'Найти врача', action: 'navigate', value: '/guest-consultation' },
+    { id: 'urgent-doctor', label: 'Срочный врач', action: 'navigate', value: `${isTrial ? '/takhet-ai/try' : '/takhet-ai/patient'}?urgent=1` },
+    { id: 'ai-consultation', label: 'ИИ видео', action: 'navigate', value: '/ai-consultation' },
     { id: 'ai-decoding', label: 'ИИ расшифровка', action: 'navigate', value: '/ai-lab' },
     { id: 'describe-symptoms', label: 'Описать симптомы', action: 'prompt', value: 'Помоги структурированно описать мои симптомы. Сначала задай мне короткие уточняющие вопросы: что беспокоит, как давно, насколько сильно, есть ли температура и тревожные признаки.' },
     { id: 'ai-browser', label: 'ИИ браузер', action: 'navigate', value: '/health-browser' },
     { id: 'services', label: 'Сервисы', action: 'navigate', value: '/services' }
-  ], []);
+  ], [isTrial]);
 
   const soulfulModeActions = useMemo<QuickAction[]>(() => [
     { id: 'find-specialist', label: 'Найти специалиста', action: 'navigate', value: '/mental' },
@@ -292,6 +293,10 @@ const TakhetAIChat: React.FC<{ user?: User; trialMode?: boolean }> = ({ user, tr
 
   const hasConversation = messages.some((item) => item.role === 'user');
   const returnTarget = { pathname: '/takhet-ai/patient', search: mode === 'soulful' ? '?mode=soulful' : '' };
+
+  if (new URLSearchParams(location.search).get('urgent') === '1') {
+    return <DoctorNowFlow user={user} trialMode={isTrial} />;
+  }
 
   const executeQuickAction = (item: QuickAction) => {
     if (item.action === 'navigate') {

@@ -23,6 +23,10 @@ const shouldUseResumableUpload = (file: File) => {
 };
 
 export const roleApi = {
+  aiLiveToken: () =>
+    api<{ token: string; model: string; expiresAt: string }>('/ai/live-token', {
+      method: 'POST'
+    }),
   publicDoctors: () => api<any[]>('/doctors'),
   publicDoctor: (id: string) => api<any>(`/doctors/${id}`),
   guestCreateConsultation: (payload: {

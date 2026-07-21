@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, ChevronRight, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, ChevronRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { FadeIn } from '../components/FadeIn';
 import { UserRole } from '../types';
@@ -8,6 +8,9 @@ import { useLanguage } from '../services/useLanguage';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { TextField } from '../components/ui/TextField';
+import { roleApi } from '../../services/roleApi';
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email: string; password: string }) => Promise<void> }> = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -16,14 +19,19 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [agreed, setAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreed) {
-      setError('Вы должны согласиться с политикой конфиденциальности.');
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!emailRegex.test(normalizedEmail)) {
+      setError('Введите корректную электронную почту.');
+      return;
+    }
+    if (!password) {
+      setError('Введите пароль.');
       return;
     }
 
@@ -31,7 +39,7 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
     setError(null);
 
     try {
-      await onLogin(UserRole.PATIENT, { email: email.trim().toLowerCase(), password });
+      await onLogin(UserRole.PATIENT, { email: normalizedEmail, password });
       const from = (location.state as any)?.from;
       const target = from?.pathname ? `${from.pathname}${from.search || ''}` : '/dashboard';
       navigate(target, { replace: true });
@@ -40,6 +48,17 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const resetPassword = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!emailRegex.test(normalizedEmail)) {
+      setError('Сначала введите электронную почту аккаунта.');
+      return;
+    }
+    setError(null);
+    await roleApi.requestPasswordReset({ email: normalizedEmail, role: 'patient' }).catch(() => undefined);
+    setInfo('Если аккаунт существует, письмо для восстановления уже отправлено.');
   };
 
   const openRegister = () => {
@@ -77,7 +96,7 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
               </div>
               <span className="text-3xl font-black text-white tracking-tighter">Takhet<span className="text-primary">+</span></span>
             </div>
-            <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Вход в Takhet AI</h1>
+            <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Вход пациента</h1>
             <p className="text-slate-400 font-medium max-w-sm mx-auto">
               Войдите, чтобы продолжить диалог с Takhet AI, открыть архив, разобрать анализы и перейти к консультациям.
             </p>
@@ -119,13 +138,7 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
               </div>
 
               <div className="flex items-center justify-between text-sm gap-4">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${agreed ? 'bg-primary border-primary' : 'border-white/10 group-hover:border-primary/50'}`}>
-                    <input type="checkbox" className="hidden" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    {agreed && <CheckCircle2 className="w-4 h-4 text-white" />}
-                  </div>
-                  <span className="text-slate-400 font-medium select-none">Я согласен с политикой</span>
-                </label>
+                <Button variant="ghost" size="sm" onClick={resetPassword} className="px-0 hover:underline">Забыли пароль?</Button>
                 <Button variant="ghost" size="sm" onClick={openRegister} className="px-0 hover:underline">
                   Зарегистрироваться
                 </Button>
@@ -141,6 +154,7 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
                   </Alert>
                 </motion.div>
               )}
+              {info && <Alert className="border-emerald-500/20 bg-emerald-500/10 text-sm text-emerald-300">{info}</Alert>}
 
               <Button
                 type="submit"

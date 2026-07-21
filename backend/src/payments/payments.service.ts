@@ -65,6 +65,9 @@ export class PaymentsService {
     }
 
     if (!found.doctorId) {
+      if ((found.summary || '').startsWith('[DOCTOR_NOW]')) {
+        return 4000;
+      }
       throw new BadRequestException('Unable to determine consultation price: case has no assigned doctor');
     }
 
