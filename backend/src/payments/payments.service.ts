@@ -64,10 +64,11 @@ export class PaymentsService {
       throw new NotFoundException('Case not found');
     }
 
+    if ((found.summary || '').startsWith('[DOCTOR_NOW]')) {
+      return 4000;
+    }
+
     if (!found.doctorId) {
-      if ((found.summary || '').startsWith('[DOCTOR_NOW]')) {
-        return 4000;
-      }
       throw new BadRequestException('Unable to determine consultation price: case has no assigned doctor');
     }
 

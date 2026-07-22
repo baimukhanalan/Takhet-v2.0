@@ -42,6 +42,20 @@ export const roleApi = {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
+  guestCreateUrgentConsultation: (payload: {
+    summary: string;
+    fullName: string;
+    phone: string;
+    email?: string;
+    phoneVerificationToken: string;
+    acceptedTerms: boolean;
+    acceptedPrivacy: boolean;
+    acceptedTelemedicine: boolean;
+  }) =>
+    api<any>('/guest/urgent-consultations', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
   requestGuestPhoneOtp: (payload: { phone: string }) =>
     api<any>('/guest/phone-otp/request', {
       method: 'POST',

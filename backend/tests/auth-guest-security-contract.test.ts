@@ -45,7 +45,7 @@ assert(envConfig.includes('googleOAuthClientId'), 'env config must expose Google
 assert(envConfig.includes('googleOAuthClientSecret'), 'env config must expose Google OAuth client secret');
 assert(envConfig.includes('googleOAuthRedirectUrl'), 'env config must expose Google OAuth redirect URL');
 
-for (const route of ["@Post('phone-otp/request')", "@Post('phone-otp/verify')", "@Post('consultations')"]) {
+for (const route of ["@Post('phone-otp/request')", "@Post('phone-otp/verify')", "@Post('consultations')", "@Post('urgent-consultations')"]) {
   assert(guestController.includes(route), `GuestController must expose ${route}`);
 }
 
@@ -68,6 +68,11 @@ for (const marker of [
 }
 assert(guestService.includes("process.env.NODE_ENV === 'production'"), 'PII encryption must have production key guard');
 assert(guestService.includes('PII_ENCRYPTION_KEY is required in production'), 'Production must fail clearly when PII_ENCRYPTION_KEY is missing');
+assert(guestController.includes('issueGuestSession'), 'Guest Doctor Now must issue a session without asking for login credentials');
+assert(guestController.includes('buildSessionCookie'), 'Guest Doctor Now must persist its protected session in an HTTP-only cookie');
+assert(guestService.includes('createUrgentConsultation'), 'Guest service must create Doctor Now consultations');
+assert(guestService.includes("'[DOCTOR_NOW]'"), 'Guest Doctor Now case must retain its server-side fixed-price marker');
+assert(guestService.includes("'awaiting_payment'"), 'Guest Doctor Now request must wait for payment confirmation');
 
 for (const value of ['smsProvider', 'smsApiKey', 'smsSender', 'piiEncryptionKey']) {
   assert(envConfig.includes(value), `env config must expose ${value}`);

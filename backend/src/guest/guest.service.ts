@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt, randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { env } from '../config/env.config';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { DoctorsService } from '../doctors/doctors.service';
 
 type GuestConsultationPayload = {
   doctorId: string;
@@ -15,12 +16,24 @@ type GuestConsultationPayload = {
   phoneVerificationToken: string;
 };
 
+type GuestUrgentConsultationPayload = {
+  summary: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  phoneVerificationToken: string;
+  acceptedTerms: boolean;
+  acceptedPrivacy: boolean;
+  acceptedTelemedicine: boolean;
+};
+
 @Injectable()
 export class GuestService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly notificationsService: NotificationsService,
-    private readonly realtimeService: RealtimeService
+    private readonly realtimeService: RealtimeService,
+    private readonly doctorsService: DoctorsService
   ) {}
 
   async requestPhoneOtp(phone: string) {
@@ -170,6 +183,118 @@ export class GuestService {
       status: 'created',
       oneTimePdfToken,
       notice: 'Final PDF is available once; summary is not stored in patient medical archive.'
+    };
+  }
+
+  async createUrgentConsultation(payload: GuestUrgentConsultationPayload) {
+    if (!payload.acceptedTerms || !payload.acceptedPrivacy || !payload.acceptedTelemedicine) {
+      throw new BadRequestException('Required consultation consents were not accepted');
+    }
+
+    const fullName = payload.fullName.trim();
+    const phone = payload.phone.trim();
+    const medicalSummary = payload.summary.trim();
+    if (!fullName || !phone || medicalSummary.length < 20) {
+      throw new BadRequestException('Guest contact and medical summary are required');
+    }
+
+    await this.ensureGuestConsultationTable();
+    await this.assertPhoneVerified(phone, payload.phoneVerificationToken);
+
+    const doctors = (await this.doctorsService.listActive()).filter(
+      (doctor) => doctor.catalogAudience === 'doctor' || doctor.catalogAudience === 'both' || !doctor.catalogAudience
+    );
+    if (!doctors.length) {
+      throw new ServiceUnavailableException('No verified doctors are available for Doctor Now');
+    }
+
+    const doctorIds = doctors.map((doctor) => doctor.id);
+    const loadRows = await this.dataSource.query(
+      `select doctor_id as "doctorId", count(*)::int as "activeCases"
+       from cases
+       where doctor_id = any($1::uuid[]) and status in ('open', 'active', 'in_review')
+       group by doctor_id`,
+      [doctorIds]
+    );
+    const activeCases = new Map<string, number>(
+      loadRows.map((row: any) => [String(row.doctorId), Number(row.activeCases || 0)] as [string, number])
+    );
+    const doctor = [...doctors].sort(
+      (left, right) => (activeCases.get(left.id) || 0) - (activeCases.get(right.id) || 0)
+    )[0];
+
+    const guestUserId = randomUUID();
+    const guestEmail = `guest-${guestUserId}@guest.takhet.local`;
+    const oneTimePdfToken = randomBytes(24).toString('hex');
+    const now = new Date();
+    const preferredDate = now.toISOString().slice(0, 10);
+    const preferredSlot = now.toTimeString().slice(0, 5);
+    const summary = [
+      '[DOCTOR_NOW]',
+      `Guest: ${this.maskName(fullName)}`,
+      `Phone verified: ${this.maskPhone(phone)}`,
+      payload.email?.trim() ? `One-time PDF email: ${this.maskEmail(payload.email.trim())}` : '',
+      'Format: urgent video consultation, up to 15 minutes',
+      'Safety screening: critical red flags were not reported',
+      '',
+      'TakhetAI medical summary:',
+      medicalSummary.slice(0, 12000)
+    ]
+      .filter((line) => line !== '')
+      .join('\n');
+
+    await this.dataSource.query(`insert into users (id, email, password_hash, role) values ($1, $2, null, 'patient')`, [
+      guestUserId,
+      guestEmail
+    ]);
+
+    const caseRows = await this.dataSource.query(
+      `insert into cases (patient_id, doctor_id, status, summary)
+       values ($1, $2, 'open', $3)
+       returning id, patient_id as "patientId", doctor_id as "doctorId", status, created_at as "createdAt"`,
+      [guestUserId, doctor.id, summary]
+    );
+    const caseRow = caseRows[0];
+
+    await this.dataSource.query(
+      `insert into guest_consultations
+        (case_id, guest_user_id, doctor_id, full_name, phone, email, one_time_pdf_token, status, preferred_date, preferred_slot, phone_verified_at)
+       values ($1, $2, $3, $4, $5, $6, $7, 'awaiting_payment', $8, $9, now())`,
+      [
+        caseRow.id,
+        guestUserId,
+        doctor.id,
+        this.encryptSensitiveValue(fullName),
+        this.encryptSensitiveValue(phone),
+        payload.email?.trim() ? this.encryptSensitiveValue(payload.email.trim()) : null,
+        oneTimePdfToken,
+        preferredDate,
+        preferredSlot
+      ]
+    );
+
+    await this.notificationsService.create(
+      doctor.id,
+      'Новый запрос «Срочный врач»',
+      'TakhetAI подготовил резюме гостевого пациента. Ожидается подтверждение оплаты.'
+    );
+    this.realtimeService.publishToUser(doctor.id, 'doctor', 'doctor-now.request.created');
+
+    return {
+      caseId: caseRow.id,
+      doctorId: doctor.id,
+      doctor: {
+        fullName: doctor.fullName,
+        specialty: doctor.specialty,
+        avatar: doctor.avatar,
+        experienceYears: doctor.experienceYears,
+        clinicName: doctor.clinicName
+      },
+      status: 'awaiting_payment',
+      amount: 4000,
+      oneTimePdfToken,
+      guestUserId,
+      guestEmail
     };
   }
 

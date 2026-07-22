@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { IsEmail, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { Body, Controller, Get, Post, Res } from '@nestjs/common';
+import { IsBoolean, IsEmail, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 import { GuestService } from './guest.service';
 import { DoctorsService } from '../doctors/doctors.service';
+import { AuthService } from '../auth/auth.service';
 
 class RequestGuestPhoneOtpDto {
   @IsString()
@@ -48,11 +49,43 @@ class CreateGuestConsultationDto {
   phoneVerificationToken!: string;
 }
 
+class CreateGuestUrgentConsultationDto {
+  @IsString()
+  @MinLength(20)
+  summary!: string;
+
+  @IsString()
+  @MinLength(2)
+  fullName!: string;
+
+  @IsString()
+  @MinLength(5)
+  phone!: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsString()
+  @MinLength(20)
+  phoneVerificationToken!: string;
+
+  @IsBoolean()
+  acceptedTerms!: boolean;
+
+  @IsBoolean()
+  acceptedPrivacy!: boolean;
+
+  @IsBoolean()
+  acceptedTelemedicine!: boolean;
+}
+
 @Controller('guest')
 export class GuestController {
   constructor(
     private readonly guestService: GuestService,
-    private readonly doctorsService: DoctorsService
+    private readonly doctorsService: DoctorsService,
+    private readonly authService: AuthService
   ) {}
 
   @Get('doctors')
@@ -73,5 +106,16 @@ export class GuestController {
   @Post('consultations')
   createConsultation(@Body() dto: CreateGuestConsultationDto) {
     return this.guestService.createGuestConsultation(dto);
+  }
+
+  @Post('urgent-consultations')
+  async createUrgentConsultation(@Body() dto: CreateGuestUrgentConsultationDto, @Res({ passthrough: true }) res: any) {
+    const created = await this.guestService.createUrgentConsultation(dto);
+    const session = this.authService.issueGuestSession(created.guestUserId, created.guestEmail);
+    const cookie = this.authService.buildSessionCookie(session.access_token);
+    res.cookie(cookie.name, cookie.value, cookie.options);
+
+    const { guestUserId: _guestUserId, guestEmail: _guestEmail, ...result } = created;
+    return { ...result, user: session.user };
   }
 }

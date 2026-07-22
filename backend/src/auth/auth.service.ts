@@ -288,6 +288,14 @@ export class AuthService {
     };
   }
 
+  issueGuestSession(userId: string, email: string) {
+    if (!email.endsWith('@guest.takhet.local')) {
+      throw new UnauthorizedException('Guest session requires an internal guest identity');
+    }
+
+    return this.issueToken(userId, email, 'patient', true);
+  }
+
   private issueToken(userId: string, email: string, role: LoginRole, verified: boolean) {
     const token = sign(
       {
