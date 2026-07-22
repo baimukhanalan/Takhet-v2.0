@@ -176,25 +176,25 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white px-4 py-4 sm:px-8">
+    <div className="min-h-screen bg-[#F6F8FC] text-[#0E1F44]">
+      <header className="border-b border-[#E7EBF4] bg-white px-4 py-4 sm:px-8">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
-          <button onClick={() => navigate(-1)} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-slate-100" aria-label="Назад">
+          <button onClick={() => navigate(-1)} className="grid h-10 w-10 place-items-center rounded-lg text-[#0E1F44] hover:bg-[#EEF2FE]" aria-label="Назад">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="text-lg font-black">Срочный врач</h1>
-            <p className="text-xs text-slate-500">TakhetAI собирает жалобы и передаёт врачу структурированное резюме</p>
+            <p className="text-xs text-[#5D6B86]">TakhetAI собирает жалобы и передаёт врачу структурированное резюме</p>
           </div>
-          <Stethoscope className="h-6 w-6 text-emerald-700" />
+          <Stethoscope className="h-6 w-6 text-[#1D4ED8]" />
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
         {stage === 'questions' && (
           <section className="space-y-6">
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full bg-emerald-700 transition-all" style={{ width: `${progress}%` }} /></div>
-            <p className="text-xs font-bold uppercase text-slate-500">Вопрос {answers.length + 1} из {questions.length}</p>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[#DCE4F8]"><div className="h-full bg-[#1D4ED8] transition-all" style={{ width: `${progress}%` }} /></div>
+            <p className="text-xs font-bold uppercase text-[#5D6B86]">Вопрос {answers.length + 1} из {questions.length}</p>
             <h2 className="text-2xl font-black leading-tight sm:text-3xl">{questions[answers.length]}</h2>
             <textarea
               autoFocus
@@ -204,10 +204,10 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
                 if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') submitAnswer();
               }}
               rows={5}
-              className="w-full resize-none rounded-lg border border-slate-300 bg-white p-4 text-base outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+              className="w-full resize-none rounded-lg border border-[#D5DCEC] bg-white p-4 text-base outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/20"
               placeholder="Ответьте своими словами"
             />
-            <button onClick={submitAnswer} disabled={!value.trim()} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-4 font-bold text-white disabled:opacity-40 sm:w-auto">
+            <button onClick={submitAnswer} disabled={!value.trim()} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-4 font-bold text-white hover:bg-[#183FAF] disabled:opacity-40 sm:w-auto">
               Продолжить <Send className="h-4 w-4" />
             </button>
           </section>
@@ -224,10 +224,10 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
 
         {stage === 'summary' && (
           <section className="space-y-5">
-            <div><h2 className="text-2xl font-black">Проверьте резюме для врача</h2><p className="mt-2 text-slate-600">Исправьте неточности перед отправкой. Стоимость срочной консультации: 4000 ₸, до 15 минут.</p></div>
-            <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={16} className="w-full rounded-lg border border-slate-300 bg-white p-4 leading-6 outline-none focus:border-emerald-700" />
+            <div><h2 className="text-2xl font-black">Проверьте резюме для врача</h2><p className="mt-2 text-[#5D6B86]">Исправьте неточности перед отправкой. Стоимость срочной консультации: 4000 ₸, до 15 минут.</p></div>
+            <textarea value={summary} onChange={(event) => setSummary(event.target.value)} rows={16} className="w-full rounded-lg border border-[#D5DCEC] bg-white p-4 leading-6 outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/20" />
             {error && <p className="border-l-4 border-red-600 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</p>}
-            <button onClick={createUrgentRequest} disabled={busy || summary.trim().length < 20} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-4 font-bold text-white disabled:opacity-50">
+            <button onClick={createUrgentRequest} disabled={busy || summary.trim().length < 20} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-4 font-bold text-white hover:bg-[#183FAF] disabled:opacity-50">
               {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
               {user ? 'Оплатить и искать врача' : 'Продолжить без входа'}
             </button>
@@ -237,15 +237,15 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
         {stage === 'contact' && (
           <section className="space-y-6">
             <div>
-              <p className="text-xs font-bold uppercase text-emerald-700">Без регистрации</p>
+              <p className="text-xs font-bold uppercase text-[#1D4ED8]">Без регистрации</p>
               <h2 className="mt-2 text-2xl font-black">Контакт для консультации</h2>
-              <p className="mt-2 leading-6 text-slate-600">Аккаунт и пароль не нужны. Подтвердите контакт, чтобы мы могли защитить обращение и подключить вас к врачу.</p>
+              <p className="mt-2 leading-6 text-[#5D6B86]">Аккаунт и пароль не нужны. Подтвердите контакт, чтобы мы могли защитить обращение и подключить вас к врачу.</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-2 sm:col-span-2">
                 <span className="text-sm font-bold text-slate-700">Имя пациента</span>
-                <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20" placeholder="Как к вам обращаться" />
+                <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" className="h-12 w-full rounded-lg border border-[#D5DCEC] bg-white px-4 outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/20" placeholder="Как к вам обращаться" />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-bold text-slate-700">Телефон</span>
@@ -258,34 +258,34 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
                   }}
                   inputMode="tel"
                   autoComplete="tel"
-                  className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="h-12 w-full rounded-lg border border-[#D5DCEC] bg-white px-4 outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/20"
                   placeholder="+7 700 000 00 00"
                 />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-bold text-slate-700">Email для кода и заключения</span>
-                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20" placeholder="patient@example.com" />
+                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" className="h-12 w-full rounded-lg border border-[#D5DCEC] bg-white px-4 outline-none focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/20" placeholder="patient@example.com" />
               </label>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-              <input value={otpCode} onChange={(event) => setOtpCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" disabled={!otpRequested || Boolean(phoneVerificationToken)} className="h-12 rounded-lg border border-slate-300 bg-white px-4 outline-none disabled:bg-slate-100" placeholder={otpRequested ? 'Одноразовый код' : 'Сначала получите код'} />
+              <input value={otpCode} onChange={(event) => setOtpCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" disabled={!otpRequested || Boolean(phoneVerificationToken)} className="h-12 rounded-lg border border-[#D5DCEC] bg-white px-4 outline-none focus:border-[#1D4ED8] disabled:bg-[#F1F3F9]" placeholder={otpRequested ? 'Одноразовый код' : 'Сначала получите код'} />
               {!otpRequested ? (
-                <button onClick={requestOtp} disabled={busy || phone.trim().length < 5 || !emailPattern.test(email.trim())} className="h-12 rounded-lg bg-slate-950 px-5 font-bold text-white disabled:opacity-40">Получить код</button>
+                <button onClick={requestOtp} disabled={busy || phone.trim().length < 5 || !emailPattern.test(email.trim())} className="h-12 rounded-lg bg-[#0E1F44] px-5 font-bold text-white hover:bg-[#172B55] disabled:opacity-40">Получить код</button>
               ) : phoneVerificationToken ? (
-                <span className="inline-flex h-12 items-center gap-2 px-3 font-bold text-emerald-700"><ShieldCheck className="h-5 w-5" /> Подтверждён</span>
+                <span className="inline-flex h-12 items-center gap-2 px-3 font-bold text-[#1D4ED8]"><ShieldCheck className="h-5 w-5" /> Подтверждён</span>
               ) : (
-                <button onClick={verifyOtp} disabled={busy || otpCode.trim().length < 4} className="h-12 rounded-lg bg-emerald-800 px-5 font-bold text-white disabled:opacity-40">Подтвердить</button>
+                <button onClick={verifyOtp} disabled={busy || otpCode.trim().length < 4} className="h-12 rounded-lg bg-[#1D4ED8] px-5 font-bold text-white hover:bg-[#183FAF] disabled:opacity-40">Подтвердить</button>
               )}
             </div>
 
             <div className="space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-700">
-              <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedTelemedicine} onChange={(event) => setAcceptedTelemedicine(event.target.checked)} className="mt-1 h-4 w-4 accent-emerald-700" /><span>Согласен на телемедицинскую консультацию и понимаю, что она не заменяет экстренную помощь.</span></label>
-              <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedPrivacy} onChange={(event) => setAcceptedPrivacy(event.target.checked)} className="mt-1 h-4 w-4 accent-emerald-700" /><span>Согласен на обработку персональных и медицинских данных согласно <a href="/privacy" className="font-bold text-emerald-800 underline">политике конфиденциальности</a>.</span></label>
-              <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 h-4 w-4 accent-emerald-700" /><span>Принимаю <a href="/offer" className="font-bold text-emerald-800 underline">условия консультации</a>, стоимость 4 000 ₸ и условия возврата.</span></label>
+              <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedTelemedicine} onChange={(event) => setAcceptedTelemedicine(event.target.checked)} className="mt-1 h-4 w-4 accent-[#1D4ED8]" /><span>Согласен на телемедицинскую консультацию и понимаю, что она не заменяет экстренную помощь.</span></label>
+              <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedPrivacy} onChange={(event) => setAcceptedPrivacy(event.target.checked)} className="mt-1 h-4 w-4 accent-[#1D4ED8]" /><span>Согласен на обработку персональных и медицинских данных согласно <a href="/privacy" className="font-bold text-[#1D4ED8] underline">политике конфиденциальности</a>.</span></label>
+              <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 h-4 w-4 accent-[#1D4ED8]" /><span>Принимаю <a href="/offer" className="font-bold text-[#1D4ED8] underline">условия консультации</a>, стоимость 4 000 ₸ и условия возврата.</span></label>
             </div>
 
-            {status && <p className="border-l-4 border-emerald-700 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">{status}</p>}
+            {status && <p className="border-l-4 border-[#1D4ED8] bg-[#EEF2FE] p-4 text-sm font-semibold text-[#0E1F44]">{status}</p>}
             {error && <p className="border-l-4 border-red-600 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</p>}
 
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -293,7 +293,7 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
               <button
                 onClick={createGuestUrgentRequest}
                 disabled={busy || fullName.trim().length < 2 || !phoneVerificationToken || !acceptedTerms || !acceptedPrivacy || !acceptedTelemedicine}
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 font-bold text-white disabled:opacity-40"
+                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-[#1D4ED8] px-5 font-bold text-white hover:bg-[#183FAF] disabled:opacity-40"
               >
                 {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
                 Оплатить 4 000 ₸ и искать врача
@@ -304,14 +304,14 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
 
         {stage === 'submitted' && (
           <section className="space-y-5 bg-white p-6 sm:p-8">
-            <CheckCircle2 className="h-10 w-10 text-emerald-700" />
+            <CheckCircle2 className="h-10 w-10 text-[#1D4ED8]" />
             <h2 className="text-2xl font-black">Заявка передана</h2>
             <p className="leading-7 text-slate-600">Врач подобран автоматически. После подтверждения оплаты откройте защищённую видеокомнату; логин и регистрация не требуются.</p>
             {error && <p className="border-l-4 border-red-600 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</p>}
             <div className="flex flex-col gap-3 sm:flex-row">
-              {paymentUrl && <a href={paymentUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-emerald-800 px-6 py-3 text-center font-bold text-emerald-800">Открыть оплату</a>}
-              {!paymentUrl && <button onClick={retryPayment} disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-800 px-6 py-3 font-bold text-emerald-800 disabled:opacity-40">{busy && <Loader2 className="h-4 w-4 animate-spin" />}Повторить оплату</button>}
-              <button onClick={() => caseId && window.location.assign(`/consultation/${caseId}`)} disabled={!caseId} className="rounded-lg bg-slate-950 px-6 py-3 font-bold text-white disabled:opacity-40">Открыть видеокомнату</button>
+              {paymentUrl && <a href={paymentUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-[#1D4ED8] px-6 py-3 text-center font-bold text-[#1D4ED8]">Открыть оплату</a>}
+              {!paymentUrl && <button onClick={retryPayment} disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#1D4ED8] px-6 py-3 font-bold text-[#1D4ED8] disabled:opacity-40">{busy && <Loader2 className="h-4 w-4 animate-spin" />}Повторить оплату</button>}
+              <button onClick={() => caseId && window.location.assign(`/consultation/${caseId}`)} disabled={!caseId} className="rounded-lg bg-[#0E1F44] px-6 py-3 font-bold text-white disabled:opacity-40">Открыть видеокомнату</button>
             </div>
           </section>
         )}
