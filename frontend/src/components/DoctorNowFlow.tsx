@@ -13,6 +13,7 @@ const questions = [
 ];
 
 const redFlagPattern = /(сильн.*боль.*груд|боль.*груд|задыха|одышк|не могу дыш|потер.*сознан|обморок|наруш.*реч|онемел|парализ|судорог|кровотеч|кровь.*не.*остан|синеет|анафилак)/i;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user }) => {
   const navigate = useNavigate();
@@ -89,10 +90,16 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
     setError(null);
     setStatus(null);
     try {
-      const result = await roleApi.requestGuestPhoneOtp({ phone: phone.trim() });
+      const result = await roleApi.requestGuestPhoneOtp({ phone: phone.trim(), email: email.trim().toLowerCase() });
       setOtpRequested(true);
       setPhoneVerificationToken('');
-      setStatus(result.devCode ? `SMS-код подготовлен. Тестовый код: ${result.devCode}` : 'SMS-код отправлен. Он действует 10 минут.');
+      setStatus(
+        result.devCode
+          ? `Код подготовлен. Тестовый код: ${result.devCode}`
+          : result.channel === 'email'
+            ? 'Код отправлен на email. Он действует 10 минут.'
+            : 'SMS-код отправлен. Он действует 10 минут.'
+      );
     } catch (otpError) {
       setError(otpError instanceof Error ? otpError.message : 'Не удалось отправить SMS-код.');
     } finally {
@@ -232,7 +239,7 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
             <div>
               <p className="text-xs font-bold uppercase text-emerald-700">Без регистрации</p>
               <h2 className="mt-2 text-2xl font-black">Контакт для консультации</h2>
-              <p className="mt-2 leading-6 text-slate-600">Аккаунт и пароль не нужны. Подтвердите телефон, чтобы мы могли защитить обращение и подключить вас к врачу.</p>
+              <p className="mt-2 leading-6 text-slate-600">Аккаунт и пароль не нужны. Подтвердите контакт, чтобы мы могли защитить обращение и подключить вас к врачу.</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -256,15 +263,15 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
                 />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-bold text-slate-700">Email для заключения</span>
-                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20" placeholder="Необязательно" />
+                <span className="text-sm font-bold text-slate-700">Email для кода и заключения</span>
+                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20" placeholder="patient@example.com" />
               </label>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-              <input value={otpCode} onChange={(event) => setOtpCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" disabled={!otpRequested || Boolean(phoneVerificationToken)} className="h-12 rounded-lg border border-slate-300 bg-white px-4 outline-none disabled:bg-slate-100" placeholder={otpRequested ? 'Код из SMS' : 'Сначала отправьте SMS-код'} />
+              <input value={otpCode} onChange={(event) => setOtpCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" disabled={!otpRequested || Boolean(phoneVerificationToken)} className="h-12 rounded-lg border border-slate-300 bg-white px-4 outline-none disabled:bg-slate-100" placeholder={otpRequested ? 'Одноразовый код' : 'Сначала получите код'} />
               {!otpRequested ? (
-                <button onClick={requestOtp} disabled={busy || phone.trim().length < 5} className="h-12 rounded-lg bg-slate-950 px-5 font-bold text-white disabled:opacity-40">Получить код</button>
+                <button onClick={requestOtp} disabled={busy || phone.trim().length < 5 || !emailPattern.test(email.trim())} className="h-12 rounded-lg bg-slate-950 px-5 font-bold text-white disabled:opacity-40">Получить код</button>
               ) : phoneVerificationToken ? (
                 <span className="inline-flex h-12 items-center gap-2 px-3 font-bold text-emerald-700"><ShieldCheck className="h-5 w-5" /> Подтверждён</span>
               ) : (

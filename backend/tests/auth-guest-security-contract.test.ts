@@ -73,6 +73,8 @@ assert(guestController.includes('buildSessionCookie'), 'Guest Doctor Now must pe
 assert(guestService.includes('createUrgentConsultation'), 'Guest service must create Doctor Now consultations');
 assert(guestService.includes("'[DOCTOR_NOW]'"), 'Guest Doctor Now case must retain its server-side fixed-price marker');
 assert(guestService.includes("'awaiting_payment'"), 'Guest Doctor Now request must wait for payment confirmation');
+assert(guestService.includes('sendGuestOtpEmail'), 'Guest OTP must fall back to configured email delivery when SMS is unavailable');
+assert(guestService.includes("channel = 'email'"), 'Guest OTP response must identify email fallback delivery');
 
 for (const value of ['smsProvider', 'smsApiKey', 'smsSender', 'piiEncryptionKey']) {
   assert(envConfig.includes(value), `env config must expose ${value}`);

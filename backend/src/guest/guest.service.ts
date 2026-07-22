@@ -36,7 +36,7 @@ export class GuestService {
     private readonly doctorsService: DoctorsService
   ) {}
 
-  async requestPhoneOtp(phone: string) {
+  async requestPhoneOtp(phone: string, email?: string) {
     const normalizedPhone = this.normalizePhone(phone);
     if (!normalizedPhone) {
       throw new BadRequestException('Valid phone is required');
@@ -60,11 +60,22 @@ export class GuestService {
       [this.hashSensitiveValue(normalizedPhone), this.hashSensitiveValue(code)]
     );
 
-    const delivery = await this.sendSms(normalizedPhone, `Takhet+ код подтверждения: ${code}`);
+    let delivery: string;
+    let channel: 'sms' | 'email' = 'sms';
+    try {
+      delivery = await this.sendSms(normalizedPhone, `Takhet+ код подтверждения: ${code}`);
+    } catch (smsError) {
+      const normalizedEmail = email?.trim().toLowerCase() || '';
+      if (!normalizedEmail || !env.resendApiKey) throw smsError;
+      delivery = await this.sendGuestOtpEmail(normalizedEmail, code);
+      channel = 'email';
+    }
+
     return {
       ok: true,
       otpRequired: true,
       delivery,
+      channel,
       ...(process.env.NODE_ENV === 'production' ? {} : { devCode: code })
     };
   }
@@ -128,7 +139,7 @@ export class GuestService {
     const summary = [
       'guest consultation',
       `Guest: ${this.maskName(fullName)}`,
-      `Phone verified: ${this.maskPhone(phone)}`,
+      `Contact verified: ${this.maskPhone(phone)}`,
       payload.email?.trim() ? `One-time PDF email: ${this.maskEmail(payload.email.trim())}` : '',
       `Date: ${preferredDate}`,
       `Time: ${preferredSlot}`,
@@ -432,6 +443,28 @@ export class GuestService {
     }
 
     return `SMS_PROVIDER ${env.smsProvider} accepted ${message.length} chars to ${this.maskPhone(phone)}`;
+  }
+
+  private async sendGuestOtpEmail(email: string, code: string) {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.resendApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: env.authEmailFrom,
+        to: [email],
+        subject: 'Код срочной консультации Takhet+',
+        html: `<div style="font-family:Arial,sans-serif;color:#0f172a"><h2>Подтверждение срочной консультации</h2><p>Ваш одноразовый код:</p><p style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</p><p>Код действует 10 минут. Никому его не сообщайте.</p></div>`
+      })
+    });
+
+    if (!response.ok) {
+      throw new BadRequestException(`Email provider failed with status ${response.status}`);
+    }
+
+    return `RESEND accepted OTP email to ${this.maskEmail(email)}`;
   }
 
   private encryptSensitiveValue(value: string) {

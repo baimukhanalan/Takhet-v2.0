@@ -8,6 +8,10 @@ class RequestGuestPhoneOtpDto {
   @IsString()
   @MinLength(5)
   phone!: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 }
 
 class VerifyGuestPhoneOtpDto {
@@ -95,7 +99,7 @@ export class GuestController {
 
   @Post('phone-otp/request')
   requestPhoneOtp(@Body() dto: RequestGuestPhoneOtpDto) {
-    return this.guestService.requestPhoneOtp(dto.phone);
+    return this.guestService.requestPhoneOtp(dto.phone, dto.email);
   }
 
   @Post('phone-otp/verify')

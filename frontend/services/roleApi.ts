@@ -56,7 +56,7 @@ export const roleApi = {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
-  requestGuestPhoneOtp: (payload: { phone: string }) =>
+  requestGuestPhoneOtp: (payload: { phone: string; email?: string }) =>
     api<any>('/guest/phone-otp/request', {
       method: 'POST',
       body: JSON.stringify(payload)

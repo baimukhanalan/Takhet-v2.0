@@ -12,6 +12,7 @@ const roleApi = read('services/roleApi.ts');
 assert(flow.includes('Продолжить без входа'), 'Guest Doctor Now must not require login');
 assert(flow.includes('roleApi.requestGuestPhoneOtp'), 'Guest Doctor Now must verify the phone by SMS');
 assert(flow.includes('roleApi.verifyGuestPhoneOtp'), 'Guest Doctor Now must validate the SMS code');
+assert(flow.includes("result.channel === 'email'"), 'Guest Doctor Now must explain email OTP fallback');
 assert(flow.includes('roleApi.guestCreateUrgentConsultation'), 'Guest Doctor Now must create an urgent consultation');
 assert(flow.includes('roleApi.createPaymentIntent'), 'Guest Doctor Now must continue to payment');
 assert(flow.includes('window.location.assign(`/consultation/${caseId}`)'), 'Guest Doctor Now must open the protected video room');
