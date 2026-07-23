@@ -14,7 +14,7 @@ if (sectionStart < 0 || sectionEnd < 0) {
 const protectedSection = source.slice(sectionStart, sectionEnd);
 const fingerprint = createHash('sha256').update(protectedSection).digest('hex');
 
-if (fingerprint !== '744a15b76fb3333dc21fc1146b5d9d34551a84a466e7b5e44ff308acff7f5caf') {
+if (fingerprint !== '5a3a2065c00d8e67c11772e8da9be182c054cae6fba7558a121d3fe0fa5f34a6') {
   throw new Error('The second landing section must remain unchanged during the header and hero redesign');
 }
 

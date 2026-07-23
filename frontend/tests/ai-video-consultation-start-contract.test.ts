@@ -11,27 +11,19 @@ const source = readFileSync(resolve(process.cwd(), 'src/pages/AIConsultationRoom
 const viteConfig = readFileSync(resolve(process.cwd(), 'vite.config.ts'), 'utf8');
 
 assert(
-  source.includes('import.meta.env.VITE_GEMINI_API_KEY'),
-  'AI video consultation must read Gemini key from Vite public env in browser builds'
+  source.includes('roleApi.aiLiveToken()'),
+  'AI video consultation must request a short-lived Live token from the backend'
 );
 
 assert(
-  source.includes('process.env.GEMINI_API_KEY') &&
-    source.includes('process.env.API_KEY') &&
-    !source.includes('getRuntimeEnvValue('),
-  'AI video consultation browser build must read statically replaced Vite process.env keys, not dynamic process.env lookups'
+  !source.includes('VITE_GEMINI_API_KEY') &&
+    !source.includes('process.env.GEMINI_API_KEY') &&
+    !source.includes('process.env.API_KEY'),
+  'AI video consultation must not bundle a permanent Gemini API key'
 );
 
-for (const defineKey of [
-  "'process.env.GEMINI_API_KEY'",
-  "'process.env.API_KEY'",
-  "'process.env.GEMINI_LIVE_MODEL'"
-]) {
-  assert(
-    viteConfig.includes(defineKey),
-    `Vite production build must statically define ${defineKey} for AI video consultation`
-  );
-}
+assert(!viteConfig.includes("'process.env.GEMINI_API_KEY'"), 'Vite must not inject the permanent Gemini key');
+assert(!viteConfig.includes("'process.env.API_KEY'"), 'Vite must not inject a generic permanent API key');
 
 assert(
   source.includes('import.meta.env.VITE_GEMINI_LIVE_MODEL'),
@@ -88,6 +80,16 @@ for (const translationKey of [
 assert(
   source.includes('isLiveConfigurationError'),
   'AI video consultation must distinguish Live configuration errors from camera/microphone permission errors'
+);
+
+assert(
+  source.includes('if (sessionEndedRef.current || !navigator.onLine || reconnectTimerRef.current) return'),
+  'AI video consultation must keep only one reconnect timer'
+);
+
+assert(
+  source.includes('scheduleReconnect();'),
+  'AI video consultation must recover after both close and error callbacks'
 );
 
 assert(

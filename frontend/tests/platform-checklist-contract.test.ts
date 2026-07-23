@@ -50,7 +50,7 @@ assert(!mentalPage.includes('Открыть полный Takhet AI'), 'Mental ch
 assert(mentalPage.includes('openSoulfulMode'), 'Mental expand action must open full Takhet AI soulful mode');
 assert(mentalPage.includes('data-takhet-tilt'), 'Mental specialist cards should opt into shared soft 3D tilt');
 
-assert(takhetAi.includes("value: '/guest-consultation'"), 'Guest Takhet AI find-doctor action must route to guest consultation');
+assert(takhetAi.includes("id: 'urgent-doctor'") && takhetAi.includes("?urgent=1"), 'Guest Takhet AI must route urgent care to Doctor Now');
 assert(takhetAi.includes("value: '/mental'"), 'Guest soulful specialist action must route to public Mental page');
 
 assert(doctorsPage.includes('Takhet+ готовит контекст'), 'Doctors hero subtitle must use clear readable product copy');

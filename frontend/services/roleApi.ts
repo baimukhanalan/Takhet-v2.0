@@ -56,6 +56,11 @@ export const roleApi = {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
+  patientCreateUrgentConsultation: (summary: string) =>
+    api<any>('/patient/urgent-consultations', {
+      method: 'POST',
+      body: JSON.stringify({ summary })
+    }),
   requestGuestPhoneOtp: (payload: { phone: string; email?: string }) =>
     api<any>('/guest/phone-otp/request', {
       method: 'POST',
@@ -225,6 +230,10 @@ export const roleApi = {
   patientConsultationReport: (caseId: string) => api<any>(`/patient/case/${caseId}/consultation-report`),
   consultationSignals: (caseId: string, since = 0) => api<any[]>(`/cases/${caseId}/signals?since=${since}`),
   consultationIceServers: () => api<{ iceServers: RTCIceServer[]; relayConfigured: boolean }>('/cases/ice-servers'),
+  cancelConsultation: (caseId: string) =>
+    api<any>(`/cases/${caseId}/cancel`, {
+      method: 'PATCH'
+    }),
   consultationSignal: (
     caseId: string,
     payload: { type: 'offer' | 'answer' | 'ice' | 'leave'; payload?: any }

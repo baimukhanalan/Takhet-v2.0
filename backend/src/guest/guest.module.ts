@@ -9,6 +9,7 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [NotificationsModule, RealtimeModule, DoctorsModule, AuthModule],
   controllers: [GuestController],
-  providers: [GuestService]
+  providers: [GuestService],
+  exports: [GuestService]
 })
 export class GuestModule {}

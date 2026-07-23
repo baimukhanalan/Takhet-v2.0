@@ -162,7 +162,10 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     rtcRef.current = null;
     remoteDescriptionReadyRef.current = false;
     pendingCandidatesRef.current = [];
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current?.getTracks().forEach((track) => {
+      track.onended = null;
+      track.stop();
+    });
     streamRef.current = null;
     setRemoteStream(null);
   };
@@ -209,6 +212,14 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     );
     const stream = await rtcRef.current.startLocalStream();
     streamRef.current = stream;
+    stream.getTracks().forEach((track) => {
+      track.onended = () => {
+        if (!isCallEnded && navigator.onLine) {
+          setLocalStatus('Камера или микрофон отключились. Восстанавливаем…');
+          void recoverConnection();
+        }
+      };
+    });
     stream.getAudioTracks().forEach((track) => {
       track.enabled = !isMuted;
     });

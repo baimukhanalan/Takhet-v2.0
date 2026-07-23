@@ -87,6 +87,12 @@ export class CasesController {
     return this.casesService.addConsultationSignal(id, req.user, dto);
   }
 
+  @UseGuards(AuthGuard)
+  @Patch(':id/cancel')
+  cancel(@Req() req: any, @Param('id') id: string) {
+    return this.casesService.cancelPatientCase(id, req.user.id);
+  }
+
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('doctor')
   @Patch(':id/respond')

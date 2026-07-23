@@ -251,6 +251,10 @@ const PatientDashboard: React.FC<{ user: User }> = ({ user }) => {
             <div className="space-y-8">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] px-2">Быстрые действия</h4>
               <div className="grid grid-cols-1 gap-4">
+                <button onClick={() => navigate('/takhet-ai/patient?urgent=1')} className="w-full p-6 md:p-8 bg-primary text-white rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-[1.02] transition-all flex items-center justify-between group overflow-hidden">
+                  <span className="break-words pr-2">Срочный врач</span>
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
                 <button onClick={() => navigate('/doctors-search')} className="w-full p-6 md:p-8 bg-slate-900 text-white rounded-[2.5rem] font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-[1.02] transition-all flex items-center justify-between group overflow-hidden">
                   <span className="break-words pr-2">Выбрать врача</span>
                   <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

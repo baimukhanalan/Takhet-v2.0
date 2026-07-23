@@ -7,9 +7,10 @@ import { AuthModule } from '../auth/auth.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../common/roles.guard';
+import { GuestModule } from '../guest/guest.module';
 
 @Module({
-  imports: [CasesModule, NotificationsModule, PaymentsModule, AuthModule, ProfilesModule],
+  imports: [CasesModule, NotificationsModule, PaymentsModule, AuthModule, ProfilesModule, GuestModule],
   controllers: [PatientController],
   providers: [AuthGuard, RolesGuard]
 })

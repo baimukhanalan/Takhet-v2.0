@@ -16,16 +16,16 @@ const envConfig = read('src/config/env.config.ts');
 const enterpriseService = read('src/enterprise/enterprise.service.ts');
 const labsService = read('src/labs/labs.service.ts');
 
-assert(authService.includes(`login: '${commonCredential}'`), 'Core portal temp login must use requested email');
-assert(authService.includes(`password: '${commonCredential}'`), 'Core portal temp password must use requested value');
 assert(authService.includes('env.enableDemoPortalLogin && this.isTempPortalLogin'), 'Core demo portal login must be feature-flagged');
+assert(authService.includes('env.demoPortalEmail') && authService.includes('env.demoPortalPassword'), 'Core demo login must read credentials from protected server env');
+assert(!authService.includes(`login: '${commonCredential}'`), 'Core auth service must not hardcode a demo login');
 
 for (const key of ['appAdminEmail', 'appDoctorEmail', 'appPartnerEmail', 'appPatientEmail']) {
-  assert(envConfig.includes(`${key}: process.env.`) && envConfig.includes('|| demoPortalCredential'), `${key} must use demo credential only through the demo feature flag`);
+  assert(envConfig.includes(`${key}: process.env.`) && envConfig.includes('|| activeDemoPortalEmail'), `${key} must use demo credential only through the demo feature flag`);
 }
 
 for (const key of ['appAdminPassword', 'appDoctorPassword', 'appPartnerPassword', 'appPatientPassword']) {
-  assert(envConfig.includes(`${key}: process.env.`) && envConfig.includes('|| demoPortalCredential'), `${key} must use demo credential only through the demo feature flag`);
+  assert(envConfig.includes(`${key}: process.env.`) && envConfig.includes('|| activeDemoPortalPassword'), `${key} must use demo credential only through the demo feature flag`);
 }
 
 assert(envConfig.includes("process.env.ENABLE_DEMO_PORTAL_LOGIN === 'true'") && envConfig.includes("process.env.NODE_ENV !== 'production'"), 'Demo portal login must be disabled in production');

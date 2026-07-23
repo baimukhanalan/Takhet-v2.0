@@ -148,7 +148,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
     if (step === 'consultation' && !sessionEndedRef.current && !isConnectingRef.current && !isLiveConnected) {
       startConsultation();
     }
-  }, [step, isLiveConnected]);
+  }, [step]);
 
   useEffect(() => {
     const stopActiveSession = () => cleanupLive();
@@ -414,6 +414,15 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
   const startConsultation = async () => {
     if (isConnectingRef.current) return;
 
+    const scheduleReconnect = () => {
+      if (sessionEndedRef.current || !navigator.onLine || reconnectTimerRef.current) return;
+      const delay = Math.min(10_000, 1000 * 2 ** reconnectAttemptRef.current++);
+      reconnectTimerRef.current = window.setTimeout(() => {
+        reconnectTimerRef.current = null;
+        void startConsultation();
+      }, delay);
+    };
+
     // Stop old Live/audio nodes without throwing away an already granted camera/mic stream.
     if (liveSessionRef.current || sessionRef.current || audioInputProcessorRef.current || videoFrameIntervalRef.current || audioContextRef.current) {
       cleanupLive({ preserveMediaStream: true });
@@ -534,16 +543,14 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
             setIsLiveConnected(false);
             isConnectingRef.current = false;
             cleanupLive({ invalidateSession: false });
-            if (!sessionEndedRef.current && navigator.onLine) {
-              const delay = Math.min(10_000, 1000 * 2 ** reconnectAttemptRef.current++);
-              reconnectTimerRef.current = window.setTimeout(() => void startConsultation(), delay);
-            }
+            scheduleReconnect();
           },
           onerror: (err) => {
             if (activeLiveConnectionIdRef.current !== connectionId) return;
             console.error("Live API Error:", err);
             setConnectionError(isLiveConfigurationError(err) ? t('ai_consultation.room.liveConfigError') : t.ai_consultation.room.connectionError);
             isConnectingRef.current = false;
+            scheduleReconnect();
           }
         }
       });
@@ -553,6 +560,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
       console.error("Consultation start error:", err);
       setConnectionError(isLiveConfigurationError(err) ? t('ai_consultation.room.liveConfigError') : t.ai_consultation.room.accessDenied);
       isConnectingRef.current = false;
+      scheduleReconnect();
     }
   };
 

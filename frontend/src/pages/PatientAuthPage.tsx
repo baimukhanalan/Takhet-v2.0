@@ -154,7 +154,7 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
                   </Alert>
                 </motion.div>
               )}
-              {info && <Alert className="border-emerald-500/20 bg-emerald-500/10 text-sm text-emerald-300">{info}</Alert>}
+              {info && <Alert className="border-[#1D4ED8]/20 bg-[#1D4ED8]/10 text-sm text-[#AFC1FF]">{info}</Alert>}
 
               <Button
                 type="submit"

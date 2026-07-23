@@ -21,7 +21,7 @@ assert(
 assert(
   geminiClient.includes('buildTakhetNavigationInsight') &&
     geminiClient.includes('isTakhetNavigationQuery') &&
-    geminiClient.includes('guest-consultation'),
+    geminiClient.includes('/takhet-ai/try?urgent=1'),
   'AI Browser must answer Takhet navigation and booking questions locally instead of waiting for a slow general AI call'
 );
 

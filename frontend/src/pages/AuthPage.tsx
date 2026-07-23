@@ -300,7 +300,7 @@ const AuthPage: React.FC<{
 
               {mode === 'register' && (
                 <label className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                  <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 h-4 w-4 accent-emerald-700" />
+                  <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 h-4 w-4 accent-[#1D4ED8]" />
                   <span>Я принимаю <a href="/terms" className="font-bold text-primary underline">условия использования</a> и <a href="/privacy" className="font-bold text-primary underline">политику конфиденциальности</a>.</span>
                 </label>
               )}

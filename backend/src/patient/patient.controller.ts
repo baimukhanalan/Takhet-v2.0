@@ -8,6 +8,7 @@ import { CasesService } from '../cases/cases.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentsService } from '../payments/payments.service';
 import { ProfilesService } from '../profiles/profiles.service';
+import { GuestService } from '../guest/guest.service';
 
 class CreateCaseDto {
   @IsString()
@@ -120,7 +121,8 @@ export class PatientController {
     private readonly casesService: CasesService,
     private readonly notificationsService: NotificationsService,
     private readonly paymentsService: PaymentsService,
-    private readonly profilesService: ProfilesService
+    private readonly profilesService: ProfilesService,
+    private readonly guestService: GuestService
   ) {}
 
   @Get('cases')
@@ -135,6 +137,11 @@ export class PatientController {
       appointmentDate: dto.appointmentDate,
       appointmentSlot: dto.appointmentSlot
     });
+  }
+
+  @Post('urgent-consultations')
+  createUrgentConsultation(@Req() req: any, @Body() dto: CreateCaseDto) {
+    return this.guestService.createPatientUrgentConsultation(req.user.id, dto.summary);
   }
 
   @Get('notifications')

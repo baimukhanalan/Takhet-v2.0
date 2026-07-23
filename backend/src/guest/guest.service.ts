@@ -213,27 +213,7 @@ export class GuestService {
     await this.ensureGuestConsultationTable();
     await this.assertPhoneVerified(phone, payload.phoneVerificationToken);
 
-    const doctors = (await this.doctorsService.listActive()).filter(
-      (doctor) => doctor.catalogAudience === 'doctor' || doctor.catalogAudience === 'both' || !doctor.catalogAudience
-    );
-    if (!doctors.length) {
-      throw new ServiceUnavailableException('No verified doctors are available for Doctor Now');
-    }
-
-    const doctorIds = doctors.map((doctor) => doctor.id);
-    const loadRows = await this.dataSource.query(
-      `select doctor_id as "doctorId", count(*)::int as "activeCases"
-       from cases
-       where doctor_id = any($1::uuid[]) and status in ('open', 'active', 'in_review')
-       group by doctor_id`,
-      [doctorIds]
-    );
-    const activeCases = new Map<string, number>(
-      loadRows.map((row: any) => [String(row.doctorId), Number(row.activeCases || 0)] as [string, number])
-    );
-    const doctor = [...doctors].sort(
-      (left, right) => (activeCases.get(left.id) || 0) - (activeCases.get(right.id) || 0)
-    )[0];
+    const doctor = await this.selectUrgentDoctor();
 
     const guestUserId = randomUUID();
     const guestEmail = `guest-${guestUserId}@guest.takhet.local`;
@@ -300,19 +280,94 @@ export class GuestService {
     return {
       caseId: caseRow.id,
       doctorId: doctor.id,
-      doctor: {
-        fullName: doctor.fullName,
-        specialty: doctor.specialty,
-        avatar: doctor.avatar,
-        experienceYears: doctor.experienceYears,
-        clinicName: doctor.clinicName
-      },
+      doctor: this.toDoctorCard(doctor),
       status: paymentRequired ? 'awaiting_payment' : 'active',
       paymentRequired,
       amount: 4000,
       oneTimePdfToken,
       guestUserId,
       guestEmail
+    };
+  }
+
+  async createPatientUrgentConsultation(patientId: string, medicalSummary: string) {
+    const summaryText = medicalSummary.trim();
+    if (summaryText.length < 20) {
+      throw new BadRequestException('Medical summary is required');
+    }
+
+    const doctor = await this.selectUrgentDoctor();
+    const paymentRequired = env.paymentProvider === 'kaspi';
+    const summary = [
+      '[DOCTOR_NOW]',
+      'Format: urgent video consultation, up to 15 minutes',
+      'Safety screening: critical red flags were not reported',
+      '',
+      'TakhetAI medical summary:',
+      summaryText.slice(0, 12000)
+    ]
+      .filter((line) => line !== '')
+      .join('\n');
+
+    const rows = await this.dataSource.query(
+      `insert into cases (patient_id, doctor_id, status, summary)
+       values ($1, $2, $3, $4)
+       returning id, doctor_id as "doctorId", status, created_at as "createdAt"`,
+      [patientId, doctor.id, paymentRequired ? 'open' : 'active', summary]
+    );
+
+    await this.notificationsService.create(
+      doctor.id,
+      'Новый запрос «Срочный врач»',
+      paymentRequired
+        ? 'TakhetAI подготовил резюме пациента. Ожидается подтверждение оплаты.'
+        : 'TakhetAI подготовил резюме пациента. Обращение активно, онлайн-оплата пока не подключена.'
+    );
+    this.realtimeService.publishToUser(doctor.id, 'doctor', 'doctor-now.request.created');
+    this.realtimeService.publishToUser(patientId, 'patient', 'doctor-now.request.created');
+
+    return {
+      caseId: rows[0].id,
+      doctorId: doctor.id,
+      doctor: this.toDoctorCard(doctor),
+      status: paymentRequired ? 'awaiting_payment' : 'active',
+      paymentRequired,
+      amount: 4000
+    };
+  }
+
+  private async selectUrgentDoctor() {
+    const doctors = (await this.doctorsService.listActive()).filter(
+      (doctor) => doctor.catalogAudience === 'doctor' || doctor.catalogAudience === 'both' || !doctor.catalogAudience
+    );
+    if (!doctors.length) {
+      throw new ServiceUnavailableException('No verified doctors are available for Doctor Now');
+    }
+
+    const doctorIds = doctors.map((doctor) => doctor.id);
+    const loadRows = await this.dataSource.query(
+      `select doctor_id as "doctorId", count(*)::int as "activeCases"
+       from cases
+       where doctor_id = any($1::uuid[]) and status in ('open', 'active', 'in_review')
+       group by doctor_id`,
+      [doctorIds]
+    );
+    const activeCases = new Map<string, number>(
+      loadRows.map((row: any) => [String(row.doctorId), Number(row.activeCases || 0)] as [string, number])
+    );
+
+    return [...doctors].sort(
+      (left, right) => (activeCases.get(left.id) || 0) - (activeCases.get(right.id) || 0)
+    )[0];
+  }
+
+  private toDoctorCard(doctor: Awaited<ReturnType<DoctorsService['listActive']>>[number]) {
+    return {
+      fullName: doctor.fullName,
+      specialty: doctor.specialty,
+      avatar: doctor.avatar,
+      experienceYears: doctor.experienceYears,
+      clinicName: doctor.clinicName
     };
   }
 

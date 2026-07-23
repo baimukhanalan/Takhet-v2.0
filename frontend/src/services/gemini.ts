@@ -29,8 +29,8 @@ type HealthInsightStreamOptions = {
   onDelta?: (delta: string, fullText: string) => void;
 };
 
-const AI_FIRST_RESPONSE_TIMEOUT_MS = 25000;
-const AI_STREAM_IDLE_TIMEOUT_MS = 20000;
+const AI_FIRST_RESPONSE_TIMEOUT_MS = 12000;
+const AI_STREAM_IDLE_TIMEOUT_MS = 12000;
 const AI_STREAM_TOTAL_TIMEOUT_MS = 90000;
 
 const readAiTextStream = async (

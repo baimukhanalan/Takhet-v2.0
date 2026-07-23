@@ -12,7 +12,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 const app = read('src/App.tsx');
 const sidebar = read('src/components/Sidebar.tsx');
 const authPage = read('src/pages/AuthPage.tsx');
-const guestPage = read('src/pages/GuestConsultationPage.tsx');
+const doctorNowFlow = read('src/components/DoctorNowFlow.tsx');
 const roleApi = read('services/roleApi.ts');
 const labsApp = read('src/pages/TakhetLabsApp.tsx');
 const enterpriseApp = read('src/pages/EnterpriseApp.tsx');
@@ -30,22 +30,21 @@ assert(authPage.includes('showPassword'), 'Auth registration/login must allow pa
 assert(authPage.includes("type={showPassword ? 'text' : 'password'}"), 'Auth password input must switch between hidden and visible');
 assert(authPage.includes('emailRegex'), 'Auth page must validate email format before submit');
 
-for (const removedCopy of ['Выбранный врач', 'Ваше имя', 'Email для одноразового PDF', 'Получить консультацию']) {
-  assert(!guestPage.includes(removedCopy), `Guest consultation must remove old side form copy: ${removedCopy}`);
-}
-
 for (const marker of [
-  'selectedDoctor',
-  'selectedDate',
-  'selectedSlot',
-  'roleApi.publicDoctor',
   'roleApi.requestGuestPhoneOtp',
   'roleApi.verifyGuestPhoneOtp',
   'otpCode',
-  'Подтвердить телефон'
+  'Без регистрации',
+  'Продолжить без входа'
 ]) {
-  assert(guestPage.includes(marker), `Guest consultation must implement expanded doctor profile/OTP marker: ${marker}`);
+  assert(doctorNowFlow.includes(marker), `Doctor Now guest flow must implement marker: ${marker}`);
 }
+
+assert(
+  app.includes('<Route path="/guest-consultation" element={<Navigate to="/patient-auth"'),
+  'Legacy guest booking route must redirect to patient login'
+);
+assert(sidebar.includes("to: '/takhet-ai/patient?urgent=1'"), 'Patient sidebar must expose Doctor Now');
 
 for (const apiMethod of ['requestGuestPhoneOtp', 'verifyGuestPhoneOtp']) {
   assert(roleApi.includes(apiMethod), `roleApi must expose guest OTP method: ${apiMethod}`);

@@ -217,6 +217,27 @@ export class CasesService {
     return this.casesRepo.findOne({ where: { id: caseId } });
   }
 
+  async cancelPatientCase(caseId: string, patientId: string) {
+    this.assertUuid(caseId, 'Case id');
+    const found = await this.casesRepo.findOne({ where: { id: caseId, patientId } });
+    if (!found) throw new NotFoundException('Case not found');
+    if (found.status === 'closed') return this.normalizeCase(found);
+
+    found.status = 'closed';
+    found.summary = `${this.normalizeSummary(found.summary)}\n\nОтменено пациентом до подключения к врачу.`;
+    const updated = await this.casesRepo.save(found);
+    await this.auditService.log('case.cancelled.by_patient', patientId, { caseId });
+    if (found.doctorId) {
+      await this.notificationsService.create(found.doctorId, 'Запрос отменён', 'Пациент отменил срочную консультацию до подключения.');
+    }
+    this.realtimeService.publishToUsers(
+      [found.patientId, found.doctorId].filter(Boolean) as string[],
+      'patient',
+      'case.cancelled'
+    );
+    return this.normalizeCase(updated);
+  }
+
   async listPartnerPatients(doctorIds?: string[]) {
     const where = doctorIds && doctorIds.length > 0 ? { doctorId: undefined as any } : undefined;
     const cases = doctorIds && doctorIds.length > 0
