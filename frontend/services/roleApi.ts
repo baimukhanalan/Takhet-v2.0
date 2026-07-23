@@ -244,7 +244,15 @@ export const roleApi = {
       body: JSON.stringify(payload)
     }),
   createPaymentIntent: (caseId: string) =>
-    api<any>('/payments/create-intent', {
+    api<{
+      available?: boolean;
+      paymentRequired?: boolean;
+      paymentUrl?: string | null;
+      paymentId?: string | null;
+      amount?: number;
+      currency?: string;
+      message?: string;
+    }>('/payments/create-intent', {
       method: 'POST',
       body: JSON.stringify({ caseId })
     }),

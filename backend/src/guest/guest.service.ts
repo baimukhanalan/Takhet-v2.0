@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt, randomUUID } from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt, randomUUID, scryptSync } from 'crypto';
 import { DataSource } from 'typeorm';
 import { env } from '../config/env.config';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -148,9 +148,10 @@ export class GuestService {
       .filter(Boolean)
       .join('\n');
 
-    await this.dataSource.query(`insert into users (id, email, password_hash, role) values ($1, $2, null, 'patient')`, [
+    await this.dataSource.query(`insert into users (id, email, password_hash, role) values ($1, $2, $3, 'patient')`, [
       guestUserId,
-      guestEmail
+      guestEmail,
+      this.createGuestPasswordHash()
     ]);
 
     const caseRows = await this.dataSource.query(
@@ -240,6 +241,7 @@ export class GuestService {
     const now = new Date();
     const preferredDate = now.toISOString().slice(0, 10);
     const preferredSlot = now.toTimeString().slice(0, 5);
+    const paymentRequired = env.paymentProvider === 'kaspi';
     const summary = [
       '[DOCTOR_NOW]',
       `Guest: ${this.maskName(fullName)}`,
@@ -254,23 +256,24 @@ export class GuestService {
       .filter((line) => line !== '')
       .join('\n');
 
-    await this.dataSource.query(`insert into users (id, email, password_hash, role) values ($1, $2, null, 'patient')`, [
+    await this.dataSource.query(`insert into users (id, email, password_hash, role) values ($1, $2, $3, 'patient')`, [
       guestUserId,
-      guestEmail
+      guestEmail,
+      this.createGuestPasswordHash()
     ]);
 
     const caseRows = await this.dataSource.query(
       `insert into cases (patient_id, doctor_id, status, summary)
-       values ($1, $2, 'open', $3)
+       values ($1, $2, $3, $4)
        returning id, patient_id as "patientId", doctor_id as "doctorId", status, created_at as "createdAt"`,
-      [guestUserId, doctor.id, summary]
+      [guestUserId, doctor.id, paymentRequired ? 'open' : 'active', summary]
     );
     const caseRow = caseRows[0];
 
     await this.dataSource.query(
       `insert into guest_consultations
         (case_id, guest_user_id, doctor_id, full_name, phone, email, one_time_pdf_token, status, preferred_date, preferred_slot, phone_verified_at)
-       values ($1, $2, $3, $4, $5, $6, $7, 'awaiting_payment', $8, $9, now())`,
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())`,
       [
         caseRow.id,
         guestUserId,
@@ -279,6 +282,7 @@ export class GuestService {
         this.encryptSensitiveValue(phone),
         payload.email?.trim() ? this.encryptSensitiveValue(payload.email.trim()) : null,
         oneTimePdfToken,
+        paymentRequired ? 'awaiting_payment' : 'created',
         preferredDate,
         preferredSlot
       ]
@@ -287,7 +291,9 @@ export class GuestService {
     await this.notificationsService.create(
       doctor.id,
       'Новый запрос «Срочный врач»',
-      'TakhetAI подготовил резюме гостевого пациента. Ожидается подтверждение оплаты.'
+      paymentRequired
+        ? 'TakhetAI подготовил резюме гостевого пациента. Ожидается подтверждение оплаты.'
+        : 'TakhetAI подготовил резюме гостевого пациента. Обращение активно, онлайн-оплата пока не подключена.'
     );
     this.realtimeService.publishToUser(doctor.id, 'doctor', 'doctor-now.request.created');
 
@@ -301,12 +307,20 @@ export class GuestService {
         experienceYears: doctor.experienceYears,
         clinicName: doctor.clinicName
       },
-      status: 'awaiting_payment',
+      status: paymentRequired ? 'awaiting_payment' : 'active',
+      paymentRequired,
       amount: 4000,
       oneTimePdfToken,
       guestUserId,
       guestEmail
     };
+  }
+
+  private createGuestPasswordHash() {
+    const inaccessiblePassword = randomBytes(48).toString('base64url');
+    const salt = randomBytes(16).toString('hex');
+    const hash = scryptSync(inaccessiblePassword, salt, 64).toString('hex');
+    return `scrypt$${salt}$${hash}`;
   }
 
   private async ensureGuestConsultationTable() {

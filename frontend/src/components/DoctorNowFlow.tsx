@@ -25,6 +25,7 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
   const [error, setError] = useState<string | null>(null);
   const [caseId, setCaseId] = useState<string | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [paymentUnavailable, setPaymentUnavailable] = useState(false);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -71,6 +72,8 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
       if (intent?.paymentUrl) {
         setPaymentUrl(intent.paymentUrl);
         window.open(intent.paymentUrl, '_blank', 'noopener,noreferrer');
+      } else if (intent?.available === false) {
+        setPaymentUnavailable(true);
       }
       setStage('submitted');
     } catch (requestError) {
@@ -147,6 +150,8 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
         if (intent?.paymentUrl) {
           setPaymentUrl(intent.paymentUrl);
           window.open(intent.paymentUrl, '_blank', 'noopener,noreferrer');
+        } else if (intent?.available === false) {
+          setPaymentUnavailable(true);
         }
       } catch {
         setError('Заявка создана, но платёжный сервис сейчас недоступен. Повторите оплату с этого экрана.');
@@ -229,7 +234,7 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
             {error && <p className="border-l-4 border-red-600 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</p>}
             <button onClick={createUrgentRequest} disabled={busy || summary.trim().length < 20} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-4 font-bold text-white hover:bg-[#183FAF] disabled:opacity-50">
               {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-              {user ? 'Оплатить и искать врача' : 'Продолжить без входа'}
+              {user ? 'Отправить заявку врачу' : 'Продолжить без входа'}
             </button>
           </section>
         )}
@@ -282,7 +287,7 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
             <div className="space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-700">
               <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedTelemedicine} onChange={(event) => setAcceptedTelemedicine(event.target.checked)} className="mt-1 h-4 w-4 accent-[#1D4ED8]" /><span>Согласен на телемедицинскую консультацию и понимаю, что она не заменяет экстренную помощь.</span></label>
               <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedPrivacy} onChange={(event) => setAcceptedPrivacy(event.target.checked)} className="mt-1 h-4 w-4 accent-[#1D4ED8]" /><span>Согласен на обработку персональных и медицинских данных согласно <a href="/privacy" className="font-bold text-[#1D4ED8] underline">политике конфиденциальности</a>.</span></label>
-              <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 h-4 w-4 accent-[#1D4ED8]" /><span>Принимаю <a href="/offer" className="font-bold text-[#1D4ED8] underline">условия консультации</a>, стоимость 4 000 ₸ и условия возврата.</span></label>
+              <label className="flex items-start gap-3"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 h-4 w-4 accent-[#1D4ED8]" /><span>Принимаю <a href="/offer" className="font-bold text-[#1D4ED8] underline">условия консультации</a>, ознакомлен со стоимостью 4 000 ₸ и условиями оплаты и возврата.</span></label>
             </div>
 
             {status && <p className="border-l-4 border-[#1D4ED8] bg-[#EEF2FE] p-4 text-sm font-semibold text-[#0E1F44]">{status}</p>}
@@ -296,7 +301,7 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
                 className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-[#1D4ED8] px-5 font-bold text-white hover:bg-[#183FAF] disabled:opacity-40"
               >
                 {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-                Оплатить 4 000 ₸ и искать врача
+                Отправить заявку и искать врача
               </button>
             </div>
           </section>
@@ -306,11 +311,12 @@ const DoctorNowFlow: React.FC<{ user?: User; trialMode?: boolean }> = ({ user })
           <section className="space-y-5 bg-white p-6 sm:p-8">
             <CheckCircle2 className="h-10 w-10 text-[#1D4ED8]" />
             <h2 className="text-2xl font-black">Заявка передана</h2>
-            <p className="leading-7 text-slate-600">Врач подобран автоматически. После подтверждения оплаты откройте защищённую видеокомнату; логин и регистрация не требуются.</p>
+            <p className="leading-7 text-slate-600">Врач подобран автоматически. Откройте защищённую видеокомнату; логин и регистрация не требуются.</p>
+            {paymentUnavailable && <p className="border-l-4 border-[#1D4ED8] bg-[#EEF2FE] p-4 text-sm font-semibold text-[#0E1F44]">Онлайн-оплата пока не подключена. Заявка сохранена без списания средств.</p>}
             {error && <p className="border-l-4 border-red-600 bg-red-50 p-4 text-sm font-semibold text-red-800">{error}</p>}
             <div className="flex flex-col gap-3 sm:flex-row">
               {paymentUrl && <a href={paymentUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-[#1D4ED8] px-6 py-3 text-center font-bold text-[#1D4ED8]">Открыть оплату</a>}
-              {!paymentUrl && <button onClick={retryPayment} disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#1D4ED8] px-6 py-3 font-bold text-[#1D4ED8] disabled:opacity-40">{busy && <Loader2 className="h-4 w-4 animate-spin" />}Повторить оплату</button>}
+              {!paymentUrl && !paymentUnavailable && <button onClick={retryPayment} disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#1D4ED8] px-6 py-3 font-bold text-[#1D4ED8] disabled:opacity-40">{busy && <Loader2 className="h-4 w-4 animate-spin" />}Повторить оплату</button>}
               <button onClick={() => caseId && window.location.assign(`/consultation/${caseId}`)} disabled={!caseId} className="rounded-lg bg-[#0E1F44] px-6 py-3 font-bold text-white disabled:opacity-40">Открыть видеокомнату</button>
             </div>
           </section>

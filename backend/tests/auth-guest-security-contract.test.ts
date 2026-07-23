@@ -73,6 +73,9 @@ assert(guestController.includes('buildSessionCookie'), 'Guest Doctor Now must pe
 assert(guestService.includes('createUrgentConsultation'), 'Guest service must create Doctor Now consultations');
 assert(guestService.includes("'[DOCTOR_NOW]'"), 'Guest Doctor Now case must retain its server-side fixed-price marker');
 assert(guestService.includes("'awaiting_payment'"), 'Guest Doctor Now request must wait for payment confirmation');
+assert(guestService.includes("paymentRequired ? 'open' : 'active'"), 'Doctor Now must activate requests when acquiring is disabled');
+assert(!guestService.includes("values ($1, $2, null, 'patient')"), 'Guest users must not violate production password_hash constraints');
+assert(guestService.includes('createGuestPasswordHash'), 'Guest users must receive an inaccessible one-way password hash');
 assert(guestService.includes('sendGuestOtpEmail'), 'Guest OTP must fall back to configured email delivery when SMS is unavailable');
 assert(guestService.includes("channel = 'email'"), 'Guest OTP response must identify email fallback delivery');
 

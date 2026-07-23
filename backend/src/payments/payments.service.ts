@@ -9,6 +9,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { CaseEntity } from '../cases/case.entity';
 import { RealtimeService } from '../realtime/realtime.service';
 import { DoctorsService } from '../doctors/doctors.service';
+import { env } from '../config/env.config';
 
 @Injectable()
 export class PaymentsService {
@@ -25,6 +26,25 @@ export class PaymentsService {
 
   async createIntent(userId: string, caseId: string) {
     const amount = await this.resolveCasePaymentAmount(userId, caseId);
+
+    if (env.paymentProvider !== 'kaspi') {
+      await this.auditService.log('payment.intent.unavailable', userId, {
+        caseId,
+        amount,
+        configuredProvider: env.paymentProvider
+      });
+      return {
+        available: false,
+        paymentRequired: false,
+        paymentUrl: null,
+        paymentId: null,
+        provider: 'none',
+        amount,
+        currency: 'KZT',
+        message: 'Online payment is not connected yet. The consultation request has been saved.'
+      };
+    }
+
     const payment = await this.paymentsRepo.save(
       this.paymentsRepo.create({ userId, amount, caseId, currency: 'KZT', provider: 'kaspi', status: 'pending', providerId: null, providerPaymentId: null })
     );

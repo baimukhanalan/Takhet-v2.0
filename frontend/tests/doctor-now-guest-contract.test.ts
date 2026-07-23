@@ -15,6 +15,8 @@ assert(flow.includes('roleApi.verifyGuestPhoneOtp'), 'Guest Doctor Now must vali
 assert(flow.includes("result.channel === 'email'"), 'Guest Doctor Now must explain email OTP fallback');
 assert(flow.includes('roleApi.guestCreateUrgentConsultation'), 'Guest Doctor Now must create an urgent consultation');
 assert(flow.includes('roleApi.createPaymentIntent'), 'Guest Doctor Now must continue to payment');
+assert(flow.includes('paymentUnavailable'), 'Guest Doctor Now must handle unavailable acquiring without an API error');
+assert(flow.includes('Заявка сохранена без списания средств'), 'Guest Doctor Now must explain disabled online payment');
 assert(flow.includes('window.location.assign(`/consultation/${caseId}`)'), 'Guest Doctor Now must open the protected video room');
 assert(!flow.includes("navigate('/patient-auth'"), 'Guest Doctor Now must never redirect to patient login');
 assert(roleApi.includes("api<any>('/guest/urgent-consultations'"), 'roleApi must expose the guest urgent consultation endpoint');
