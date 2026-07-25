@@ -27,9 +27,11 @@ assert(
 );
 
 assert(
-  consultationRoom.includes('onClick={() => navigate(-1)}') &&
+  consultationRoom.includes('() => navigate(-1)') &&
+    consultationRoom.includes('isGuestPatient') &&
+    consultationRoom.includes('returnGuestToLanding') &&
     !consultationRoom.includes("onClick={() => navigate('/appointments')}"),
-  'Consultation room back control must return to the exact previous page, not always appointments'
+  'Consultation room back control must preserve history for registered users and return guests to the landing page'
 );
 
 console.log('Back button history contract passed');

@@ -7,6 +7,7 @@ const assert = (condition: unknown, message: string) => {
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 const flow = read('src/components/DoctorNowFlow.tsx');
+const consultationRoom = read('src/pages/ConsultationRoom.tsx');
 const roleApi = read('services/roleApi.ts');
 
 assert(flow.includes('Продолжить без входа'), 'Guest Doctor Now must not require login');
@@ -26,6 +27,9 @@ assert(flow.includes("mediaState !== 'ready'"), 'Guest Doctor Now must gate room
 assert(flow.includes('window.location.assign(`/consultation/${caseId}`)'), 'Guest Doctor Now must open the protected video room');
 assert(!flow.includes("navigate('/patient-auth'"), 'Guest Doctor Now must never redirect to patient login');
 assert(roleApi.includes("api<any>('/guest/urgent-consultations'"), 'roleApi must expose the guest urgent consultation endpoint');
+assert(consultationRoom.includes("'@guest.takhet.local'"), 'The consultation room must recognize guest urgent patients');
+assert(consultationRoom.includes("api('/auth/logout', { method: 'POST' })"), 'Guest consultation exit must clear the temporary session');
+assert(consultationRoom.includes("window.location.replace('/?landing=1')"), 'Guest consultation exit must return to the public landing page');
 
 for (const consent of ['acceptedTerms', 'acceptedPrivacy', 'acceptedTelemedicine']) {
   assert(flow.includes(consent), `Guest Doctor Now must collect ${consent}`);

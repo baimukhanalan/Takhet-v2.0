@@ -20,6 +20,7 @@ import {
 import { User, UserRole } from '../types';
 import { advancedChatStream, analyzeHealthData } from '../services/gemini';
 import { WebRTCService } from '../services/webrtc';
+import { api } from '../../services/api';
 import { roleApi } from '../../services/roleApi';
 
 type CaseItem = {
@@ -91,6 +92,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const isDoctor = user.role === UserRole.DOCTOR;
+  const isGuestPatient = !isDoctor && Boolean(user.email?.toLowerCase().endsWith('@guest.takhet.local'));
   const primaryVideoRef = useRef<HTMLVideoElement>(null);
   const tileVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -168,6 +170,11 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
     });
     streamRef.current = null;
     setRemoteStream(null);
+  };
+
+  const returnGuestToLanding = async () => {
+    await api('/auth/logout', { method: 'POST' }).catch(() => null);
+    window.location.replace('/?landing=1');
   };
 
   const setupLocalMedia = async () => {
@@ -754,6 +761,10 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
       setIsCallEnded(true);
       if (!isDoctor) {
         window.setTimeout(() => {
+          if (isGuestPatient) {
+            void returnGuestToLanding();
+            return;
+          }
           navigate('/archive', { replace: true });
         }, 250);
       }
@@ -775,7 +786,7 @@ const ConsultationRoom: React.FC<{ user: User }> = ({ user }) => {
           <div className="flex min-w-0 flex-1 flex-col bg-[#0A0F1A]">
             <div className="flex items-center justify-between px-4 py-4 sm:px-6">
               <button
-                onClick={() => navigate(-1)}
+                onClick={isGuestPatient ? () => void returnGuestToLanding() : () => navigate(-1)}
                 className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-widest text-white"
               >
                 <ChevronLeft className="h-4 w-4" />
