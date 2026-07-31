@@ -91,8 +91,8 @@ const AuthPage: React.FC<{
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
-    if (!emailRegex.test(normalizedEmail)) {
-      setError('Введите корректную почту.');
+    if (!normalizedEmail || (mode === 'register' && !emailRegex.test(normalizedEmail))) {
+      setError(mode === 'register' ? 'Введите корректную почту.' : 'Введите email или логин.');
       return;
     }
     if (mode === 'register' && password.length < 10) {
@@ -257,10 +257,10 @@ const AuthPage: React.FC<{
                 <TextField
                   required
                   name="email"
-                  type="email"
-                  inputMode="email"
+                  type={mode === 'register' ? 'email' : 'text'}
+                  inputMode={mode === 'register' ? 'email' : 'text'}
                   autoComplete="username"
-                  placeholder={t.auth.email}
+                  placeholder={mode === 'register' ? t.auth.email : 'Email или логин'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   leading={<Mail className="h-5 w-5" />}

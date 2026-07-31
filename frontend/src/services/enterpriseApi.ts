@@ -63,18 +63,6 @@ export type EnterpriseConsultationRequestInput = {
   premiumRequested?: boolean;
 };
 
-const enterpriseDemoIdentifiers: Record<EnterpriseRole, string> = {
-  employee: 'EMP-1001',
-  employer_admin: 'HR-ADMIN',
-  doctor: 'DR-ENTERPRISE',
-  psychologist: 'PSY-ENTERPRISE',
-  takhet_admin: 'T+ADMIN',
-  clinical_supervisor: 'CLIN-SUP'
-};
-
-const resolveEnterpriseDemoIdentifier = (identifier: string, role: EnterpriseRole) =>
-  ['admin', 'baimukhanalan1@gmail.com'].includes(identifier.trim().toLowerCase()) ? enterpriseDemoIdentifiers[role] : identifier;
-
 export const enterpriseApi = {
   createLead: (payload: EnterpriseLeadInput) =>
     api<{ ok: boolean; id: string }>('/enterprise/leads', {
@@ -84,14 +72,13 @@ export const enterpriseApi = {
   login: (identifier: string, password: string, role: EnterpriseRole) =>
     api<EnterpriseSession>('/enterprise/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ identifier: resolveEnterpriseDemoIdentifier(identifier, role), password, role })
+      body: JSON.stringify({ identifier, password, role })
     }),
   register: (payload: EnterpriseRegisterInput) =>
     api<{ ok: boolean; status: 'request_submitted'; role: EnterpriseRole; legal: string }>('/enterprise/auth/register', {
       method: 'POST',
       body: JSON.stringify({
-        ...payload,
-        identifier: resolveEnterpriseDemoIdentifier(payload.identifier, payload.role)
+        ...payload
       })
     }),
   session: () => api<EnterpriseSession>('/enterprise/auth/session'),

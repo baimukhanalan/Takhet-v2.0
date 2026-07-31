@@ -22,15 +22,21 @@ const labsService = read('src/labs/labs.service.ts');
 assert(envConfig.includes('enableDemoPortalLogin'), 'env config must expose ENABLE_DEMO_PORTAL_LOGIN');
 assert(
   envConfig.includes("process.env.ENABLE_DEMO_PORTAL_LOGIN === 'true'") && envConfig.includes("process.env.NODE_ENV !== 'production'"),
-  'demo portal login must be disabled by default and impossible in production'
+  'development demo portal login must remain impossible in production'
 );
+assert(envConfig.includes("process.env.ENABLE_PRESENTATION_PORTAL_LOGIN === 'true'"), 'production presentation login must use a separate explicit flag');
+assert(envConfig.includes('PRESENTATION_PORTAL_EXPIRES_AT'), 'production presentation login must require an expiration');
+assert(envConfig.includes('isPresentationPortalLoginActive'), 'presentation access must be checked against expiration at runtime');
 
 assert(!paymentsService.includes("status = 'paid'") || paymentsService.includes('verifyKaspiWebhook'), 'payments must not mark direct Kaspi fallback as paid');
 assert(!paymentsService.includes('kaspi_stub'), 'payments must not use kaspi_stub auto-paid fallback');
 assert(paymentsService.includes("payment.status = 'failed'"), 'failed Kaspi payment attempts must be persisted as failed');
 assert(paymentsService.includes('ServiceUnavailableException'), 'unavailable payment provider must return a clear non-paid error');
 
-assert(authService.includes('env.enableDemoPortalLogin && this.isTempPortalLogin'), 'demo portal login must be behind feature flag');
+assert(
+  authService.includes('env.enableDemoPortalLogin && env.isPresentationPortalLoginActive() && this.isTempPortalLogin'),
+  'demo portal login must be behind feature flag and runtime expiration'
+);
 assert(authService.includes('Подтверждение почты Takhet+'), 'email verification subject must be readable UTF-8');
 assert(authService.includes('Восстановление доступа Takhet+'), 'password reset subject must be readable UTF-8');
 assert(!authService.includes('Рџ') && !authService.includes('вЂ') && !authService.includes('�'), 'auth emails must not contain mojibake');

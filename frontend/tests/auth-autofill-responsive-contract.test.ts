@@ -31,10 +31,12 @@ for (const path of authSources) {
 
 for (const path of ['src/pages/AuthPage.tsx', 'src/pages/PatientAuthPage.tsx', 'src/pages/AdminAuthPage.tsx']) {
   const source = read(path);
-  assert(source.includes('type="email"'), `${path} must use email input type`);
   assert(source.includes('autoComplete='), `${path} must declare autocomplete behavior`);
   assert(source.includes('current-password'), `${path} must mark login password fields as current-password`);
+  assert(source.includes('Email или логин'), `${path} must accept a presentation username as well as email`);
 }
+
+assert(read('src/pages/AuthPage.tsx').includes("type={mode === 'register' ? 'email' : 'text'}"), 'Main auth must keep email semantics for registration and username semantics for login');
 
 for (const path of ['src/pages/EnterpriseApp.tsx', 'src/pages/TakhetLabsApp.tsx']) {
   const source = read(path);

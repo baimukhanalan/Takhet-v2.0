@@ -71,10 +71,10 @@ const AdminAuthPage: React.FC<AdminAuthPageProps> = ({ onLogin }) => {
                 <TextField
                   required
                   name="admin-email"
-                  type="email"
-                  inputMode="email"
+                  type="text"
+                  inputMode="text"
                   autoComplete="username"
-                  placeholder={t.admin.emailPlaceholder}
+                  placeholder="Email или логин"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   leading={<Mail className="h-5 w-5" />}

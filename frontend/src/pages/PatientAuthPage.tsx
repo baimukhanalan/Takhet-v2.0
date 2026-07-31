@@ -26,8 +26,8 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
-    if (!emailRegex.test(normalizedEmail)) {
-      setError('Введите корректную электронную почту.');
+    if (!normalizedEmail) {
+      setError('Введите email или логин.');
       return;
     }
     if (!password) {
@@ -110,10 +110,10 @@ const PatientAuthPage: React.FC<{ onLogin: (role: UserRole, credentials: { email
                 <TextField
                   required
                   name="patient-email"
-                  type="email"
-                  inputMode="email"
+                  type="text"
+                  inputMode="text"
                   autoComplete="username"
-                  placeholder="Электронная почта"
+                  placeholder="Email или логин"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   leading={<Mail className="h-5 w-5" />}

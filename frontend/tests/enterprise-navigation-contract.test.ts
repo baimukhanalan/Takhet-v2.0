@@ -13,6 +13,7 @@ const app = read('src/App.tsx');
 const publicHeader = read('src/components/PublicHeader.tsx');
 const enterprisePage = read('src/pages/EnterpriseApp.tsx');
 const enterpriseApi = read('src/services/enterpriseApi.ts');
+const enterpriseService = read('../backend/src/enterprise/enterprise.service.ts');
 
 assert(publicHeader.includes("path: '/enterprise'"), 'Public header must keep Enterprise navigation link');
 assert(publicHeader.includes('overflow-y-auto'), 'Mobile/tablet burger menu must remain scrollable');
@@ -38,7 +39,8 @@ for (const endpoint of [
   assert(enterpriseApi.includes(endpoint), `Enterprise API client must expose ${endpoint}`);
 }
 
-assert(enterpriseApi.includes('resolveEnterpriseDemoIdentifier(identifier, role)'), 'Enterprise demo admin/admin credentials must map by selected role');
+assert(enterpriseApi.includes('JSON.stringify({ identifier, password, role })'), 'Enterprise client must send presentation credentials to the server without exposing role account IDs');
+assert(enterpriseService.includes('enterpriseDemoIdentifier(role)'), 'Enterprise server must map presentation credentials by selected role');
 assert(enterpriseApi.includes('createLead'), 'Enterprise API client must persist B2B leads');
 assert(enterpriseApi.includes('requestConsultation'), 'Employee consultation request must use backend');
 assert(enterprisePage.includes('riskPrecheck'), 'Old pre-shift flow must remain hidden under Risk / Pre-check, not deleted');

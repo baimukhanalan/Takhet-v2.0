@@ -41,11 +41,34 @@ const assertProductionRequiredSecret = (name: string, value: string | undefined,
   }
 };
 
-const demoPortalLoginEnabled = process.env.ENABLE_DEMO_PORTAL_LOGIN === 'true' && process.env.NODE_ENV !== 'production';
-const demoPortalEmail = process.env.DEMO_PORTAL_EMAIL || '';
-const demoPortalPassword = process.env.DEMO_PORTAL_PASSWORD || '';
+const developmentDemoLoginEnabled = process.env.ENABLE_DEMO_PORTAL_LOGIN === 'true' && process.env.NODE_ENV !== 'production';
+const productionPresentationLoginRequested =
+  process.env.ENABLE_PRESENTATION_PORTAL_LOGIN === 'true' && process.env.NODE_ENV === 'production';
+const presentationPortalUsername = process.env.PRESENTATION_PORTAL_USERNAME || '';
+const presentationPortalPassword = process.env.PRESENTATION_PORTAL_PASSWORD || '';
+const presentationPortalExpiresAt = process.env.PRESENTATION_PORTAL_EXPIRES_AT || '';
+const presentationPortalExpiryTimestamp = Date.parse(presentationPortalExpiresAt);
 
-if (demoPortalLoginEnabled) {
+if (productionPresentationLoginRequested) {
+  if (!presentationPortalUsername.trim() || !presentationPortalPassword.trim()) {
+    throw new Error('Presentation portal username and password are required when production presentation login is enabled');
+  }
+  if (!presentationPortalExpiresAt || Number.isNaN(presentationPortalExpiryTimestamp)) {
+    throw new Error('A valid PRESENTATION_PORTAL_EXPIRES_AT is required for production presentation login');
+  }
+}
+
+const productionPresentationLoginEnabled =
+  productionPresentationLoginRequested && Date.now() < presentationPortalExpiryTimestamp;
+const demoPortalLoginEnabled = developmentDemoLoginEnabled || productionPresentationLoginEnabled;
+const demoPortalEmail = productionPresentationLoginEnabled
+  ? presentationPortalUsername
+  : process.env.DEMO_PORTAL_EMAIL || '';
+const demoPortalPassword = productionPresentationLoginEnabled
+  ? presentationPortalPassword
+  : process.env.DEMO_PORTAL_PASSWORD || '';
+
+if (developmentDemoLoginEnabled) {
   if (!demoPortalEmail.trim() || !demoPortalPassword.trim() || isWeakSecret(demoPortalPassword, 10)) {
     throw new Error('DEMO_PORTAL_EMAIL and a non-placeholder DEMO_PORTAL_PASSWORD are required when ENABLE_DEMO_PORTAL_LOGIN=true');
   }
@@ -122,6 +145,10 @@ export const env = {
   googleOAuthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
   googleOAuthRedirectUrl: process.env.GOOGLE_OAUTH_REDIRECT_URL || '',
   enableDemoPortalLogin: demoPortalLoginEnabled,
+  enablePresentationPortalLogin: productionPresentationLoginRequested,
+  presentationPortalExpiresAt,
+  isPresentationPortalLoginActive: () =>
+    !productionPresentationLoginRequested || Date.now() < presentationPortalExpiryTimestamp,
   piiEncryptionKey: process.env.PII_ENCRYPTION_KEY || '',
   geminiFlashModel: process.env.GEMINI_FLASH_MODEL || 'gemini-2.5-flash',
   geminiProModel: process.env.GEMINI_PRO_MODEL || 'gemini-2.5-pro',

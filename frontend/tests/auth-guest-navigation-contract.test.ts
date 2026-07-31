@@ -25,7 +25,7 @@ assert(labsApp.includes("navigate('/', { replace: true })"), 'Takhet Labs logout
 assert(enterpriseApp.includes("navigate('/', { replace: true })"), 'Enterprise logout must route to landing page');
 
 assert(authPage.includes('goBackOrHome'), 'Auth back action must use previous page fallback');
-assert(authPage.includes('type="email"'), 'Auth email field must use email input type');
+assert(authPage.includes("type={mode === 'register' ? 'email' : 'text'}"), 'Auth identifier must accept usernames for login and email for registration');
 assert(authPage.includes('showPassword'), 'Auth registration/login must allow password visibility toggle');
 assert(authPage.includes("type={showPassword ? 'text' : 'password'}"), 'Auth password input must switch between hidden and visible');
 assert(authPage.includes('emailRegex'), 'Auth page must validate email format before submit');

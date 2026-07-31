@@ -159,13 +159,35 @@ export class LabsService {
     await this.ensureSchema();
     const normalizedIdentifier = identifier.trim();
     const normalizedPassword = password.trim();
+    const demoIdentifiers: Record<LabsRole, string> = {
+      member: 'LABS-MEMBER',
+      physician: 'LABS-PHYSICIAN',
+      admin: 'LABS-ADMIN',
+      family: 'LABS-FAMILY'
+    };
+    const isDemoLogin =
+      env.enableDemoPortalLogin &&
+      env.isPresentationPortalLoginActive() &&
+      normalizedIdentifier.toLowerCase() === env.demoPortalEmail.toLowerCase() &&
+      normalizedPassword === env.demoPortalPassword;
+    const isExpiredPresentationCredential =
+      env.enablePresentationPortalLogin &&
+      !env.isPresentationPortalLoginActive() &&
+      normalizedPassword === env.demoPortalPassword &&
+      [env.demoPortalEmail.toLowerCase(), ...Object.values(demoIdentifiers).map((value) => value.toLowerCase())].includes(
+        normalizedIdentifier.toLowerCase()
+      );
+    if (isExpiredPresentationCredential) {
+      throw new UnauthorizedException('Presentation access has expired');
+    }
+    const lookupIdentifier = isDemoLogin ? demoIdentifiers[role] : normalizedIdentifier;
     const rows = await this.dataSource.query(
       `SELECT id, role, full_name AS "fullName", email, password_hash AS "passwordHash"
        FROM labs_users
-       WHERE role = $1 AND (identifier = $2 OR email = $2 OR $2 = 'admin')
+       WHERE role = $1 AND (identifier = $2 OR email = $2)
        ORDER BY created_at ASC
        LIMIT 1`,
-      [role, normalizedIdentifier]
+      [role, lookupIdentifier]
     );
     const user = rows[0];
     if (!user || !this.verifyPassword(user.passwordHash, normalizedPassword)) {
@@ -766,7 +788,7 @@ export class LabsService {
         `INSERT INTO labs_users (identifier, email, role, full_name, password_hash)
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (identifier, role) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name, password_hash = EXCLUDED.password_hash`,
-        [identifier, email, role, fullName, this.hashPassword(env.enableDemoPortalLogin ? 'baimukhanalan1@gmail.com' : randomBytes(24).toString('base64url'))]
+        [identifier, email, role, fullName, this.hashPassword(env.enableDemoPortalLogin ? env.demoPortalPassword : randomBytes(24).toString('base64url'))]
       );
     }
   }

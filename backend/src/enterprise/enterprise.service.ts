@@ -76,6 +76,15 @@ export class EnterpriseService implements OnModuleInit {
   }
 
   async login(identifier: string, password: string, role?: EnterpriseRole) {
+    const normalizedInput = identifier.trim().toLowerCase();
+    const demoIdentifier = role ? this.enterpriseDemoIdentifier(role) : '';
+    const isPresentationCredential =
+      env.enablePresentationPortalLogin &&
+      password === env.demoPortalPassword &&
+      [env.demoPortalEmail.toLowerCase(), demoIdentifier].includes(normalizedInput);
+    if (isPresentationCredential && !env.isPresentationPortalLoginActive()) {
+      throw new UnauthorizedException('Presentation access has expired');
+    }
     const normalized = this.resolveEnterpriseDemoIdentifier(identifier, role);
     const rows = await this.dataSource.query(
       `
@@ -957,7 +966,16 @@ export class EnterpriseService implements OnModuleInit {
 
   private resolveEnterpriseDemoIdentifier(identifier: string, role?: EnterpriseRole) {
     const normalized = identifier.trim().toLowerCase();
-    if (!env.enableDemoPortalLogin || !['admin', 'baimukhanalan1@gmail.com'].includes(normalized) || !role) return normalized;
+    if (
+      !env.enableDemoPortalLogin ||
+      !env.isPresentationPortalLoginActive() ||
+      normalized !== env.demoPortalEmail.toLowerCase() ||
+      !role
+    ) return normalized;
+    return this.enterpriseDemoIdentifier(role);
+  }
+
+  private enterpriseDemoIdentifier(role: EnterpriseRole) {
     const demoByRole: Record<EnterpriseRole, string> = {
       employee: 'emp-1001',
       employer_admin: 'hr-admin',
@@ -1350,7 +1368,7 @@ export class EnterpriseService implements OnModuleInit {
   }
 
   private async ensureSeedData() {
-    const bootstrapPassword = process.env.ENTERPRISE_BOOTSTRAP_PASSWORD || (env.enableDemoPortalLogin ? 'baimukhanalan1@gmail.com' : randomBytes(24).toString('base64url'));
+    const bootstrapPassword = process.env.ENTERPRISE_BOOTSTRAP_PASSWORD || (env.enableDemoPortalLogin ? env.demoPortalPassword : randomBytes(24).toString('base64url'));
     const password = this.hashPassword(bootstrapPassword);
     const existing = await this.dataSource.query(`SELECT id FROM enterprises ORDER BY created_at ASC LIMIT 1`);
     const enterpriseId = existing[0]?.id || (await this.createSeedEnterprise());

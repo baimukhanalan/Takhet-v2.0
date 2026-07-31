@@ -35,7 +35,8 @@ export class AuthService {
 
   async login(email: string, password: string, role: LoginRole) {
     const normalizedEmail = email.trim().toLowerCase();
-    const isDemoPortalLogin = env.enableDemoPortalLogin && this.isTempPortalLogin(normalizedEmail, password);
+    const isDemoPortalLogin =
+      env.enableDemoPortalLogin && env.isPresentationPortalLoginActive() && this.isTempPortalLogin(normalizedEmail, password);
     if (!isDemoPortalLogin && !this.isValidEmail(normalizedEmail)) {
       throw new UnauthorizedException('Invalid email format');
     }
