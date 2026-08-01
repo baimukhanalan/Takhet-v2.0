@@ -14,5 +14,10 @@ export const databaseConfig: TypeOrmModuleOptions = {
   url: env.databaseUrl,
   synchronize: false,
   autoLoadEntities: false,
-  entities: [User, TriageSession, CaseEntity, Doctor, AuditLog, Signature, Payment, NotificationEntity]
+  entities: [User, TriageSession, CaseEntity, Doctor, AuditLog, Signature, Payment, NotificationEntity],
+  extra: {
+    max: env.databasePoolMax,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 30_000
+  }
 };

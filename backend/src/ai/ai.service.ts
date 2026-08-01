@@ -12,7 +12,7 @@ export class AiService {
   private readonly proModel = env.geminiProModel;
   private readonly fallbackModel = env.geminiFallbackModel;
   private readonly simpleModelCandidates = Array.from(new Set([this.fastModel, this.fallbackModel].filter(Boolean)));
-  private readonly proModelCandidates = Array.from(new Set([this.proModel, this.fastModel].filter(Boolean)));
+  private readonly proModelCandidates = Array.from(new Set([this.proModel, this.fastModel, this.fallbackModel].filter(Boolean)));
   private readonly kazakhstanContext =
     'Assume the user is likely in Kazakhstan unless they specify another country. Explain emergency numbers and care pathways as Kazakhstan-specific examples. For Kazakhstan: 103 is ambulance/medical emergency, 112 is the unified emergency response number. If the user is in another country, ask them to verify local emergency numbers.';
   private readonly strictAnswerRules = [

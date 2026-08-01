@@ -110,6 +110,7 @@ export const env = {
   port: Number(process.env.PORT || 3000),
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:4174',
   databaseUrl: process.env.DATABASE_URL || '',
+  databasePoolMax: Math.max(1, Number(process.env.DATABASE_POOL_MAX || 5)),
   supabaseUrl: process.env.SUPABASE_URL || '',
   supabaseProjectId: process.env.SUPABASE_PROJECT_ID || '',
   supabaseStorageHostname: deriveSupabaseStorageHostname(),
