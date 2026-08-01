@@ -39,8 +39,8 @@
   },
   "overrides": {
     "@protobufjs/utf8": "1.1.1",
-    "brace-expansion": "2.0.3",
-    "protobufjs": "7.6.4",
+    "brace-expansion": "2.1.4",
+    "protobufjs": "7.6.5",
     "ws": "8.21.0"
   }
 }
