@@ -32,6 +32,10 @@ const isLiveConfigurationError = (error: unknown) => {
     message.includes('Gemini Live API key') ||
     message.includes('API key') ||
     message.includes('Requested entity was not found') ||
+    message.includes('RESOURCE_EXHAUSTED') ||
+    message.includes('credits are depleted') ||
+    message.includes('quota') ||
+    message.includes('429') ||
     hasApiPermissionMismatch
   );
 };
@@ -49,6 +53,33 @@ const LIVE_VIDEO_FRAME_INTERVAL_MS = 1000;
 const LIVE_AUDIO_PROCESSOR_BUFFER_SIZE = 512;
 const LIVE_BARGE_IN_RMS_THRESHOLD = 0.025;
 const LIVE_BARGE_IN_DEBOUNCE_MS = 250;
+const LIVE_MAX_RECONNECT_ATTEMPTS = 5;
+const LIVE_MEDIA_PERMISSION_TIMEOUT_MS = 15_000;
+
+const requestUserMedia = async (constraints: MediaStreamConstraints) => {
+  let completed = false;
+  let timeoutId: number | undefined;
+  const mediaRequest = navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+    if (completed) {
+      stream.getTracks().forEach((track) => track.stop());
+      throw new DOMException('Media request timed out', 'AbortError');
+    }
+    return stream;
+  });
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(
+      () => reject(new DOMException('Media permission request timed out', 'TimeoutError')),
+      LIVE_MEDIA_PERMISSION_TIMEOUT_MS
+    );
+  });
+
+  try {
+    return await Promise.race([mediaRequest, timeout]);
+  } finally {
+    completed = true;
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
+};
 
 const LIVE_BASE_SYSTEM_INSTRUCTION = [
   'You are Takhet+ live AI consultation assistant.',
@@ -382,11 +413,6 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
     const cleaned = cleanAIText(text).trim();
     if (!cleaned || sessionEndedRef.current) return;
 
-    if (typeof session?.sendRealtimeInput === 'function') {
-      session.sendRealtimeInput({ text: cleaned });
-      return;
-    }
-
     if (typeof session?.sendClientContent === 'function') {
       session.sendClientContent({
         turns: [{ role: 'user', parts: [{ text: cleaned }] }],
@@ -416,6 +442,10 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
 
     const scheduleReconnect = () => {
       if (sessionEndedRef.current || !navigator.onLine || reconnectTimerRef.current) return;
+      if (reconnectAttemptRef.current >= LIVE_MAX_RECONNECT_ATTEMPTS) {
+        setConnectionError(t.ai_consultation.room.connectionError);
+        return;
+      }
       const delay = Math.min(10_000, 1000 * 2 ** reconnectAttemptRef.current++);
       reconnectTimerRef.current = window.setTimeout(() => {
         reconnectTimerRef.current = null;
@@ -445,12 +475,13 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
       if (!stream || !hasLiveAudio) {
         const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
         try {
-          stream = await navigator.mediaDevices.getUserMedia({
+          stream = await requestUserMedia({
             video: { width: { ideal: 1280 }, height: { ideal: 720 } },
             audio
           });
-        } catch {
-          stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'TimeoutError') throw error;
+          stream = await requestUserMedia({ audio, video: false });
           setIsCameraOn(false);
         }
         streamRef.current = stream;
@@ -550,7 +581,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
             console.error("Live API Error:", err);
             setConnectionError(isLiveConfigurationError(err) ? t('ai_consultation.room.liveConfigError') : t.ai_consultation.room.connectionError);
             isConnectingRef.current = false;
-            scheduleReconnect();
+            if (!isLiveConfigurationError(err)) scheduleReconnect();
           }
         }
       });
@@ -560,7 +591,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
       console.error("Consultation start error:", err);
       setConnectionError(isLiveConfigurationError(err) ? t('ai_consultation.room.liveConfigError') : t.ai_consultation.room.accessDenied);
       isConnectingRef.current = false;
-      scheduleReconnect();
+      if (!isLiveConfigurationError(err)) scheduleReconnect();
     }
   };
 
@@ -1378,12 +1409,13 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
                     // Pre-request stream
                     let stream: MediaStream;
                     try {
-                      stream = await navigator.mediaDevices.getUserMedia({
+                      stream = await requestUserMedia({
                         video: { width: { ideal: 1280 }, height: { ideal: 720 } },
                         audio: true
                       });
-                    } catch {
-                      stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                    } catch (error) {
+                      if (error instanceof DOMException && error.name === 'TimeoutError') throw error;
+                      stream = await requestUserMedia({ video: false, audio: true });
                       setIsCameraOn(false);
                     }
                     streamRef.current = stream;
@@ -1406,7 +1438,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
                     setStep('consultation');
                   } catch (err) {
                     console.error("Failed to initialize media on click:", err);
-                    alert(t('ai_consultation.room.mediaAccessError'));
+                    setConnectionError(t('ai_consultation.room.mediaAccessError'));
                   }
                 }}
                 className="px-12 py-6 bg-primary text-white rounded-[2rem] font-black uppercase tracking-widest shadow-2xl shadow-primary/30"

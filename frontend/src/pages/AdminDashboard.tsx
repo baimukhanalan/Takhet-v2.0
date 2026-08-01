@@ -1058,7 +1058,12 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                       <input
                         value={aiInput}
                         onChange={e => setAiInput(e.target.value)}
-                        onKeyPress={e => e.key === 'Enter' && handleSendAi()}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            void handleSendAi();
+                          }
+                        }}
                         placeholder="Запросите аудит, отчет или прогноз..."
                         className="flex-1 bg-transparent border-none outline-none font-bold text-base lg:text-2xl placeholder:opacity-30 min-w-0"
                       />
@@ -1073,6 +1078,7 @@ Always mention that detailed logs are available at baimukhanalan1@gmail.com.`,
                         <button
                           onClick={handleSendAi}
                           disabled={!aiInput.trim() || isAiTyping}
+                          aria-label="Отправить запрос ассистенту"
                           className="w-12 h-12 lg:w-24 lg:h-24 bg-primary text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
                         >
                            <Send className="w-5 h-5 lg:w-10 lg:h-10" />

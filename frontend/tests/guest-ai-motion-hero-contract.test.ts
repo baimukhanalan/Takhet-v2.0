@@ -35,8 +35,8 @@ assert(mental.includes("consumeGuestAiRequest('mental-ai')"), 'Guest Mental AI m
 assert(aiVideo.includes("consumeGuestAiRequest('ai-video')"), 'Guest video AI must consume its own request bucket');
 assert(!coordinator.includes('consumeGuestAiRequest'), 'Platform coordinator must remain exempt from guest request limits');
 assert(coordinator.includes('isPlatformCoordinatorQuestion'), 'Platform coordinator must reject off-platform questions locally');
-assert(geminiClient.includes('AI_FIRST_RESPONSE_TIMEOUT_MS = 12000'), 'AI clients must fail over instead of waiting indefinitely for first output');
-assert(geminiClient.includes('AI_STREAM_IDLE_TIMEOUT_MS = 12000'), 'AI clients must detect stalled streams');
+assert(geminiClient.includes('AI_FIRST_RESPONSE_TIMEOUT_MS = 25000'), 'AI clients must tolerate a Railway cold start before failing over');
+assert(geminiClient.includes('AI_STREAM_IDLE_TIMEOUT_MS = 20000'), 'AI clients must detect stalled streams without cutting off normal model pauses');
 assert(geminiClient.includes('readAiTextStream'), 'AI text systems must share one resilient stream reader');
 assert(chatStream.includes('maxOutputTokens: 2200'), 'Streaming answers must have enough output budget to finish');
 assert(chatStream.includes('MAX_TOKENS'), 'Streaming endpoint must continue answers stopped by the model token limit');

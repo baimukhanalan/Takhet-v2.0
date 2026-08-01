@@ -19,6 +19,10 @@ assert(source.includes('LIVE_BASE_SYSTEM_INSTRUCTION'), 'AI consultation must us
 assert(source.includes('sendLiveTextTurn('), 'AI consultation text messages must be sent as explicit live turns');
 assert(source.includes('turnComplete: true'), 'AI consultation live text turns must be marked complete');
 assert(
+  source.indexOf("typeof session?.sendClientContent === 'function'") < source.indexOf('session?.sendRealtimeInput?.({ text: cleaned })'),
+  'AI consultation text turns must prefer sendClientContent over realtime media input'
+);
+assert(
   !source.includes('sendLiveTextTurn(session, t.ai_consultation.room.initialMessage)'),
   'AI consultation must not send a synthetic initial patient message that can make the model talk to itself'
 );
@@ -34,6 +38,10 @@ assert(source.includes('const LIVE_BARGE_IN_RMS_THRESHOLD = 0.025'), 'AI consult
 assert(source.includes('stopAssistantAudioForUserSpeech'), 'AI consultation must stop assistant audio when the user starts speaking');
 assert(source.includes('lastUserSpeechInterruptAtRef'), 'AI consultation local interruption must be debounced');
 assert(source.includes('activeLiveConnectionIdRef'), 'AI consultation must guard callbacks against stale duplicate Live sessions');
+assert(source.includes('LIVE_MAX_RECONNECT_ATTEMPTS'), 'AI consultation must bound automatic reconnect attempts');
+assert(source.includes('LIVE_MEDIA_PERMISSION_TIMEOUT_MS'), 'AI consultation must bound camera and microphone permission waits');
+assert(source.includes('requestUserMedia({'), 'AI consultation must use the bounded media permission helper');
+assert(source.includes("message.includes('RESOURCE_EXHAUSTED')"), 'AI consultation must stop reconnecting on exhausted provider quota');
 assert(source.includes('if (activeLiveConnectionIdRef.current !== connectionId)'), 'AI consultation Live callbacks must ignore stale session events');
 assert(source.includes('activeSession.sendRealtimeInput?.({ audioStreamEnd: true })'), 'AI consultation cleanup must end the Gemini audio stream before closing');
 assert(!source.includes('t.ai_consultation.room.systemInstruction,\n        LIVE_AI_BEHAVIOR_INSTRUCTION'), 'AI consultation must not mix old generic prompt with Live behavior prompt');

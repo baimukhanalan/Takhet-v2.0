@@ -1,3 +1,5 @@
+import { API_URL } from '../../services/api';
+
 type SpeechRecognitionResultHandler = (text: string) => void;
 
 type StartVoiceInputOptions = {
@@ -60,10 +62,11 @@ const startRecordedVoiceInput = async ({
       try {
         const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
         const audio = await blobToBase64(blob);
-        const response = await fetch('/api/ai/transcribe', {
+        const response = await fetch(`${API_URL}/ai/public-transcribe`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ audio, mimeType: blob.type || 'audio/webm' })
+          body: JSON.stringify({ audio, mimeType: blob.type || 'audio/webm' }),
+          credentials: 'include'
         });
         const payload = await response.json();
         if (!response.ok || !payload.text) throw new Error(payload.error || 'TRANSCRIBE_FAILED');

@@ -1,3 +1,5 @@
+import { API_URL } from '../../services/api';
+
 export interface TrustedSource {
   id: string;
   title: string;
@@ -29,8 +31,8 @@ type HealthInsightStreamOptions = {
   onDelta?: (delta: string, fullText: string) => void;
 };
 
-const AI_FIRST_RESPONSE_TIMEOUT_MS = 12000;
-const AI_STREAM_IDLE_TIMEOUT_MS = 12000;
+const AI_FIRST_RESPONSE_TIMEOUT_MS = 25000;
+const AI_STREAM_IDLE_TIMEOUT_MS = 20000;
 const AI_STREAM_TOTAL_TIMEOUT_MS = 90000;
 
 const readAiTextStream = async (
@@ -49,10 +51,11 @@ const readAiTextStream = async (
   };
 
   try {
-    const response = await fetch('/api/ai/chat-stream', {
+    const response = await fetch(`${API_URL}/ai/public-chat-stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      credentials: 'include',
       signal: controller.signal
     });
     window.clearTimeout(firstResponseTimer);
@@ -382,12 +385,13 @@ export async function getHealthInsightsFast(query: string, options: HealthInsigh
 }
 
 async function callAiApi<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(`${API_URL}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    credentials: 'include'
   });
 
   const raw = await response.text();
@@ -409,12 +413,12 @@ async function callAiApi<T>(path: string, body: Record<string, unknown>): Promis
 }
 
 export async function getHealthInsights(query: string): Promise<AISearchResult> {
-  return callAiApi<AISearchResult>('/api/ai/health-insights', { query });
+  return callAiApi<AISearchResult>('/ai/public-health-insights', { query });
 }
 
 export async function advancedChat(message: string, config: { systemInstruction?: string; useSearch?: boolean }) {
   try {
-    const response = await callAiApi<{ text: string }>('/api/ai/chat', {
+    const response = await callAiApi<{ text: string }>('/ai/public-chat', {
       message,
       systemInstruction: config.systemInstruction,
       useSearch: config.useSearch
@@ -439,7 +443,24 @@ export async function advancedChatStream(
 
     return fullText || buildLocalFallback(message);
   } catch (error) {
-    console.error('Advanced Chat Stream Error:', error);
+    const isExpectedTimeout = error instanceof DOMException && error.name === 'AbortError';
+    if (!isExpectedTimeout) {
+      console.error('Advanced Chat Stream Error:', error);
+    }
+    try {
+      const response = await callAiApi<{ text: string }>('/ai/public-chat', {
+        message,
+        systemInstruction: config.systemInstruction,
+        useSearch: config.useSearch
+      });
+      if (response.text?.trim()) {
+        config.onDelta?.(response.text, response.text);
+        return response.text;
+      }
+    } catch (retryError) {
+      console.error('Advanced Chat Retry Error:', retryError);
+    }
+
     const fallback = buildLocalFallback(message);
     config.onDelta?.(fallback, fallback);
     return fallback;
@@ -448,7 +469,7 @@ export async function advancedChatStream(
 
 export async function fastChat(message: string) {
   try {
-    const response = await callAiApi<{ text: string }>('/api/ai/chat', { message });
+    const response = await callAiApi<{ text: string }>('/ai/public-chat', { message });
     return response.text || buildLocalFallback(message);
   } catch (error) {
     console.error('Fast Chat Error:', error);
@@ -458,7 +479,7 @@ export async function fastChat(message: string) {
 
 export async function generateSpeech(text: string) {
   try {
-    const response = await callAiApi<{ audio: string | null }>('/api/ai/speech', { text });
+    const response = await callAiApi<{ audio: string | null }>('/ai/public-speech', { text });
     return response.audio;
   } catch (error) {
     console.error('TTS Error:', error);
@@ -468,7 +489,7 @@ export async function generateSpeech(text: string) {
 
 export async function analyzeHealthData(type: string, data: string) {
   try {
-    return callAiApi<{ summary: string; recommendations: string[] }>('/api/ai/analyze', { type, data });
+    return callAiApi<{ summary: string; recommendations: string[] }>('/ai/public-analyze', { type, data });
   } catch (error) {
     console.error('Analyze Health Data Error:', error);
     return { summary: 'Ошибка при анализе данных.', recommendations: [] };

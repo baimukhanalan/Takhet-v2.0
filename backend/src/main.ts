@@ -8,7 +8,9 @@ import { TelemetryService } from './telemetry/telemetry.service';
 const express = require('express');
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.use(express.json({ limit: '8mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '8mb' }));
   app.getHttpAdapter().getInstance().disable('x-powered-by');
   const telemetryService = app.get(TelemetryService);
   const allowedOrigins = new Set([

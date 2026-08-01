@@ -170,6 +170,20 @@ export class AiService {
 
       return JSON.parse(text);
     } catch (error) {
+      try {
+        const text = await this.chat(`AI Browser query: ${query}`, {
+          systemInstruction: [
+            'You are Takhet AI Browser. Reply in Russian with a direct, concrete answer.',
+            'For medical questions include safe next steps, red flags and a suitable specialist without claiming a final diagnosis.',
+            'For current information clearly say what must be checked in a fresh primary source.',
+            this.strictAnswerRules
+          ].join('\n'),
+          useSearch: false
+        });
+        if (text.trim()) return this.buildHealthInsightsFromText(query, text);
+      } catch {
+        // The structured and plain provider paths are both unavailable.
+      }
       return this.buildHealthInsightsFallback(query);
     }
   }
@@ -213,7 +227,7 @@ export class AiService {
         return;
       } catch (error) {
         lastError = error;
-        if (!this.isQuotaError(error)) {
+        if (!this.isRetryableModelError(error)) {
           break;
         }
       }
@@ -223,21 +237,62 @@ export class AiService {
   }
 
   async generateSpeech(text: string) {
-    const response = await this.client.models.generateContent({
-      model: 'gemini-2.5-flash-preview-tts',
-      contents: [{ parts: [{ text }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' }
+    try {
+      const response = await this.client.models.generateContent({
+        model: 'gemini-2.5-flash-preview-tts',
+        contents: [{ parts: [{ text: `Read the following transcript aloud exactly as written. Output audio only.\n\n${text}` }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' }
+            }
           }
         }
-      }
-    });
+      });
 
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    return base64Audio ? `data:audio/mp3;base64,${base64Audio}` : null;
+      const audioPart = response.candidates
+        ?.flatMap((candidate) => candidate.content?.parts || [])
+        .find((part) => Boolean(part.inlineData?.data));
+      const base64Audio = audioPart?.inlineData?.data;
+      if (!base64Audio) return null;
+
+      const mimeType = audioPart.inlineData?.mimeType || 'audio/L16;codec=pcm;rate=24000';
+      return this.toPlayableAudioDataUrl(base64Audio, mimeType);
+    } catch (error) {
+      if (this.isProviderCapacityError(error)) return null;
+      throw error;
+    }
+  }
+
+  async transcribeAudio(audio: string, mimeType: string) {
+    if (!/^audio\//i.test(mimeType) || !/^[A-Za-z0-9+/=\r\n]+$/.test(audio)) {
+      throw new InternalServerErrorException('AI_AUDIO_FORMAT_INVALID');
+    }
+
+    let lastError: unknown = null;
+    for (const model of this.getModelCandidates('transcribe')) {
+      try {
+        const response = await this.client.models.generateContent({
+          model,
+          contents: [
+            {
+              parts: [
+                { inlineData: { data: audio, mimeType } },
+                { text: 'Transcribe this Russian or Kazakh medical voice input. Return only the spoken text, without comments.' }
+              ]
+            }
+          ],
+          config: { maxOutputTokens: 600 }
+        });
+        return (response.text || '').trim();
+      } catch (error) {
+        lastError = error;
+        if (!this.isRetryableModelError(error)) break;
+      }
+    }
+
+    throw lastError || new InternalServerErrorException('AI_TRANSCRIBE_FAILED');
   }
 
   async analyzeHealthData(type: string, data: string) {
@@ -274,7 +329,7 @@ export class AiService {
     return this.ai;
   }
 
-  private getModelCandidates(task: 'chat' | 'browser' | 'analysis' | 'image' | 'file' | 'pdf' | 'archive' | 'consultation-report', input = '') {
+  private getModelCandidates(task: 'chat' | 'browser' | 'analysis' | 'image' | 'file' | 'pdf' | 'archive' | 'consultation-report' | 'transcribe', input = '') {
     return this.shouldUseProModel(input, task) ? this.proModelCandidates : this.simpleModelCandidates;
   }
 
@@ -306,7 +361,7 @@ export class AiService {
         });
       } catch (error) {
         lastError = error;
-        if (!this.isQuotaError(error)) {
+        if (!this.isRetryableModelError(error)) {
           break;
         }
       }
@@ -318,6 +373,40 @@ export class AiService {
   private isQuotaError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error || '');
     return /429|503|RESOURCE_EXHAUSTED|UNAVAILABLE|quota|rate-limits|high demand/i.test(message);
+  }
+
+  private isProviderCapacityError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error || '');
+    return /429|503|RESOURCE_EXHAUSTED|UNAVAILABLE|quota|credits are depleted|rate-limits|high demand/i.test(message);
+  }
+
+  private isRetryableModelError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error || '');
+    return this.isQuotaError(error) || /404|NOT_FOUND|model.*not found|not supported|temporarily unavailable/i.test(message);
+  }
+
+  private toPlayableAudioDataUrl(base64Audio: string, mimeType: string) {
+    if (!/audio\/(?:L16|pcm)/i.test(mimeType)) {
+      return `data:${mimeType};base64,${base64Audio}`;
+    }
+
+    const rate = Number(mimeType.match(/rate=(\d+)/i)?.[1] || 24000);
+    const pcm = Buffer.from(base64Audio, 'base64');
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + pcm.length, 4);
+    header.write('WAVE', 8);
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(1, 22);
+    header.writeUInt32LE(rate, 24);
+    header.writeUInt32LE(rate * 2, 28);
+    header.writeUInt16LE(2, 32);
+    header.writeUInt16LE(16, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(pcm.length, 40);
+    return `data:audio/wav;base64,${Buffer.concat([header, pcm]).toString('base64')}`;
   }
 
   private maxOutputTokensForTask(task: 'chat' | 'browser' | 'analysis' | 'image' | 'file' | 'pdf' | 'archive' | 'consultation-report') {
@@ -388,6 +477,21 @@ export class AiService {
       suggestedQuestions: medical
         ? ['Какие красные флаги опасны?', 'К какому врачу обратиться?', 'Что можно сделать до консультации?', 'Какие анализы подготовить?']
         : ['Объясни проще', 'Сравни варианты', 'Что важно проверить?', 'Дай короткий вывод']
+    };
+  }
+
+  private buildHealthInsightsFromText(query: string, text: string) {
+    const fallback = this.buildHealthInsightsFallback(query);
+    return {
+      ...fallback,
+      summary: {
+        ...fallback.summary,
+        likelyCause: text.trim()
+      },
+      detailedExplanation: {
+        ...fallback.detailedExplanation,
+        scenarios: [text.trim()]
+      }
     };
   }
 

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Bot, LoaderCircle, MessageCircleMore, SendHorizonal, X } from 'lucide-react';
+import { API_URL } from '../../services/api';
 import { isPlatformCoordinatorQuestion, platformCoordinatorScopeReply } from '../services/platformCoordinator';
 
 type Lang = 'ru' | 'kk';
@@ -90,7 +91,7 @@ export default function SiteCoordinator({ lang, navItems }: { lang: Lang; navIte
     setLoading(true);
 
     try {
-      const response = await fetch('/api/ai/chat-stream', {
+      const response = await fetch(`${API_URL}/ai/public-chat-stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,6 +99,7 @@ export default function SiteCoordinator({ lang, navItems }: { lang: Lang; navIte
           systemInstruction: buildCoordinatorInstruction(lang, navItems),
           useSearch: false
         }),
+        credentials: 'include'
       });
       if (!response.ok || !response.body) throw new Error('Coordinator failed');
 
