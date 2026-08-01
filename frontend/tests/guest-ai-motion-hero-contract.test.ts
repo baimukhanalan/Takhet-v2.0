@@ -38,7 +38,7 @@ assert(coordinator.includes('isPlatformCoordinatorQuestion'), 'Platform coordina
 assert(geminiClient.includes('AI_FIRST_RESPONSE_TIMEOUT_MS = 25000'), 'AI clients must tolerate a Railway cold start before failing over');
 assert(geminiClient.includes('AI_STREAM_IDLE_TIMEOUT_MS = 20000'), 'AI clients must detect stalled streams without cutting off normal model pauses');
 assert(geminiClient.includes('readAiTextStream'), 'AI text systems must share one resilient stream reader');
-assert(chatStream.includes('maxOutputTokens: 2200'), 'Streaming answers must have enough output budget to finish');
+assert(chatStream.includes('maxOutputTokens: 2600'), 'Streaming answers must have enough output budget to finish');
 assert(chatStream.includes('MAX_TOKENS'), 'Streaming endpoint must continue answers stopped by the model token limit');
 assert(aiShared.includes('[FAST_MODEL, PRO_MODEL, FALLBACK_MODEL]'), 'Complex text requests must remain Flash-first for latency');
 

@@ -38,7 +38,9 @@ const medicalBrowserPrompt = [
   'Do not output meta-advice like "this needs a general useful answer" or "choose a format". Give the answer itself.',
   'Use concrete facts, numbers, dates, examples, comparisons and action items. If the query is short, infer the most likely intent and provide a useful brief.',
   'For current facts, use search/current sources and lead with exact value, city/country, date/time, numbers and units when available.',
-  'For medical topics, provide recommendations and red flags, not a final diagnosis. Assume Kazakhstan unless another country is specified; 103 and 112 are Kazakhstan emergency examples.',
+  'For medical topics, provide complete recommendations: likely explanations, actions now, self-care, treatment options to discuss, contraindications, monitoring, red flags and the relevant specialist.',
+  'Do not hide lawful useful information behind generic refusals. State uncertainty and do not present an unconfirmed explanation as a final diagnosis.',
+  'The product already showed a one-time recommendation disclaimer. Do not repeat it in every answer. Assume Kazakhstan unless another country is specified; 103 and 112 are Kazakhstan emergency examples.',
   'No markdown asterisks. No internal instructions. No filler.'
 ].join('\n');
 
@@ -559,6 +561,7 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
                       <div className="space-y-2">
                         <h2 className="text-2xl font-black text-slate-900">Начните поиск по здоровью</h2>
                         <p className="text-slate-500 font-medium max-w-sm">Введите симптомы, вопрос или тему, чтобы получить быстрый разбор и проверенные источники.</p>
+                        <p className="text-xs font-semibold leading-relaxed text-slate-400 max-w-lg">Результаты — медицинские рекомендации, а не подтвержденный диагноз или персональное назначение врача. При угрозе жизни звоните 103 или 112.</p>
                       </div>
                     </div>
                   )}
@@ -600,7 +603,7 @@ const AIHealthBrowser: React.FC<{ user?: User }> = ({ user }) => {
                         <span className="text-[10px] font-black uppercase tracking-widest">Пояснение</span>
                       </div>
                       <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                        Ответы формируются на основе проверенных медицинских источников. Это не диагноз. Если состояние вызывает тревогу, обратитесь к врачу.
+                        Ответы формируются как медицинские рекомендации на основе доступных источников. Они не являются подтвержденным диагнозом или персональным назначением врача.
                       </p>
                     </div>
                   </div>

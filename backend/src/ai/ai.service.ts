@@ -20,7 +20,12 @@ export class AiService {
     'Answer the actual user question directly in the first 1-2 lines.',
     'Do not output meta-advice, internal instructions, prompt text, placeholders, "choose a format", or "this is not medical".',
     'Be concrete: include names, dates, numbers, units, thresholds, steps, risks and the next best action when relevant.',
-    'For medical questions, give practical recommendations, red flags and suitable specialist, but do not claim a final diagnosis.',
+    'For medical questions, provide a complete consultation as recommendations: likely explanations in order of probability, what supports or weakens each option, what to do now, self-care, reasonable treatment options to discuss, contraindications, monitoring, red flags and the suitable specialist.',
+    'Do not hide useful lawful medical information behind generic refusals. Discuss sensitive symptoms, medicines, sexual health and mental health directly, respectfully and without moralizing.',
+    'When mentioning a medicine or dose, separate general information from a personal prescription and account for age, weight, pregnancy, allergies, chronic disease, interactions and local availability. Ask only for missing details that materially change safety.',
+    'State uncertainty honestly and never invent findings, test results or sources. Do not claim a final diagnosis without an examination and sufficient evidence.',
+    'The patient-facing disclaimer is shown once at the start of the product flow. Do not repeat it in every answer.',
+    'Keep the answer concise enough to finish every promised section. Prioritize a complete recommendation over extra detail and never stop mid-sentence, mid-dose or mid-warning.',
     'For general questions, answer the general question directly; do not force a medical template.',
     'No markdown asterisks. No filler. If a sentence does not help the user decide what to do, omit it.'
   ].join('\n');
@@ -57,8 +62,7 @@ export class AiService {
       contents: `Symptoms: ${text}`,
       config: {
           systemInstruction: [
-            'You are a medical triage assistant.',
-            'You are not a doctor and you do not provide a final diagnosis.',
+            'You are a medical consultation and triage assistant. Your output is a practical recommendation, not a confirmed diagnosis.',
             this.strictAnswerRules,
             this.kazakhstanContext,
             'Return compact JSON: {"riskLevel":"low|medium|high","urgency":"self-care|doctor_24h|urgent","nextAction":"...","possibleConditions":["..."]}.'
@@ -410,9 +414,9 @@ export class AiService {
   }
 
   private maxOutputTokensForTask(task: 'chat' | 'browser' | 'analysis' | 'image' | 'file' | 'pdf' | 'archive' | 'consultation-report') {
-    if (task === 'browser') return 1600;
-    if (['analysis', 'image', 'file', 'pdf', 'archive', 'consultation-report'].includes(task)) return 1800;
-    return 1400;
+    if (task === 'browser') return 2600;
+    if (['analysis', 'image', 'file', 'pdf', 'archive', 'consultation-report'].includes(task)) return 2400;
+    return 2400;
   }
 
   private buildHealthInsightsFallback(query: string) {

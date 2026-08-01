@@ -15,6 +15,8 @@ const chatStreamSource = read('api/ai/chat-stream.ts');
 const browserSource = read('api/ai/health-insights.ts');
 const liveRoomSource = normalizeNewlines(read('src/pages/AIConsultationRoom.tsx'));
 const geminiClientSource = read('src/services/gemini.ts');
+const takhetAiSource = normalizeNewlines(read('src/pages/TakhetAIChat.tsx'));
+const healthBrowserSource = normalizeNewlines(read('src/pages/AIHealthBrowser.tsx'));
 const mentalPageSource = read('src/pages/MentalPage.tsx');
 const coordinatorSource = read('src/components/AIChatOverlay.tsx');
 const siteCoordinatorSource = read('src/components/SiteCoordinator.tsx');
@@ -26,6 +28,8 @@ for (const [name, source] of [
   ['ai-browser', browserSource],
   ['live-consultation', liveRoomSource],
   ['gemini-client', geminiClientSource],
+  ['takhet-ai', takhetAiSource],
+  ['health-browser', healthBrowserSource],
   ['mental-page', mentalPageSource],
   ['coordinator-overlay', coordinatorSource],
   ['site-coordinator', siteCoordinatorSource],
@@ -57,7 +61,14 @@ assert(/const liveSystemInstruction = \[\n\s+LIVE_BASE_SYSTEM_INSTRUCTION,\n\s+L
 assert(!liveRoomSource.includes('t.ai_consultation.room.systemInstruction,\n        LIVE_AI_BEHAVIOR_INSTRUCTION'), 'AI consultation Live prompt must not reintroduce the old talk-over prompt');
 assert(!liveRoomSource.includes('systemInstruction: `${t.ai_consultation.room.systemInstruction}'), 'AI consultation advanced/search prompts must not use the old generic prompt');
 assert(liveRoomSource.includes('Ask one concise question, then stop and let the patient answer.'), 'AI consultation prompt must prevent the assistant from talking over the patient');
+assert(liveRoomSource.includes('Мои ответы — медицинские рекомендации'), 'AI consultation must open with the one-time recommendation disclaimer');
+assert(liveRoomSource.includes('complete consultation as practical recommendations'), 'AI consultation must provide complete recommendations instead of vague orientation');
+assert(takhetAiSource.includes('Мои ответы — медицинские рекомендации'), 'Takhet AI must show its recommendation disclaimer at the start');
+assert(takhetAiSource.includes('Давай полноценную консультацию'), 'Takhet AI medical mode must request a complete consultation');
+assert(!takhetAiSource.includes('if (isIntro) return null'), 'Takhet AI must not hide its initial recommendation disclaimer');
+assert(healthBrowserSource.includes('Результаты — медицинские рекомендации'), 'AI Browser must show its recommendation disclaimer before the first search');
 assert(mentalPageSource.includes('do not give generic motivational text'), 'Mental assistant prompt must block generic support filler');
+assert(mentalPageSource.includes('Provide complete recommendations'), 'Mental assistant must provide complete recommendations instead of generic support');
 assert(mentalPageSource.includes('Ask at most one short clarifying question'), 'Mental assistant should not interrogate the user with many questions');
 
 assert(coordinatorSource.includes('first give the exact route/action'), 'Coordinator overlay must keep route-first instruction');

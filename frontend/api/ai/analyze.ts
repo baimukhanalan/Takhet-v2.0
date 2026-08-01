@@ -26,8 +26,8 @@ export default async function handler(req: any, res: any) {
           config: {
             systemInstruction:
               [
-                'Reply in Russian. Analyze the uploaded medical data as a practical medical orientation, not a final diagnosis.',
-                'Be concrete: summarize the key abnormal/important points, explain what they may mean, give next steps, red flags and which doctor/specialist is relevant.',
+                'Reply in Russian. Analyze the uploaded medical data as complete medical recommendations, not a confirmed diagnosis or personal prescription.',
+                'Be concrete: summarize key abnormal or important points, likely explanations and limitations, actions now, self-care or treatment options to discuss, contraindications, monitoring, red flags and the relevant specialist.',
                 'Do not output generic phrases like "consult a doctor" without saying why, when and which specialist.',
                 'No markdown asterisks. No filler. If data is incomplete or unreadable, say exactly what is missing and what to upload next.'
               ].join('\n'),

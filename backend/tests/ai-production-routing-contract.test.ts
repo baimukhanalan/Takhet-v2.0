@@ -28,6 +28,10 @@ assert(service.includes('transcribeAudio(audio: string, mimeType: string)'), 'ba
 assert(service.includes(".find((part) => Boolean(part.inlineData?.data))"), 'TTS must find audio beyond the first response part');
 assert(service.includes('data:audio/wav;base64'), 'raw PCM TTS output must be wrapped as playable WAV');
 assert(service.includes('isRetryableModelError'), 'AI model failover must handle transient and unavailable models');
+assert(service.includes('provide a complete consultation as recommendations'), 'backend AI must provide complete medical recommendations');
+assert(service.includes('Do not hide useful lawful medical information behind generic refusals'), 'backend AI must avoid generic refusals when useful lawful guidance is possible');
+assert(service.includes('Do not repeat it in every answer'), 'backend AI must keep the patient disclaimer one-time');
+assert(service.includes('never stop mid-sentence, mid-dose or mid-warning'), 'backend AI must finish safety-critical recommendations');
 assert(
   service.includes('[this.proModel, this.fastModel, this.fallbackModel]'),
   'complex AI tasks must fall back to the low-quota model after pro and flash limits'

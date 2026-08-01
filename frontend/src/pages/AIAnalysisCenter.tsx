@@ -172,6 +172,7 @@ const AIAnalysisCenter: React.FC<{ user: User }> = ({ user }) => {
             <BrainCircuit className="w-8 h-8" />
           </div>
           <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter uppercase">Лаборатория ИИ</h1>
+          <p className="max-w-2xl text-sm font-semibold leading-relaxed text-slate-500">Результаты — медицинские рекомендации, а не подтвержденный диагноз или персональное назначение врача. При угрозе жизни звоните 103 или 112.</p>
         </div>
 
         <div className="bg-white p-1.5 rounded-[2rem] border border-slate-200 flex shadow-sm">
@@ -395,7 +396,7 @@ const AIAnalysisCenter: React.FC<{ user: User }> = ({ user }) => {
             </div>
             <h4 className="text-xl font-black uppercase tracking-tight">Техническая справка</h4>
             <p className="text-sm text-slate-500 font-medium leading-relaxed">
-              Результат анализа ИИ не является окончательным диагнозом и используется как вспомогательная информация для ускорения обработки данных.
+              Результат формируется как медицинские рекомендации: важные показатели, возможные объяснения, дальнейшие действия, риски и вопросы для врача. Это не подтвержденный диагноз или персональное назначение.
             </p>
             <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
               <CheckCircle2 className="w-5 h-5 text-blue-500" />

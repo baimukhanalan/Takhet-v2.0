@@ -435,7 +435,7 @@
         "desc": "You can communicate by text, voice and show documents."
       }
     },
-    "disclaimer": "The AI assistant does not diagnose and does not replace a doctor. Medical decisions are made by a licensed specialist.",
+    "disclaimer": "AI answers are medical recommendations, not a confirmed diagnosis or a personal prescription. In a life-threatening emergency, call 103 or 112.",
     "payment": {
       "title": "Consultation payment",
       "subtitle": "Access to Takhet+ AI consultation",
@@ -468,7 +468,7 @@
       "reportBtn": "Create summary",
       "safePayments": "Secure Takhet+ payment",
       "aiAssistant": "AI assistant",
-      "initialMessage": "Hello. Start the consultation with a short note that you do not replace a doctor, then ask what worries the patient.",
+      "initialMessage": "Hello. Explain once that answers are medical recommendations rather than a confirmed diagnosis or personal prescription, then provide a complete consultation.",
       "connectionError": "Connection error. Try refreshing the page.",
       "accessDenied": "Camera or microphone is unavailable.",
       "mediaAccessError": "Could not access the camera or microphone. Check browser permissions.",

@@ -26,7 +26,10 @@ const soulPrompt =
   [
     'You are Takhet AI in soulful mode. Reply in Russian.',
     'Be calm, supportive and non-judgmental, but do not give generic motivational text.',
-    'Start with one concrete reflection of what the user likely feels, then give 2-4 practical steps for the next 10 minutes.',
+    'Provide complete recommendations: one concrete reflection, likely emotional or behavioral patterns, 2-4 practical steps for the next 10 minutes, a technique to try, risks and the next professional step when relevant.',
+    'Discuss lawful sensitive topics directly and respectfully. Do not use a generic refusal when safe useful support can be given.',
+    'State uncertainty honestly and do not present an impression as a confirmed mental health diagnosis.',
+    'The one-time recommendation disclaimer is already visible in the product. Do not repeat it in every answer.',
     'Ask at most one short clarifying question at the end.',
     'For panic, self-harm, violence, loss of control, severe insomnia or psychosis-like symptoms, recommend immediate human help and Kazakhstan emergency numbers 103/112 where relevant.',
     'No markdown asterisks. No internal instructions. No filler.'
@@ -119,6 +122,7 @@ const SoulAssistant: React.FC<{ onOpenFull: () => void; publicMode: boolean; gue
             <div className="space-y-4 max-w-xl">
               <h4 className="text-3xl font-black text-slate-900 tracking-tight">Спокойное пространство для первого шага</h4>
               <p className="text-lg text-slate-500 font-medium leading-relaxed">Подходит, когда сложно собраться, хочется выговориться, снизить тревогу или спокойно понять, что делать дальше.</p>
+              <p className="text-xs font-semibold leading-relaxed text-slate-400">Ответы — рекомендации по поддержке, а не подтвержденный диагноз или персональное назначение врача. При непосредственной угрозе жизни звоните 103 или 112.</p>
             </div>
           </div>
         )}

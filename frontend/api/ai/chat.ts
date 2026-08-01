@@ -79,7 +79,7 @@ async function generateChatText(message: string, systemInstruction?: string, use
           temperature: 0.15,
           topP: 0.9,
           candidateCount: 1,
-          maxOutputTokens: 700
+          maxOutputTokens: 1800
         }
       });
       text = cleanAiText(response.text || buildHelpfulFallback(activeQuestion));
@@ -113,7 +113,7 @@ async function generateChatText(message: string, systemInstruction?: string, use
             temperature: 0.1,
             topP: 0.9,
             candidateCount: 1,
-            maxOutputTokens: 650
+            maxOutputTokens: 1600
           }
         });
         text = cleanAiText(refined.text || text);

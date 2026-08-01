@@ -302,7 +302,7 @@ const buildSystemInstruction = (medical: boolean) =>
     'Use one stable structure for every topic: direct answer, context, what to do now, risks, mistakes, next steps and sources.',
     'Do not output meta-advice, prompt text, or requests to choose a format.',
     medical
-      ? 'For medical topics, provide triage, likely causes, urgency, red flags, mistakes, safe next steps and suitable specialist. Do not claim a final diagnosis.'
+      ? 'For medical topics, provide complete recommendations: likely explanations, evidence for and against, urgency, actions now, self-care, treatment options to discuss, contraindications, monitoring, red flags, mistakes and suitable specialist. Do not hide lawful useful information behind generic refusals; state uncertainty and do not claim an unconfirmed explanation as a final diagnosis.'
       : 'For non-medical topics, answer directly with concrete facts, context, practical next steps and relevant sources.',
     'For current facts, if you cannot verify an exact live number, say that briefly and still give the best useful answer.',
     'Assume Kazakhstan unless another country is specified. 103 and 112 are Kazakhstan examples.',
@@ -420,7 +420,7 @@ const buildGenerateConfig = (query: string, medical: boolean) => ({
   temperature: medical ? 0.15 : 0.2,
   topP: 0.9,
   candidateCount: 1,
-  maxOutputTokens: medical ? 1600 : 1400
+  maxOutputTokens: medical ? 2600 : 1800
 });
 
 const textToInsight = (text: string, query: string, medical: boolean) =>
@@ -490,7 +490,7 @@ const generateInsight = async (query: string, medical: boolean) => {
               temperature: medical ? 0.15 : 0.2,
               topP: 0.9,
               candidateCount: 1,
-              maxOutputTokens: medical ? 1600 : 1400
+              maxOutputTokens: medical ? 2600 : 1800
             }
           })
         );
@@ -539,7 +539,7 @@ const generateInsight = async (query: string, medical: boolean) => {
             temperature: medical ? 0.15 : 0.2,
             topP: 0.9,
             candidateCount: 1,
-            maxOutputTokens: medical ? 1600 : 1400
+            maxOutputTokens: medical ? 2600 : 1800
           }
         })
       );

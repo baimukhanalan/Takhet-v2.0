@@ -56,10 +56,10 @@ assert(takhetAi.includes("value: '/mental'"), 'Guest soulful specialist action m
 assert(doctorsPage.includes('Takhet+ готовит контекст'), 'Doctors hero subtitle must use clear readable product copy');
 assert(enterpriseApp.includes('Цифровое медицинское сопровождение предприятий'), 'Enterprise hero must use requested positioning copy');
 
-assert(chatStream.includes('maxOutputTokens: 2200'), 'Streaming chat must raise maxOutputTokens to reduce answer truncation');
+assert(chatStream.includes('maxOutputTokens: 2600'), 'Streaming chat must raise maxOutputTokens to reduce answer truncation');
 assert(!chatStream.includes("cleanStreamChunk(chunk.text || '')"), 'Streaming must not destructively clean every chunk before writing it');
 assert(healthBrowserApi.includes('HEALTH_BROWSER_SINGLE_PASS'), 'AI Browser must use a single-pass response path before expensive fallback generation');
-assert(healthBrowserApi.includes('maxOutputTokens: medical ? 1600 : 1400'), 'AI Browser token limits must be raised to reduce truncated answers');
+assert(healthBrowserApi.includes('maxOutputTokens: medical ? 2600 : 1800'), 'AI Browser token limits must be raised to reduce truncated answers');
 assert(coordinatorApi.includes('maxOutputTokens: 900'), 'Coordinator must allow enough output for complete route-first answers');
 
 console.log('Platform checklist frontend contract passed');
