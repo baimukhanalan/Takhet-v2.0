@@ -46,6 +46,14 @@ assert(source.includes('if (activeLiveConnectionIdRef.current !== connectionId)'
 assert(source.includes('activeSession.sendRealtimeInput?.({ audioStreamEnd: true })'), 'AI consultation cleanup must end the Gemini audio stream before closing');
 assert(!source.includes('t.ai_consultation.room.systemInstruction,\n        LIVE_AI_BEHAVIOR_INSTRUCTION'), 'AI consultation must not mix old generic prompt with Live behavior prompt');
 assert(source.includes('thinkingLevel: ThinkingLevel.LOW'), 'AI consultation Live API should use low thinking latency');
+assert(
+  !source.includes('transparent: true'),
+  'Gemini Developer Live API must not receive the Enterprise-only sessionResumption.transparent option'
+);
+assert(
+  source.indexOf('sessionPromise.then(session => {') < source.indexOf('isLiveConnectedRef.current = true'),
+  'AI consultation must only show a connected state after the Live session promise resolves'
+);
 
 assert(
   vercelConfig.includes('wss://generativelanguage.googleapis.com') &&

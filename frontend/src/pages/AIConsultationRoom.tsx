@@ -528,10 +528,9 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
           },
           outputAudioTranscription: {},
           inputAudioTranscription: {},
-          sessionResumption: {
-            handle: sessionResumptionHandleRef.current || undefined,
-            transparent: true
-          },
+          sessionResumption: sessionResumptionHandleRef.current
+            ? { handle: sessionResumptionHandleRef.current }
+            : {},
           contextWindowCompression: {
             triggerTokens: '24000',
             slidingWindow: { targetTokens: '12000' }
@@ -545,15 +544,15 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
               sessionPromise.then((session) => session.close?.()).catch(() => undefined);
               return;
             }
-            isLiveConnectedRef.current = true;
-            setIsLiveConnected(true);
-            reconnectAttemptRef.current = 0;
-            isConnectingRef.current = false;
             sessionPromise.then(session => {
               if (activeLiveConnectionIdRef.current !== connectionId || sessionEndedRef.current) {
                 session.close?.();
                 return;
               }
+              isLiveConnectedRef.current = true;
+              setIsLiveConnected(true);
+              reconnectAttemptRef.current = 0;
+              isConnectingRef.current = false;
               sessionRef.current = session;
               startVideoFrameStreaming(session);
               sendLiveStartupGreeting(session);
@@ -562,7 +561,7 @@ const AIConsultationRoom: React.FC<{ user?: User }> = ({ user }) => {
                   enablePatientAudioInput(session);
                 }
               }, 7000);
-            });
+            }).catch(() => undefined);
           },
           onmessage: (message: LiveServerMessage) => {
             if (activeLiveConnectionIdRef.current !== connectionId || sessionEndedRef.current) return;
